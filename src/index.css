@@ -1,0 +1,91 @@
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;font-size:13px;color:#0F172A;background:#fff;padding:20px}
+button,select,input,textarea{font-family:inherit;font-size:12px}
+
+.wrap{max-width:980px;margin:0 auto}
+
+/* ── Topbar ── */
+.topbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+.topbar-left{flex:1}
+.topbar-left h1{font-size:20px;font-weight:700;letter-spacing:-.3px}
+.topbar-left .sub{font-size:11px;color:#94A3B8;margin-top:2px}
+.topbar-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+/* ── Buttons ── */
+.btn{height:32px;padding:0 14px;border-radius:8px;border:1.5px solid #E2E8F0;background:#fff;color:#374151;font-weight:600;cursor:pointer}
+.btn:hover{background:#F8FAFC}
+.btn-blue{background:#1D4ED8;color:#fff;border-color:#1D4ED8}
+.btn-blue:hover{background:#1E40AF}
+.btn-pdf{background:#FFF1F2;color:#DC2626;border-color:#FECDD3}
+.btn-pdf:hover{background:#FFE4E6}
+.btn-xls{background:#F0FDF4;color:#16A34A;border-color:#BBF7D0}
+.btn-xls:hover{background:#DCFCE7}
+.btn-active{background:#0F172A;color:#fff;border-color:#0F172A}
+
+/* ── Toggle ── */
+.toggle{display:flex;border:1.5px solid #E2E8F0;border-radius:10px;overflow:hidden}
+.toggle button{border:none;border-radius:0;height:32px;padding:0 18px;background:#fff;color:#64748B;font-weight:700;cursor:pointer}
+.toggle button.on{background:#0F172A;color:#fff}
+
+/* ── Select ── */
+select.sel{height:32px;padding:0 10px;border-radius:8px;border:1.5px solid #E2E8F0;background:#fff;color:#374151;cursor:pointer}
+
+/* ── Stats ── */
+.stats-label{font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;margin-bottom:20px}
+.stat-card{background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:8px;padding:10px 12px;cursor:pointer;text-align:center}
+.stat-card:hover{filter:brightness(.97)}
+.stat-n{font-size:22px;font-weight:700}
+.stat-l{font-size:10px;font-weight:600;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ── Task groups ── */
+.group{border:1.5px solid #E2E8F0;border-radius:10px;overflow:hidden;margin-bottom:12px}
+.group-hdr{width:100%;display:flex;align-items:center;gap:10px;padding:11px 16px;border:none;text-align:left;cursor:pointer;font-family:inherit}
+.group-hdr:hover{filter:brightness(.97)}
+.group-name{font-size:14px;font-weight:700;flex:1}
+.group-count{font-size:10px;font-weight:600;color:#94A3B8}
+.badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:99px}
+
+/* ── Task rows ── */
+.task-row{width:100%;display:flex;align-items:center;gap:10px;padding:10px 16px;border:none;border-bottom:1px solid #E5E7EB;background:#fff;text-align:left;cursor:pointer;font-family:inherit}
+.task-row:hover{background:#F8FAFC}
+.task-row.open{background:#EFF6FF}
+.task-text{font-size:12px;flex:1;line-height:1.4;color:#0F172A;text-align:left}
+.task-date{font-size:10px;color:#94A3B8;flex-shrink:0;min-width:44px;text-align:right}
+
+/* ── Pills ── */
+.pill{font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px;flex-shrink:0;white-space:nowrap;display:inline-flex;align-items:center;gap:4px}
+.av{border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0}
+.dot-status{width:11px;height:11px;border-radius:50%;flex-shrink:0;cursor:pointer;display:inline-block}
+
+/* ── Edit form ── */
+.edit-form{background:#F9FAFB;border-top:1px solid #E5E7EB;padding:14px 16px}
+.edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.field label{font-size:10px;font-weight:700;color:#6B7280;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em}
+.field input,.field select,.field textarea{width:100%;padding:6px 8px;font-size:11px;border:1px solid #D1D5DB;border-radius:6px;background:#fff;color:#111;font-family:inherit}
+.field textarea{height:72px;resize:vertical}
+.form-btns{display:flex;gap:8px;align-items:center}
+.btn-save{height:28px;padding:0 16px;font-size:11px;font-weight:700;background:#1D4ED8;color:#fff;border:none;border-radius:6px;cursor:pointer}
+.btn-cancel{height:28px;padding:0 14px;font-size:11px;background:#fff;color:#6B7280;border:1px solid #D1D5DB;border-radius:6px;cursor:pointer}
+.btn-arch{background:none;border:none;color:#DC2626;font-size:11px;cursor:pointer;margin-right:auto;font-weight:600}
+
+/* ── Archive ── */
+.arch-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid #E5E7EB;border-radius:8px;margin-bottom:4px;opacity:.55}
+.empty{color:#9CA3AF;padding:20px 0;text-align:center;font-size:12px}
+
+/* ── Bulk bar ── */
+.bulk-bar{position:sticky;top:0;z-index:10;background:#1D4ED8;color:#fff;padding:10px 16px;border-radius:8px;margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.bulk-sel{height:28px;padding:0 8px;font-size:11px;border:none;border-radius:6px;background:#fff;color:#111;cursor:pointer}
+.bulk-btn{height:28px;padding:0 12px;font-size:11px;font-weight:600;border:none;border-radius:6px;cursor:pointer}
+
+/* ── Hub ── */
+.hub-card{border-radius:14px;overflow:hidden;margin-bottom:14px;box-shadow:0 1px 6px rgba(0,0,0,.06)}
+.step-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #F8FAFC;cursor:pointer}
+.step-row:hover{background:#FAFAFA}
+.step-label{font-size:11px;flex:1}
+.doc-item{font-size:10px;color:#3B82F6;padding:2px 0;display:block}
+
+/* ── Meetings ── */
+.meeting-card{border:1.5px solid #E2E8F0;border-radius:12px;overflow:hidden;margin-bottom:10px}
+
+@media print{.topbar-right{display:none}}

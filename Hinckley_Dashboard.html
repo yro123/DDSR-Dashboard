@@ -1,0 +1,1611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CLIENT NAME — Task Dashboard</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;font-size:13px;color:#0F172A;background:#fff;padding:20px}
+.wrap{max-width:980px;margin:0 auto}
+h1{font-size:20px;font-weight:700;letter-spacing:-.3px}
+.sub{font-size:11px;color:#94A3B8;margin-top:2px}
+.topbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+.topbar-left{flex:1}
+.topbar-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+button,select,input{font-family:inherit;font-size:12px;cursor:pointer}
+.btn{height:32px;padding:0 14px;border-radius:8px;border:1.5px solid #E2E8F0;background:#fff;color:#374151;font-weight:600}
+.btn:hover{background:#F8FAFC}
+.btn-blue{background:#1D4ED8;color:#fff;border-color:#1D4ED8}
+.btn-blue:hover{background:#1E40AF}
+.btn-pdf{background:#FFF1F2;color:#DC2626;border-color:#FECDD3}
+.btn-pdf:hover{background:#FFE4E6}
+.btn-xls{background:#F0FDF4;color:#16A34A;border-color:#BBF7D0}
+.btn-xls:hover{background:#DCFCE7}
+.btn-active{background:#0F172A;color:#fff;border-color:#0F172A}
+select.sel{height:32px;padding:0 10px;border-radius:8px;border:1.5px solid #E2E8F0;background:#fff;color:#374151}
+.toggle{display:flex;border:1.5px solid #E2E8F0;border-radius:10px;overflow:hidden}
+.toggle button{border:none;border-radius:0;height:32px;padding:0 18px;background:#fff;color:#64748B;font-weight:700}
+.toggle button.on{background:#0F172A;color:#fff}
+.stats-label{font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;margin-bottom:20px}
+.stat-card{background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:8px;padding:10px 12px;cursor:pointer;text-align:center}
+.stat-card:hover{filter:brightness(.97)}
+.stat-n{font-size:22px;font-weight:700}
+.stat-l{font-size:10px;font-weight:600;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.group{border:1.5px solid #E2E8F0;border-radius:10px;overflow:hidden;margin-bottom:12px}
+.group-hdr{width:100%;display:flex;align-items:center;gap:10px;padding:11px 16px;border:none;text-align:left;cursor:pointer;font-family:inherit}
+.group-hdr:hover{filter:brightness(.97)}
+.group-name{font-size:14px;font-weight:700;flex:1}
+.group-count{font-size:10px;font-weight:600;color:#94A3B8}
+.badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:99px}
+.task-row{width:100%;display:flex;align-items:center;gap:10px;padding:10px 16px;border:none;border-bottom:1px solid #E5E7EB;background:#fff;text-align:left;cursor:pointer;font-family:inherit}
+.task-row:hover{background:#F8FAFC}
+.task-row.open{background:#EFF6FF}
+.task-text{font-size:12px;flex:1;line-height:1.4;color:#0F172A;text-align:left}
+.task-date{font-size:10px;color:#94A3B8;flex-shrink:0;min-width:44px;text-align:right}
+.pill{font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px;flex-shrink:0;white-space:nowrap}
+.av{border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.edit-form{background:#F9FAFB;border-top:1px solid #E5E7EB;padding:14px 16px}
+.edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.field label{font-size:10px;font-weight:700;color:#6B7280;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em}
+.field input,.field select,.field textarea{width:100%;padding:6px 8px;font-size:11px;border:1px solid #D1D5DB;border-radius:6px;background:#fff;color:#111;font-family:inherit}
+.field textarea{height:72px;resize:vertical}
+.form-btns{display:flex;gap:8px;align-items:center}
+.btn-save{height:28px;padding:0 16px;font-size:11px;font-weight:700;background:#1D4ED8;color:#fff;border:none;border-radius:6px;cursor:pointer}
+.btn-cancel{height:28px;padding:0 14px;font-size:11px;background:#fff;color:#6B7280;border:1px solid #D1D5DB;border-radius:6px;cursor:pointer}
+.btn-arch{background:none;border:none;color:#DC2626;font-size:11px;cursor:pointer;margin-right:auto;font-weight:600}
+.arch-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid #E5E7EB;border-radius:8px;margin-bottom:4px;opacity:.55}
+.empty{color:#9CA3AF;padding:20px 0;text-align:center;font-size:12px}
+/* Process hub */
+.hub-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.wf-card{border-radius:14px;overflow:hidden;cursor:pointer;transition:transform .1s}
+.wf-card:hover{transform:translateY(-2px)}
+.wf-banner{padding:24px 20px 20px;border:none;width:100%;text-align:left;cursor:pointer;font-family:inherit}
+.wf-icon{font-size:28px;margin-bottom:10px;display:block}
+.wf-title{font-size:16px;font-weight:800;color:#fff;margin-bottom:6px;letter-spacing:-.3px}
+.wf-counts{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.wf-count-pill{font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:rgba(255,255,255,.22);color:#fff}
+.wf-progress-track{height:6px;background:rgba(255,255,255,.25);border-radius:99px;overflow:hidden}
+.wf-progress-fill{height:6px;background:#fff;border-radius:99px}
+.wf-phase{font-size:10px;font-weight:700;color:rgba(255,255,255,.8);margin-top:8px;text-transform:uppercase;letter-spacing:.07em}
+.wf-body{background:#fff;border:2px solid transparent;border-top:none;border-radius:0 0 14px 14px;padding:16px}
+.wf-section-title{font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;margin-top:14px}
+.wf-section-title:first-child{margin-top:0}
+.step-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #F8FAFC}
+.step-label{font-size:11px;flex:1}
+.todo-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #F8FAFC}
+.todo-label{font-size:11px;flex:1;color:#0F172A}
+.doc-item{font-size:10px;color:#3B82F6;padding:2px 0}
+.wf-owners{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:4px}
+@media print{.topbar-right{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="topbar">
+  <div class="topbar-left">
+    <h1>CLIENT NAME</h1>
+    <div class="sub">Project implementation dashboard</div>
+  </div>
+  <div class="topbar-right">
+    <button class="btn btn-pdf" onclick="exportPDF()">📄 PDF</button>
+    <button class="btn btn-xls" onclick="exportExcel()">📊 Excel</button>
+    <div class="toggle">
+      <button id="btn-tasks" class="on" onclick="setScreen('tasks')">☑ Tasks</button>
+      <button id="btn-hub" onclick="setScreen('hub')">⬡ Process Hub</button>
+      <button id="btn-meetings" onclick="setScreen('meetings')">📋 Meeting Notes</button>
+    </div>
+  </div>
+</div>
+
+<div id="screen-tasks">
+  <div class="topbar" style="margin-bottom:12px">
+    <div class="toggle" style="border-radius:8px">
+      <button id="grp-person" class="on" onclick="setGroup('person')">By person</button>
+      <button id="grp-cat" onclick="setGroup('category')">By workflow</button>
+    </div>
+    <select class="sel" id="filter-secondary" onchange="render()"></select>
+    <select class="sel" id="filter-status" onchange="render()">
+      <option value="">All statuses</option>
+      <option>Not Started</option>
+      <option>In Progress</option>
+      <option>Done</option>
+    </select>
+    <button class="btn" id="btn-archive" onclick="toggleArchive()">Archive</button>
+    <button class="btn btn-blue" onclick="openAdd()">+ Add task</button>
+  </div>
+  <div class="stats-label" id="stats-label">Tasks per assignee</div>
+  <div class="stats" id="stats-row"></div>
+  <div id="add-form-top"></div>
+  <div id="bulk-bar" style="display:none;position:sticky;top:0;z-index:10;background:#1D4ED8;color:#fff;padding:10px 16px;border-radius:8px;margin-bottom:10px;display:none;align-items:center;gap:10px;flex-wrap:wrap">
+    <span id="bulk-count" style="font-size:12px;font-weight:700;flex:1"></span>
+    <select id="bulk-status" style="height:28px;padding:0 8px;font-size:11px;border:none;border-radius:6px;background:#fff;color:#111;cursor:pointer">
+      <option value="">Change status...</option>
+      <option>Not Started</option><option>In Progress</option><option>Done</option>
+    </select>
+    <select id="bulk-priority" style="height:28px;padding:0 8px;font-size:11px;border:none;border-radius:6px;background:#fff;color:#111;cursor:pointer">
+      <option value="">Change priority...</option>
+      <option>High</option><option>Medium</option><option>Low</option>
+    </select>
+    <select id="bulk-person" style="height:28px;padding:0 8px;font-size:11px;border:none;border-radius:6px;background:#fff;color:#111;cursor:pointer" id="bulk-person-sel">
+      <option value="">Reassign to...</option>
+    </select>
+    <button onclick="bulkArchive()" style="height:28px;padding:0 12px;font-size:11px;font-weight:600;background:#EF4444;color:#fff;border:none;border-radius:6px;cursor:pointer">Archive</button>
+    <button onclick="clearBulk()" style="height:28px;padding:0 12px;font-size:11px;font-weight:600;background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:6px;cursor:pointer">✕ Clear</button>
+  </div>
+  <div id="main-content"></div>
+</div>
+
+<div id="screen-meetings" style="display:none;max-width:900px"></div>
+
+<div id="screen-hub" style="display:none">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+  <p style="font-size:12px;color:#64748B;flex:1">Click any workflow to expand — cheat sheet notes from project documents</p>
+  <button onclick="printCheatSheet()" style="height:30px;padding:0 14px;font-size:11px;font-weight:600;background:#F8FAFC;color:#374151;border:1.5px solid #E2E8F0;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px">🖨 Print cheat sheet</button>
+</div>
+  <div id="hub-grid" style="max-width:900px"></div>
+
+  <div style="max-width:900px;margin-top:32px;border:1.5px solid #E2E8F0;border-radius:12px;overflow:hidden">
+    <button onclick="toggleDocLibrary()" style="width:100%;display:flex;align-items:center;gap:10px;padding:14px 18px;background:#F8FAFC;border:none;cursor:pointer;text-align:left;font-family:inherit">
+      <span style="font-size:18px">📁</span>
+      <div style="flex:1">
+        <div style="font-size:15px;font-weight:800;color:#0F172A">Project Documents</div>
+        <div style="font-size:11px;color:#94A3B8">All source documents — click to open in SharePoint</div>
+      </div>
+      <span id="doc-library-arrow" style="font-size:12px;color:#94A3B8">▶</span>
+    </button>
+    <div id="doc-library" style="padding:16px 18px;background:#fff;display:none"></div>
+  </div>
+</div>
+
+</div>
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────
+const CATEGORIES = ["Workflow 1","Workflow 2","Workflow 3","Workflow 4","Workflow 5","Workflow 6"];
+const CAT_COLOR = {"Vic.AI / AP":"#F59E0B","MOLO Integration":"#22C55E","NetSuite Purchasing":"#3B82F6","Paylocity / Concur":"#A855F7","Financial Close":"#14B8A6","System Config":"#64748B"};
+const CAT_BG = {"Vic.AI / AP":"#FFFBEB","MOLO Integration":"#F0FDF4","NetSuite Purchasing":"#EFF6FF","Paylocity / Concur":"#FAF5FF","Financial Close":"#F0FDFA","System Config":"#F8FAFC"};
+const AVC = {
+  Adina:["#DBEAFE","#1E40AF"],Gretchen:["#EDE9FE","#5B21B6"],Jenna:["#FFE4E6","#9F1239"],
+  Leslie:["#DCFCE7","#166534"],Stephanie:["#FEE2E2","#991B1B"],Nicole:["#D1FAE5","#064E3B"],
+  Cheri:["#FCE7F3","#831843"],Unassigned:["#F3F4F6","#6B7280"],
+  "NetSuite Implementation":["#D1FAE5","#065F46"],
+  "MOLO Team":["#E0F2FE","#0369A1"],
+  "Vic.AI Team":["#FEF3C7","#92400E"],
+};
+const STATUS_DOT = {"Not Started":"#CBD5E1","In Progress":"#3B82F6","Done":"#22C55E"};
+const STATUS_BG  = {"Not Started":"#F1F5F9","In Progress":"#EFF6FF","Done":"#F0FDF4"};
+const STATUS_COL = {"Not Started":"#64748B","In Progress":"#1D4ED8","Done":"#16A34A"};
+const PRI_BG = {High:"#FEE2E2",Medium:"#FEF3C7",Low:"#D1FAE5"};
+const PRI_COL = {High:"#991B1B",Medium:"#92400E",Low:"#166534"};
+
+const MEETINGS = [
+  {
+    id: "may12",
+    date: "May 12, 2026",
+    title: "Weekly Sync — Post Go-Live",
+    attendees: ["Adina","Brian","Nicole","Jenna","Gretchen","Stephanie","Lou"],
+    topics: [
+      {
+        area: "Financial Close — Trial Balance Import Status",
+        color: "#14B8A6",
+        notes: [
+          "2026 — All periods imported (Jan 2025 through March 2026) ✅",
+          "Jan 2025 — Full Trial Balance imported with all activity ✅",
+          "Feb 2025 onwards — Subsequent months imported as GL Deltas ✅",
+          "Net Income / EBITDA — Confirmed matching between NetSuite and source systems ✅",
+          "March Month-End — Confirmed matches Syteline month-end ✅"
+        ],
+        actionItems: [
+          "Continue monthly GL Delta imports going forward",
+          "Maintain period locks to prevent backdating"
+        ]
+      },
+      {
+        area: "Vic.AI / AP",
+        color: "#F59E0B",
+        notes: [
+          "Screen glitch NOT resolved — Aftab says fix expected week of May 17th",
+          "Workaround: process max 3 invoices at a time to avoid spinning",
+          "Nicole reporting separate issue: screen blanks out even when scrolling — not just batch processing",
+          "Nicole screens going back to top on every refresh — cannot scroll through 70+ invoice list",
+          "Payments: check batch delay due to Vic.ai 3rd-party vendor issue — Lou confirmed Sightline was fully paid before cutover",
+          "Subcontractor payments flagged as biggest concern by Lou",
+          "Vendor ACH campaign sent to ~4,200 vendors — ~20 already signed up",
+          "GL / AI Training: still not learning correctly — wrong GLs posting (e.g. accumulated depreciation, freight revenue, sales discounts)",
+          "Root cause: Bianca does not have access to see expense lines on PO-based invoices",
+          "AI expected to reach ~96% accuracy in 30-60-90 days — team must manually review in the meantime",
+          "Allison (temp starting May 18) to clean up historical GL coding — start with large dollar items first",
+          "Sales tax payable posting process confirmed as correct — not a priority to fix now"
+        ],
+        actionItems: [
+          "Email Aftab re: Nicole blank-screen/scroll glitch — cc team (Adina)",
+          "Check status of last week VicPay check batch (Stephanie)",
+          "Give Bianca access to see expense lines on invoices (Stephanie)",
+          "Implement AP split: Leslie/Tracy do PO-based invoices; Bianca does standalone directs",
+          "Production invoices: AP reviews but does NOT post — forward to Nicole/Josh for approval",
+          "Assign Allison to clean up historical GL coding via VicAI Bills — start with large items (Lou/Stephanie)",
+          "Update VicAI Bills saved search: add Reference PO, line description, Division (Adina)",
+          "Add Reviewed checkbox to VicAI Bills for AP tracking (Adina)"
+        ]
+      }
+    ],
+    nextMeeting: "Tuesday May 19, 2026"
+  },
+  {
+    id: "may12b",
+    date: "May 12, 2026",
+    title: "Post Go-Live Vic.AI Review & Cleanup Plan",
+    attendees: ["Adina","Brian","Nicole","Jenna","Gretchen","Stephanie","Lou"],
+    topics: [
+      {
+        area: "Vic.AI System Performance",
+        color: "#F59E0B",
+        notes: [
+          "Widespread system instability — screen freezes, resets, inability to scroll invoice lists",
+          "Root cause: Vic infrastructure overloaded, likely triggered by our large account volume",
+          "Workaround: Process invoices in batches of 3 or fewer until fix is deployed",
+          "Aftab promises infrastructure upgrade will fix the issue by next week",
+          "Nicole & Josh experiencing separate blank-screen issue even when processing 1 invoice at a time",
+          "Adina to email Aftab separately about Nicole blank-screen/scroll glitch"
+        ],
+        actionItems: [
+          "Email Aftab re: Nicole blank-screen/scroll glitch — cc team (Adina)",
+          "Continue 3-invoice-max workaround until infrastructure fix confirmed"
+        ]
+      },
+      {
+        area: "Vic.AI Payment Processing",
+        color: "#F59E0B",
+        notes: [
+          "System-wide issue with Vic third-party check vendor — funds debited from our account but checks not being sent",
+          "Canned response in use for vendor inquiries",
+          "ACH enrollment campaign sent to 4,200 vendors — ~20 already signed up",
+          "Lou confirmed everything in Sightline was paid before cutover so delays are within normal terms",
+          "Subcontractor payments flagged as highest priority by Lou",
+          "Priority: fix check issue before building new features like the VicPay dashboard"
+        ],
+        actionItems: [
+          "Check status of last week VicPay check batch (Stephanie)",
+          "Continue ACH enrollment push — encourage all vendors to switch"
+        ]
+      },
+      {
+        area: "GL Coding Errors & Cleanup Plan",
+        color: "#F59E0B",
+        notes: [
+          "Vic AI miscoding invoices — items posting to wrong GLs (e.g. freight to Accumulated Depreciation) and wrong locations",
+          "AP workflow gap: Bianca lacked access to expense line subtab — could not see or correct AI-generated GL codes",
+          "Nicole & Josh spent ~16 hours manually cleaning up GL coding errors",
+          "New AP workflow: Bianca handles direct/standalone invoices; Leslie & Tracy handle all PO-based invoices; Production bills require Nicole/Josh final approval",
+          "Bianca granted access to expense line subtab in Vic",
+          "AI expected to reach ~96% accuracy in 30-60-90 days",
+          "Hard-coded rules in Vic.ai NOT supported — would break AI learning and GL sync",
+          "Allison (temp starting May 18) assigned to clean up historical coding errors via VicAI Bills — start with high-value items",
+          "Adina to add Reviewed checkbox to VicAI Bills search for tracking progress"
+        ],
+        actionItems: [
+          "Grant Bianca access to expense line subtab in Vic (Stephanie)",
+          "Implement new AP split immediately (Stephanie)",
+          "Assign Allison to clean up historical GL coding via VicAI Bills — start with large items (Lou/Stephanie)",
+          "Add Reviewed checkbox to VicAI Bills search (Adina)",
+          "Update VicAI Bills search: add Reference PO, line description, Division; remove Internal ID (Adina)",
+          "Share Claude-generated project dashboard with team (Adina)"
+        ]
+      },
+      {
+        area: "Use Tax Accrual Process",
+        color: "#14B8A6",
+        notes: [
+          "Process of grossing up consumable costs to accrue use tax reviewed",
+          "Finding: long-standing, compliant process — not a new error introduced by Vic.ai",
+          "Decision: Do not change this process now — revisit in June once system is stable"
+        ],
+        actionItems: [
+          "Revisit use tax accrual process in June once system is stable (Gretchen/Nicole)"
+        ]
+      }
+    ],
+    nextMeeting: "Tuesday May 19, 2026"
+  },
+  {
+    id: "financial_cutover",
+    date: "May 12, 2026",
+    title: "Trial Balances Review — Historical Data Load & Cutover Strategy",
+    attendees: ["Adina","Gretchen","Harrison","Lou"],
+    topics: [
+      {
+        area: "Historical Data Load Status",
+        color: "#14B8A6",
+        notes: [
+          "Net-change method used for historical data (Jan 2025-Mar 2026) — imports monthly GL activity against 1/1/25 opening balance",
+          "Net-change method avoids reversal entries — key improvement over previous load attempt",
+          "2024 and 2025 journal entries created to consolidate Alden financials",
+          "March 2026 Balance Sheet: ties to native NetSuite report with minor variances from mapping (e.g. short-term lease liability)",
+          "March 2026 Income Statement: ~$20k variance vs. official $2,067,990 Net Income — Gretchen exporting to Excel for line-by-line comparison",
+          "Storage COGS is a top-side adjustment in Sightline — historical JEs needed to reclass from Service COGS"
+        ],
+        actionItems: [
+          "Export March 2026 financials to Excel for line-by-line comparison — find ~$20k Net Income variance (Gretchen)",
+          "Create historical JEs to reclass Storage COGS from Service COGS (Gretchen)"
+        ]
+      },
+      {
+        area: "Cutover Accounting Strategy",
+        color: "#14B8A6",
+        notes: [
+          "Open AP Balance ($2.5M): must be paid outside NetSuite — posting directly to AP account would corrupt AP aging report",
+          "Solution: Use dummy vendor Sightline Vendor #2882 — import balance as a bill, apply future payments as credits until balance zeroes out",
+          "April 2026 Load: Import full April trial balance from Sightline using clearing accounts",
+          "AR: Map $365k balance to Opening Balance AR clearing account",
+          "Inventory: Map $1.497M balance to Opening Balance Inventory clearing account",
+          "Deferred Revenue: Map to Opening Balance Deferred Revenue clearing account",
+          "Goal: MOLO historical data isolated from main GL accounts which are populated cleanly by the April load"
+        ],
+        actionItems: [
+          "Import April 2026 Sightline trial balance — map AR, Inventory, Deferred Revenue to clearing accounts (Gretchen)",
+          "Investigate and resolve AP opening-balance clearing account balance (Gretchen)",
+          "Create report showing Opening Balance AR, Inventory, Deferred Revenue balances by location — share with Gretchen and Adina (Harrison)"
+        ]
+      },
+      {
+        area: "Budget Mapping",
+        color: "#14B8A6",
+        notes: [
+          "Imported budget significantly off — missing key items including interest expense",
+          "RSL9 mapping needs correction — Gretchen working with Lou to fix hidden interest/EBITDA budget tabs"
+        ],
+        actionItems: [
+          "Email Lou re: hidden interest/EBITDA budget tabs then update budget import (Gretchen)"
+        ]
+      },
+      {
+        area: "Margin Report & Cost of Sales Adjustments (CSAs)",
+        color: "#14B8A6",
+        notes: [
+          "Margin report confirmed reliable — estimated unit cost is actual average cost at time of transaction",
+          "CSAs correct COGS when inventory costs change retroactively (backdated receipts, price corrections)",
+          "High CSA volume indicates process issues (e.g. negative inventory) and creates variance between margin report and P&L",
+          "Harrison to create a saved search to monitor CSAs and alert team"
+        ],
+        actionItems: [
+          "Create NetSuite saved search and alert for Cost of Sales Adjustments — send link to Adina and Gretchen (Harrison)",
+          "Set up May import for Jenna then guide her on May GL import (Gretchen)"
+        ]
+      }
+    ],
+    nextMeeting: "TBD"
+  },
+  {
+    id: "may14_purchasing",
+    date: "May 14, 2026",
+    title: "Weekly Sync — Hinckley Purchasing",
+    attendees: ["Adina","Steven","Harrison","Chad","Cheri","Justin","Tracy"],
+    topics: [
+      {
+        area: "MOLO ↔ NetSuite Integration Bugs",
+        color: "#22C55E",
+        notes: [
+          "Purchase Price not syncing from NetSuite to MOLO — ~2,900 items affected since go-live",
+          "Service managers cannot see true costs on work orders, blocking margin management in MOLO",
+          "Bug regression — feature was tested and confirmed working previously",
+          "MOLO Sublet vendor search is unusable — only loads vendors as user scrolls, preventing search until full list loads",
+          "MOLO inventory overstated — system user force-matching to NetSuite without accounting for WIP, causing WIP double-counting",
+          "True QOH = MOLO QOH − MOLO WIP (current workaround until fixed)",
+          "Other unresolved bugs: LOA charge method, WO type tags (partial), WIP amount sync, no date stamps on MOLO transactions"
+        ],
+        actionItems: [
+          "Email Patrick (MOLO) with consolidated bug list: purchase price sync, sublet search, LOA, WIP, date stamps, WO job types (Adina)",
+          "Investigate NetSuite inventory bump for item 15422781 on May 4 8:21 AM — report findings (Harrison)",
+          "Continue documenting bugs with screenshots and sending to Adina/Harrison (All purchasers)"
+        ]
+      },
+      {
+        area: "Margin Reporting & UOM Standardization",
+        color: "#3B82F6",
+        notes: [
+          "Current margin report unreliable — zero-price transactions from internals, flat-rate jobs, warranty, and packages distort margins",
+          "Live example: WO 227569 showed $700 loss on paint — service manager manually adjusted sales price below cost (sold Pettit Trinidad Pro Blue for $72 each vs $314 cost)",
+          "Solution: filter report by MOLO Job Type = Retail to exclude internal/warranty/rework/package/flat-rate transactions",
+          "UOM problem: inconsistent units across sites (sandpaper by sheet vs. by box) creates incorrect costing and margins",
+          "Justin sells sandpaper by 0.25/0.5/box; Cheri sells sandpaper by the sheet (100 per roll)",
+          "Decision: standardize all items to the smallest unit of measure ever issued at any site",
+          "Use native NetSuite Order Multiple field to display conversion rate on POs (e.g., box of 100 = order multiple of 100)",
+          "Avoid custom 'pack conversion' field — Order Multiple is the proper native field and aligns with future MRP/buyer's workbench",
+          "Service managers should NOT be able to adjust sales prices on work orders — needs to be locked to certain individuals",
+          "Average cost is location-based in NetSuite (good for site-level margin tracking) — top-level average cost across all locations is meaningless"
+        ],
+        actionItems: [
+          "Update margin report: invoice-level detail; filter Retail; exclude Internal; add WO job type column; email to team (Harrison)",
+          "Lead UOM standardization project — convert items to smallest issued unit, populate Order Multiple field (Steven & Chad)",
+          "Get Brian/Jenna/Andrew alignment on company-wide UOM direction before rolling out to purchasers (Adina)"
+        ]
+      },
+      {
+        area: "Future Sites — Inventory Load",
+        color: "#22C55E",
+        notes: [
+          "Inventory migration plan: export valuation from SightLine → import new items to NetSuite → import inventory quantities + costs via NetSuite inventory adjustment → recreate ~5 open POs manually → ensure all SightLine WIP is closed before migration"
+        ],
+        actionItems: [
+          "Email Peter Bratzis (IT) re: SightLine valuation report — confirm whether it includes WIP and confirm cutover approach (Steven)",
+          "Confirm with SightLine that all open work orders/WIP will be closed before migration (Steven)"
+        ]
+      },
+    ],
+    nextMeeting: "TBD"
+  }
+];
+
+const WORKFLOWS = [
+  {id:"vicai",cat:"Vic.AI / AP",name:"Vic.AI / AP Automation",color:"#F59E0B",bg:"#FFFBEB",phase:"Stabilizing",
+   owners:["Vic.AI Team","Leslie","Stephanie","Adina"],
+   desc:"Invoice intake, 3-way PO matching, autonomous approval flows, vendor onboarding, ACH setup, payment reconciliation.",
+   steps:[["Vendor onboarding & ACH setup","In Progress"],["Invoice intake & AI predictions","Done"],["3-Way PO matching & Sightline mapping","In Progress"],["Approval flow configuration (~64 approvers)","Done"],["Payment reconciliation process","In Progress"],["Sightline credit process definition","Not Started"],["Prepayment workaround documented","Not Started"]],
+   docs:["VIC.AI Process.docx","VicAI Guidebook 4-26-26.docx"]},
+  {id:"molo",cat:"MOLO Integration",name:"MOLO ↔ NetSuite Integration",color:"#22C55E",bg:"#F0FDF4",phase:"In Progress",
+   owners:["Adina","MOLO Team","NetSuite Implementation"],
+   desc:"Bi-directional sync between MOLO and NetSuite. Item strategy, WIP fix, boat records, customer/vendor lists, go-live cutover.",
+   steps:[["Item list sync (inventory items)","In Progress"],["Customer & vessel data review","In Progress"],["Boat record review & ownership history","In Progress"],["WIP band-aid fix deployed","Not Started"],["LOA UoM mapping error fixed","Not Started"],["Labor cost sync on internal invoices","Not Started"],["Work Order → PO automation scoped","Not Started"]],
+   docs:["Molo to NetSuite Flow.docx","Service Items.docx","Hinckley Yacht Workflow Updated 2-25-26.docx"]},
+  {id:"purchasing",cat:"NetSuite Purchasing",name:"NetSuite Purchasing",color:"#3B82F6",bg:"#EFF6FF",phase:"Go-Live",
+   owners:["NetSuite Implementation","Gretchen","Leslie","Adina"],
+   desc:"NetSuite replaces MOLO for all purchasing. PO creation, item receipts, item management, user roles, training.",
+   steps:[["MOLO POs migrated to NetSuite (Apr 26)","Done"],["User roles assigned (Procurement Manager 1B)","Done"],["2FA and user preferences configured","In Progress"],["Item data fixes imported","In Progress"],["PO numbering system live","Done"],["Future: WO → PO auto-creation","Not Started"]],
+   docs:["NetSuite_Purchasing_4-26-26.docx","MOLO Purchasing Process 4-26-26.docx"]},
+  {id:"paylocity",cat:"Paylocity / Concur",name:"Paylocity / Concur / HR",color:"#A855F7",bg:"#FAF5FF",phase:"In Progress",
+   owners:["Stephanie","Gretchen","Nicole"],
+   desc:"Payroll JE automation, P-card/Concur expense process, employee reimbursements, new employee SOP.",
+   steps:[["Paylocity JE import tested & approved","In Progress"],["Paylocity JE automation configured","Not Started"],["Concur P-card export mapped to JE template","Not Started"],["P-card test import run with approval","Not Started"],["Employee reimbursement flow confirmed","Done"],["New employee SOP published","Done"]],
+   docs:["Concur & Paylocity.docx","Creating New Employee.docx"]},
+  {id:"financial",cat:"Financial Close",name:"Financial Close & Reporting",color:"#14B8A6",bg:"#F0FDFA",phase:"In Progress",
+   owners:["Gretchen","Jenna","Nicole","NetSuite Implementation","Adina"],
+   desc:"Period locking, trial balance imports, REVREC, intercompany elimination, production overhead allocation, BI data lake.",
+   steps:[["April period locked in NetSuite","Done"],["Trial balance imported & reconciled","In Progress"],["Revenue recognition (REVREC) configured","In Progress"],["Intercompany clearing process defined","Not Started"],["Production overhead allocation automated","Not Started"],["BI / data lake project kicked off","Not Started"],["Management reporting package built","In Progress"]],
+   docs:["Intercompany_Revenue_Summary.docx","Production Allocation Process.docx"]},
+  {id:"sysconfig",cat:"System Config",name:"System Configuration",color:"#64748B",bg:"#F8FAFC",phase:"In Progress",
+   owners:["Gretchen","Adina","NetSuite Implementation"],
+   desc:"NetSuite COA restructure, GL locks, roles & permissions, features configuration, Sightline GL mapping.",
+   steps:[["COA restructured & accounts renamed","In Progress"],["GL creation locked to Lou + Gretchen","In Progress"],["Roles assigned (Leslie, Tracy, new users)","In Progress"],["Sandbox visual cue applied","Not Started"],["NetSuite features configured","In Progress"],["Sightline GL mapping corrected","Done"],["Exception Management enabled on dashboards","Not Started"]],
+   docs:["NetSuite Enabled Features and General Preferences.docx","NetSuite Tips and Tricks.docx"]},
+];
+
+const SEED = [
+["Follow up on two open Vic.ai issues with Vivian","Not Started","2026-04-28","Leslie","Vic.AI / AP"],
+["Repost the canceled invoices once Vivian confirms","Not Started","2026-05-05","Leslie","Vic.AI / AP"],
+["Repost all invoices in a Posting Failed state","Not Started","2026-05-07","Leslie","Vic.AI / AP"],
+["Report on Vic AI progress after the call with the vendor","Not Started","2026-05-05","Stephanie","Vic.AI / AP"],
+["Fix the discount display error in Vic.ai","Not Started","2026-04-22","Vic.AI Team","Vic.AI / AP"],
+["Provide the public dashboard link for vendor onboarding","Not Started","2026-04-24","Vic.AI Team","Vic.AI / AP"],
+["Upload initial vendor ACH details","Not Started","2026-04-24","Vic.AI Team","Vic.AI / AP"],
+["Confirm vendor credit sync logic before Thursday","Not Started","2026-04-27","Vic.AI Team","Vic.AI / AP"],
+["Follow up with support on the processing screen glitch","Not Started","2026-04-30","Vic.AI Team","Vic.AI / AP"],
+["Follow up with Julian on the duplicate posting error","Not Started","2026-04-30","Vic.AI Team","Vic.AI / AP"],
+["Provide Peter with the list of affected Sightline POs","Not Started","2026-04-30","Vic.AI Team","Vic.AI / AP"],
+["Investigate the root cause of the spinning invoices","Not Started","2026-05-05","Vic.AI Team","Vic.AI / AP"],
+["Cancel all spinning invoices","Not Started","2026-05-05","Vic.AI Team","Vic.AI / AP"],
+["Manually clear all duplicate posting errors","Not Started","2026-05-05","Vic.AI Team","Vic.AI / AP"],
+["Follow up on the IT screen-glitching ticket","Not Started","2026-05-05","Vic.AI Team","Vic.AI / AP"],
+["Confirm vendor campaign status with Katie","Not Started","2026-05-05","Vic.AI Team","Vic.AI / AP"],
+["Schedule an analytics session with Jack","Not Started","2026-05-05","Vic.AI Team","Vic.AI / AP"],
+["Confirm the system glitch fix release date and notify the team","Not Started","2026-05-07","Vic.AI Team","Vic.AI / AP"],
+["Review accuracy reports with the ML team","Not Started","2026-05-07","Vic.AI Team","Vic.AI / AP"],
+["Test the VRA process using the two new test VRAs","Not Started","2026-05-07","Vic.AI Team","Vic.AI / AP"],
+["Discuss the Vic AI bank reconciliation process","Not Started","2026-04-01","Adina","Vic.AI / AP"],
+["Create the Vic AI AP process document for Nicoles team","Not Started","2026-04-17","Adina","Vic.AI / AP"],
+["Define the process for handling Sightline credits","Not Started","2026-04-21","Adina","Vic.AI / AP"],
+["Develop a process for applying credits to Sightline POs","Not Started","2026-04-22","Adina","Vic.AI / AP"],
+["Update Item Account data in the Sightline source file","Not Started","2026-04-30","Adina","Vic.AI / AP"],
+["Reclass all incorrect inventory bill postings to new Vouchers Payable account","Not Started","2026-05-07","NetSuite Implementation","Vic.AI / AP"],
+["Run the script to update bill dates to April 27","Not Started","2026-04-30","NetSuite Implementation","Vic.AI / AP"],
+["Review and manually correct other non-inventory Vic AI bill postings","Not Started","2026-05-07","Jenna","Vic.AI / AP"],
+["Run script to fix incorrect invoice dates from Vic.ai","Not Started","2026-04-27","NetSuite Implementation","Vic.AI / AP"],
+["Location Balancing Testing","In Progress","2026-02-25","Adina","MOLO Integration"],
+["Mapping Fix Molo NetSuite Inventory Items and Other GL Codes","In Progress","2026-02-25","Adina","MOLO Integration"],
+["Item List Sync Molo to NetSuite","In Progress","2026-02-25","Adina","MOLO Integration"],
+["Customer List Data Review - Missing customers","In Progress","2026-02-25","Adina","MOLO Integration"],
+["Molo Boat Record Review","In Progress","2026-02-25","Adina","MOLO Integration"],
+["Ownership History Review","In Progress","2026-02-25","Adina","MOLO Integration"],
+["Confirm with Jenna the MOLO VRMA workflow is acceptable","Not Started","2026-03-13","Adina","MOLO Integration"],
+["Follow up with Dimitri on item and customer list data","Not Started","2026-04-07","Adina","MOLO Integration"],
+["Confirm AR ledger tie-out against Molo report","Not Started","2026-04-28","Adina","MOLO Integration"],
+["Review inventory tie-out for all sites","Not Started","2026-04-28","Adina","MOLO Integration"],
+["Investigate the item receipt incorrectly hitting the Direct Materials GL","Not Started","2026-05-05","Adina","MOLO Integration"],
+["Ask Peter to re-upload the 82670 record history file","Not Started","2026-05-05","Adina","MOLO Integration"],
+["Finalize the list of accounting issues before sending to the Molo team","Not Started","2026-05-10","Adina","MOLO Integration"],
+["Discuss the internal WO cost capture issue with Jenna","Not Started","2026-05-10","Adina","MOLO Integration"],
+["Create a consolidated list of critical vs Phase 2 items for Dan","Not Started","2026-05-05","Adina","MOLO Integration"],
+["Fix the Molo job type sync issue","Not Started","2026-04-28","MOLO Team","MOLO Integration"],
+["Investigate why labor costs are not syncing on internal invoices","Not Started","2026-04-28","MOLO Team","MOLO Integration"],
+["Implement the band-aid WIP fix","Not Started","2026-05-05","MOLO Team","MOLO Integration"],
+["Investigate and fix the LOA UoM mapping error","Not Started","2026-05-05","MOLO Team","MOLO Integration"],
+["Continue to work around the WIP and LOA bugs","Not Started","2026-05-10","MOLO Team","MOLO Integration"],
+["Contact Dan Nelson at Molo for timeline on Work Order to PO workflow","Not Started","2026-04-01","MOLO Team","MOLO Integration"],
+["Discuss the boat record data priority with Andrew","Not Started","2026-04-06","MOLO Team","MOLO Integration"],
+["Email GMs to coordinate with service managers on collecting missing vessel data","Not Started","2026-03-31","MOLO Team","MOLO Integration"],
+["Remove Molo PO and Vendor Bill permissions pending review of the sublet workflow","Not Started","2026-04-13","MOLO Team","MOLO Integration"],
+["Discuss the item type sync logic with Patrick","Not Started","2026-04-07","MOLO Team","MOLO Integration"],
+["Confirm the GL impact of MOLO negative inventory feature","Not Started","2026-03-27","MOLO Team","MOLO Integration"],
+["Confirm with Patrick if the intercompany type tag is flowing to NetSuite","Not Started","2026-05-10","MOLO Team","MOLO Integration"],
+["Schedule a call with Harrison to clarify MOLO transaction reversals","Not Started","2026-04-23","Adina","MOLO Integration"],
+["Investigate the 50k non-inventory item account balance in MOLO","Not Started","2026-04-23","Adina","MOLO Integration"],
+["Schedule a call to define the post-go-live reconciliation process","Not Started","2026-04-23","Adina","MOLO Integration"],
+["Schedule a meeting to define the WIP accounting model","Not Started","2026-04-26","Adina","MOLO Integration"],
+["Provide go-ahead to Patrick and Harrison for MOLO data cutover","Not Started","2026-04-23","Adina","MOLO Integration"],
+["Allocation Schedule Dept Update","Not Started","2026-02-20","NetSuite Implementation","NetSuite Purchasing"],
+["Create the custom FOB field on the vendor record","Not Started","2026-04-21","NetSuite Implementation","NetSuite Purchasing"],
+["Move PO line fields Location Department to the end of the line","Not Started","2026-04-23","NetSuite Implementation","NetSuite Purchasing"],
+["Move item record fields MOLO BIN Purchase Price to the top","Not Started","2026-04-23","NetSuite Implementation","NetSuite Purchasing"],
+["Wipe the production environment and notify Patrick to begin the MOLO sync","Not Started","2026-04-23","NetSuite Implementation","NetSuite Purchasing"],
+["Initiate the Sandbox refresh","Not Started","2026-04-23","NetSuite Implementation","NetSuite Purchasing"],
+["Execute the cutover plan on Monday AM","Not Started","2026-04-23","NetSuite Implementation","NetSuite Purchasing"],
+["Import item data fixes missing base pricing non-inventory setup","Not Started","2026-04-26","NetSuite Implementation","NetSuite Purchasing"],
+["Lock April AP and AR periods in NetSuite tonight","Not Started","2026-04-26","NetSuite Implementation","NetSuite Purchasing"],
+["Import MOLO inventory files as NetSuite adjustments","Not Started","2026-04-27","NetSuite Implementation","NetSuite Purchasing"],
+["Create P&I Item checkbox on the inventory item form","Not Started","2026-04-27","NetSuite Implementation","NetSuite Purchasing"],
+["Add the Payment Method field to the bill payment form","Not Started","2026-05-05","NetSuite Implementation","NetSuite Purchasing"],
+["Update the cheat sheet with NetSuite codes and distribute to purchasers","Not Started","2026-04-28","Leslie","NetSuite Purchasing"],
+["Update preferences Number of Rows in List Segments to 1000","Not Started","2026-05-05","Leslie","NetSuite Purchasing"],
+["Customize dashboards using Reminders Shortcuts and Custom Content portlets","Not Started","2026-05-05","Leslie","NetSuite Purchasing"],
+["Re-attempt the TB import after balancing","Not Started","2026-03-12","Nicole","NetSuite Purchasing"],
+["Build separate allocation schedules for all required GL accounts","Not Started","2026-03-31","Nicole","NetSuite Purchasing"],
+["Consult Joshua Sightline on the non-inventory PO GL impact timing","Not Started","2026-03-27","Nicole","NetSuite Purchasing"],
+["Create the custom bin location table on the item record","Not Started","2026-04-23","Adina","NetSuite Purchasing"],
+["Follow up with Harrison to add the location-specific BIN to the PO PDF","Not Started","2026-04-24","Adina","NetSuite Purchasing"],
+["Notify Peter to automate the Sightline PO file export","Not Started","2026-04-21","Adina","NetSuite Purchasing"],
+["Create a saved search to flag transactions posted to prior periods","Not Started","2026-04-28","Adina","NetSuite Purchasing"],
+["Train Stephanie and Leslie on NetSuite batch check runs","Not Started","2026-04-23","Adina","NetSuite Purchasing"],
+["Send calendar invite for the April 22nd training session","Not Started","2026-04-21","Adina","NetSuite Purchasing"],
+["Create the purchasing cheat sheet with FAQs from Chad and Steven","Not Started","2026-04-21","Gretchen","NetSuite Purchasing"],
+["Test Paylocity integration and get sign-off from Nicole and Jenna","Not Started","2026-03-31","Stephanie","Paylocity / Concur"],
+["Test Concur import with Gretchen once Nicole provides GL specs","Not Started","2026-03-31","Stephanie","Paylocity / Concur"],
+["Email VIT to remove the CLIENT NAME department from the system","Not Started","2026-05-07","Stephanie","Paylocity / Concur"],
+["Paylocity and NetSuite UAT Testing and Flow","In Progress","2026-02-25","Gretchen","Paylocity / Concur"],
+["Review the test Paylocity journal entry with Jenna","Not Started","2026-03-27","Gretchen","Paylocity / Concur"],
+["Work with Stephanie to configure the custom PO column in Concur","Not Started","2026-03-31","Gretchen","Paylocity / Concur"],
+["Trial Balance Review Summary","Not Started","2026-02-25","Gretchen","Financial Close"],
+["Management Report Creation","Not Started","2026-02-25","Gretchen","Financial Close"],
+["Attend the meeting with Nicole to clarify production RevRec needs","Not Started","2026-03-27","Gretchen","Financial Close"],
+["Complete historical balance sheet imports once the system is stable","Not Started","2026-03-27","Gretchen","Financial Close"],
+["Add indirect expense GLs to the chart of accounts","Not Started","2026-04-01","Gretchen","Financial Close"],
+["Send the final management package PDF to Adina","Not Started","2026-04-17","Gretchen","Financial Close"],
+["Schedule the R2R review with Adina for Monday","Not Started","2026-04-17","Gretchen","Financial Close"],
+["Begin building financial schedules as Saved Searches","Not Started","2026-04-21","Gretchen","Financial Close"],
+["Confirm Divyas Molo report email is redirected to Jenna","Not Started","2026-05-05","Gretchen","Financial Close"],
+["Restructure the COA rename inactivate and group accounts","Not Started","2026-05-07","Gretchen","Financial Close"],
+["Update import mappings to reflect new account IDs","Not Started","2026-05-07","Gretchen","Financial Close"],
+["Rename and remove incorrect reports in NetSuite","Not Started","","Gretchen","Financial Close"],
+["Contact Harrison for help building the final report set","Not Started","","Gretchen","Financial Close"],
+["Test Claude AI for data cleanup","Not Started","","Gretchen","Financial Close"],
+["Investigate the 100% prepayment workflow with the team","Not Started","2026-04-01","Gretchen","Financial Close"],
+["NetSuite Reports Build for Jenna Service P&L Statements","Not Started","2026-02-25","Gretchen","Financial Close"],
+["Clean up obsolete locations in NetSuite","Not Started","2026-03-12","Gretchen","Financial Close"],
+["Confirm REVREC Package Hierarchy","Not Started","2026-02-19","Jenna","Financial Close"],
+["Discuss Inventory Costing Molo","Not Started","2026-02-19","Jenna","Financial Close"],
+["Review NetSuite allocations with Adina and Gretchen","Not Started","2026-04-10","Jenna","Financial Close"],
+["Tag all open work orders for intercompany functionality","Not Started","2026-04-21","Jenna","Financial Close"],
+["Create and distribute the new AP process communication","Not Started","2026-04-23","Jenna","Financial Close"],
+["Review Harrison inventory opening balance files for accuracy","Not Started","2026-04-28","Jenna","Financial Close"],
+["Join the revenue allocation call with Nicole and Harrison","Not Started","2026-05-05","Jenna","Financial Close"],
+["Send the internal customers report to Laura for review","Not Started","2026-05-05","Jenna","Financial Close"],
+["Request Peters Sightline export file to fix the GL mapping error","Not Started","2026-05-07","Jenna","Financial Close"],
+["Schedule a meeting with Brian to discuss pausing the Molo go-live","Not Started","2026-05-07","Jenna","Financial Close"],
+["Continue using manual journal entry workaround for internal labor costs","Not Started","2026-05-10","Jenna","Financial Close"],
+["Lock the NetSuite period ending April 26 on Monday","Not Started","2026-04-24","NetSuite Implementation","Financial Close"],
+["Post the GL reversal journal entry on Monday morning","Not Started","2026-04-24","NetSuite Implementation","Financial Close"],
+["Create the revenue allocation report for packages","Not Started","2026-05-05","NetSuite Implementation","Financial Close"],
+["Finalize the general ledger report for transaction tracking","Not Started","2026-05-05","NetSuite Implementation","Financial Close"],
+["Investigate and consolidate all temporary deferred revenue activity into account 2818","Not Started","2026-05-10","NetSuite Implementation","Financial Close"],
+["Automate the daily running of Revenue Arrangements for account 2818","Not Started","2026-05-10","NetSuite Implementation","Financial Close"],
+["Sync Gretchen and Jenna to align on reporting needs","In Progress","2026-03-10","Adina","Financial Close"],
+["Build financial schedules as Saved Searches to assist Gretchen","Not Started","2026-04-21","Adina","Financial Close"],
+["Define the post-go-live balance sheet import process with Gretchen","Not Started","2026-04-06","Adina","Financial Close"],
+["Schedule a 1-on-1 with Jenna for Monday to discuss GL flow","Not Started","2026-04-17","Adina","Financial Close"],
+["Request creation of the Intercompany Clearing GL account in NetSuite","Not Started","2026-04-22","Adina","Financial Close"],
+["Propose a name for the new Molo payment type","Not Started","2026-04-22","Adina","Financial Close"],
+["Review the proposed AR and AP clearing process with Nicole and Brian","Not Started","2026-04-22","Adina","Financial Close"],
+["Confirm the intercompany job checkbox will correctly route revenue","Not Started","2026-04-22","Adina","Financial Close"],
+["Define the final workflow for routing intercompany invoices for coding","Not Started","2026-04-22","Adina","Financial Close"],
+["Email Gretchen to rename GL 2818 to Temporary Deferred Revenue","Not Started","2026-04-21","Adina","Financial Close"],
+["Research native NetSuite prepayment features","Not Started","2026-05-07","Adina","Financial Close"],
+["Discuss prepayment tracking on next weeks agenda","Not Started","2026-05-07","Adina","Financial Close"],
+["Lock down GL creation and changes in NetSuite to Lou and Gretchen","In Progress","2026-03-04","Adina","System Config"],
+["Confirm the UAT sandbox timeline with the BCC team","Not Started","2026-04-21","Adina","System Config"],
+["Request correct NetSuite roles for Leslie and Tracy from Gretchen","Not Started","2026-04-21","Adina","System Config"],
+["Pause direct problem-reporting to the AP team for 3-4 days","Not Started","2026-05-07","Adina","System Config"],
+["Propose an enterprise Claude license to Brian","Not Started","2026-05-07","Adina","System Config"],
+["Enable the Exception Management portlet on user dashboards","Not Started","2026-05-05","Adina","System Config"],
+["Create the custom NetSuite saved search for GL activity","Not Started","2026-05-05","Adina","System Config"],
+["Correct the GL account mapping in NetSuite asset vs liability","Not Started","2026-05-07","Adina","System Config"],
+["Build rules in NetSuite to auto-map transactions to correct GLs","Not Started","2026-05-10","Adina","System Config"],
+["Notify Harrison of the Base Price script error and missing System Information tab","Not Started","2026-05-10","Adina","System Config"],
+["Consult Jenna on the GL impact of the non-tracked item bug","Not Started","2026-04-06","Adina","System Config"],
+["Investigate the new native Outlook sync connector","Not Started","2026-05-05","NetSuite Implementation","System Config"],
+["Enable Exception Management for Hinckley","Not Started","2026-05-05","NetSuite Implementation","System Config"],
+["Select appropriate variance GLs for the Post Vendor Bill Variances tool","Not Started","2026-05-07","Gretchen","System Config"],
+["Report any sync failures that occur after a 5-minute delay","Not Started","2026-05-10","Cheri","System Config"],
+// ── May 14, 2026 — Weekly Sync: Hinckley Purchasing ───────────────────────
+["Email Patrick (MOLO) consolidated bug list — purchase price sync, sublet search, LOA, WIP, date stamps, WO job types","Not Started","2026-05-14","Adina","MOLO Integration"],
+["Call Brian re: Stanford MOLO launch — escalate risks and decision; update Steven + Harrison","Not Started","2026-05-14","Adina","MOLO Integration"],
+["Propose Claude team plan + NetSuite MCP Connector to Brian","Not Started","2026-05-14","Adina","System Config"],
+["Update margin report — invoice-level detail; filter Retail; exclude Internal; add WO job type column; email team","Not Started","2026-05-14","NetSuite Implementation","NetSuite Purchasing"],
+["Investigate NetSuite inventory bump for item 15422781 on May 4 8:21 AM — report findings","Not Started","2026-05-14","NetSuite Implementation","MOLO Integration"],
+["Lead UOM standardization project — convert items to smallest issued unit, populate Order Multiple field","Not Started","2026-05-14","Adina","NetSuite Purchasing"],
+["Email Peter Bratzis (IT) re: SightLine valuation report — confirm whether it includes WIP and confirm cutover approach","Not Started","2026-05-14","Adina","MOLO Integration"],
+["Confirm with SightLine that all open work orders and WIP will be closed before Stanford migration","Not Started","2026-05-14","Adina","MOLO Integration"],
+];
+
+// ── STATE ─────────────────────────────────────────────────────────────────
+const SK = "hy-vanilla-v1", DK = "hy-vanilla-del-v1";
+let tasks = [], archived = [], nid = 1;
+let groupBy = "person", screen = "tasks";
+let filterSecondary = "", filterStatus = "", filterPrimary = "";
+let openTaskId = null, showArchive = false, addingNew = false;
+let collapsed = {}, openWf = null, openStep = null, hubEditId = null, bulkSelected = new Set(), hubBulkSelected = new Set();
+
+function loadData() {
+  try { const d = JSON.parse(localStorage.getItem(SK)||"null"); if(d){tasks=d.tasks;nid=d.nid;} else seed(); } catch(e){seed();}
+  try { archived = JSON.parse(localStorage.getItem(DK)||"[]"); } catch(e){ archived=[]; }
+}
+function saveData() {
+  localStorage.setItem(SK, JSON.stringify({tasks,nid}));
+  localStorage.setItem(DK, JSON.stringify(archived));
+}
+function seed() {
+  tasks = SEED.map((s,i)=>({id:i+1,task:s[0],status:s[1],date:s[2],person:s[3],category:s[4],priority:"",notes:""}));
+  nid = tasks.length + 1;
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────
+function ac(n){ return AVC[n]||["#F3F4F6","#374151"]; }
+function ini(n){ return (n||"?").split(" ").map(w=>w[0]||"").join("").slice(0,2).toUpperCase(); }
+function fd(d){ if(!d)return""; try{ const[,m,dy]=d.split("-"); return["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+m-1]+" "+parseInt(dy); }catch(e){return"";} }
+function esc(s){ return (s||"").toString().replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function avHTML(name,size){
+  const[bg,fg]=ac(name);
+  return `<span class="av" style="width:${size}px;height:${size}px;font-size:${Math.floor(size*.42)}px;background:${bg};color:${fg}">${ini(name)}</span>`;
+}
+function statusPill(s){
+  const bg=STATUS_BG[s]||"#F1F5F9", col=STATUS_COL[s]||"#64748B", dot=STATUS_DOT[s]||"#CBD5E1";
+  return `<span class="pill" style="background:${bg};color:${col};display:inline-flex;align-items:center;gap:4px"><span style="width:6px;height:6px;border-radius:50%;background:${dot};display:inline-block"></span>${esc(s)}</span>`;
+}
+function catPill(c){
+  const col=CAT_COLOR[c]||"#64748B";
+  return `<span class="pill" style="background:${col}22;color:${col}">${esc(c)}</span>`;
+}
+function people(){ return [...new Set(tasks.map(t=>t.person).filter(Boolean))].sort(); }
+function visible(){
+  return tasks.filter(t=>
+    (!filterStatus||t.status===filterStatus)&&
+    (!filterPrimary||(groupBy==="person"?t.person===filterPrimary:t.category===filterPrimary))&&
+    (!filterSecondary||(groupBy==="person"?t.category===filterSecondary:t.person===filterSecondary))
+  );
+}
+
+// ── SCREEN SWITCHING ──────────────────────────────────────────────────────
+function setScreen(s){
+  screen=s;
+  document.getElementById("screen-tasks").style.display    = s==="tasks"?"":"none";
+  document.getElementById("screen-hub").style.display      = s==="hub"?"":"none";
+  document.getElementById("screen-meetings").style.display = s==="meetings"?"":"none";
+  document.getElementById("btn-tasks").className    = s==="tasks"?"on":"";
+  document.getElementById("btn-hub").className      = s==="hub"?"on":"";
+  document.getElementById("btn-meetings").className = s==="meetings"?"on":"";
+  if(s==="hub")      renderHub();
+  if(s==="meetings") renderMeetings();
+}
+function setGroup(g){
+  groupBy=g;filterSecondary="";filterPrimary="";openTaskId=null;
+  document.getElementById("grp-person").className = g==="person"?"on":"";
+  document.getElementById("grp-cat").className    = g==="category"?"on":"";
+  render();
+}
+function toggleArchive(){
+  showArchive=!showArchive;
+  document.getElementById("btn-archive").className = showArchive?"btn btn-active":"btn";
+  document.getElementById("btn-archive").textContent = showArchive?"◀ Back":"Archive ("+archived.length+")";
+  render();
+}
+
+function toggleAllGroups(){
+  const allBodies = document.querySelectorAll('[id^="group-body-"]');
+  if(!allBodies.length) return;
+  const anyVisible = Array.from(allBodies).some(el => el.style.display !== "none");
+  allBodies.forEach(el => {
+    const key = el.id.replace("group-body-","");
+    collapsed[key] = anyVisible;
+    el.style.display = anyVisible ? "none" : "";
+    const arrow = el.previousElementSibling?.querySelector('span:last-child');
+    if(arrow) arrow.textContent = anyVisible ? "▶" : "▼";
+  });
+  const btn = document.getElementById("btn-collapse");
+  if(btn) btn.textContent = anyVisible ? "⊞ Expand all" : "⊟ Collapse all";
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────
+function render(){
+  renderSecondaryFilter();
+  renderStats();
+  renderContent();
+}
+
+function renderSecondaryFilter(){
+  const sel = document.getElementById("filter-secondary");
+  const cur = filterSecondary;
+  if(groupBy==="person"){
+    sel.innerHTML = `<option value="">All workflows</option>`+CATEGORIES.map(c=>`<option${c===cur?" selected":""}>${c}</option>`).join("");
+  } else {
+    sel.innerHTML = `<option value="">All people</option>`+people().map(p=>`<option${p===cur?" selected":""}>${p}</option>`).join("");
+  }
+  document.getElementById("stats-label").textContent = "Tasks per "+(groupBy==="person"?"assignee":"workflow");
+}
+
+function renderStats(){
+  const vis = visible();
+  const groups = groupBy==="person"
+    ? people().map(p=>({label:p,count:vis.filter(t=>t.person===p).length})).filter(x=>x.count>0)
+    : CATEGORIES.map(c=>({label:c,count:vis.filter(t=>t.category===c).length})).filter(x=>x.count>0);
+
+  let html = groups.map(({label,count})=>{
+    const color = groupBy==="person" ? ac(label)[1] : (CAT_COLOR[label]||"#64748B");
+    const bg    = groupBy==="person" ? ac(label)[0] : (CAT_BG[label]||"#F8FAFC");
+    const active = filterPrimary===label;
+    return `<div class="stat-card" style="background:${bg};border-color:${active?color:color+"30"}" onclick="statClick('${label.replace(/'/,"\'")}')">
+      <div class="stat-n" style="color:${color}">${count}</div>
+      <div class="stat-l" style="color:${color}">${esc(label)}</div>
+    </div>`;
+  }).join("");
+  html += `<div class="stat-card"><div class="stat-n">${vis.length}</div><div class="stat-l" style="color:#94A3B8">Total</div></div>`;
+  document.getElementById("stats-row").innerHTML = html;
+}
+
+function statClick(label){
+  filterPrimary = filterPrimary===label ? "" : label;
+  renderSecondaryFilter();
+  renderStats();
+  renderContent();
+}
+
+function renderContent(){
+  if(showArchive){ renderArchive(); return; }
+  const addTop = document.getElementById("add-form-top");
+  addTop.innerHTML = addingNew ? buildEditForm(null) : "";
+  if(addingNew){ attachFormEvents("new-form"); }
+
+  const vis = visible();
+  const groupKeys = groupBy==="person" ? people() : CATEGORIES;
+  let html = "";
+  groupKeys.forEach(key=>{
+    const gTasks = vis.filter(t=>groupBy==="person"?t.person===key:t.category===key);
+    if(!gTasks.length) return;
+    const ip=gTasks.filter(t=>t.status==="In Progress").length;
+    const dn=gTasks.filter(t=>t.status==="Done").length;
+    const ns=gTasks.filter(t=>t.status==="Not Started").length;
+    const bg   = groupBy==="person" ? ac(key)[0] : (CAT_BG[key]||"#F8FAFC");
+    const col  = groupBy==="person" ? ac(key)[1] : (CAT_COLOR[key]||"#374151");
+    const bdr  = col+"50";
+    html += `<div class="group" style="border-color:${bdr}">
+      <button class="group-hdr" style="background:${bg}" onclick="toggleGroup('${key.replace(/'/,"\'")}')">
+        ${groupBy==="person" ? avHTML(key,26) : `<span class="dot" style="background:${CAT_COLOR[key]||col}"></span>`}
+        <span class="group-name" style="color:${groupBy==="person"?"#0F172A":col}">${esc(key)}</span>
+        <span class="group-count">${gTasks.length} tasks</span>
+        ${ip>0?`<span class="badge" style="background:#EFF6FF;color:#1D4ED8">${ip} active</span>`:""}
+        ${dn>0?`<span class="badge" style="background:#F0FDF4;color:#16A34A">${dn} done</span>`:""}
+        ${ns>0?`<span class="badge" style="background:#F1F5F9;color:#64748B">${ns} pending</span>`:""}
+        <span style="font-size:10px;color:#CBD5E1;margin-left:4px">${collapsed[key]?"▶":"▼"}</span>
+      </button>
+      <div id="group-body-${CSS.escape(key)}" style="display:${collapsed[key]?"none":""}">`;
+    gTasks.forEach((t,i)=>{
+      const isOpen = openTaskId===t.id;
+      const isChecked = bulkSelected.has(t.id);
+      html += `<div style="display:flex;align-items:stretch;border-bottom:1px solid #E5E7EB;background:${isChecked?"#EFF6FF":"transparent"}">
+        <label style="display:flex;align-items:center;padding:0 6px 0 12px;cursor:pointer;flex-shrink:0" onclick="event.stopPropagation()">
+          <input type="checkbox" ${isChecked?"checked":""} onchange="toggleBulkSelect(${t.id},this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:#1D4ED8">
+        </label>
+        <button class="task-row${isOpen?" open":""}" style="opacity:${t.status==="Done"?.45:1};flex:1;border:none;border-bottom:none;padding:10px 10px 10px 4px" onclick="toggleTask(${t.id})">
+          <span onclick="event.stopPropagation();cycleStatus(${t.id})" title="Click to cycle status" style="width:11px;height:11px;border-radius:50%;flex-shrink:0;background:${STATUS_DOT[t.status]||"#CBD5E1"};cursor:pointer;display:inline-block"></span>
+          <span class="task-text">${esc(t.task)}</span>
+          <span class="task-date">${fd(t.date)}</span>
+          ${statusPill(t.status)}
+          ${groupBy==="person" ? catPill(t.category) : avHTML(t.person,20)+`<span style="font-size:11px;color:#64748B;min-width:80px;text-align:left">${esc(t.person)}</span>`}
+          ${t.priority?`<span class="pill" style="background:${PRI_BG[t.priority]};color:${PRI_COL[t.priority]}">${t.priority}</span>`:`<span style="font-size:9px;color:#E2E8F0">set priority</span>`}
+          <span style="font-size:10px;color:#CBD5E1">${isOpen?"▲":"▼"}</span>
+        </button>
+      </div>`;
+      if(isOpen){
+        html += `<div class="edit-form" id="form-${t.id}">${buildEditForm(t)}</div>`;
+      }
+    });
+    html += `</div></div>`;
+  });
+  if(!html){
+    document.getElementById("main-content").innerHTML = `<div class="empty">No tasks match current filters.</div>`;
+    return;
+  }
+  const vis2 = visible();
+  const groupKeys2 = groupBy==="person"
+    ? [...new Set(vis2.map(t=>t.person).filter(Boolean))].sort()
+    : CATEGORIES.filter(c=>vis2.some(t=>t.category===c));
+  const collapseBtn = `<div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+    <button id="btn-collapse" onclick="toggleAllGroups()" style="height:26px;padding:0 12px;font-size:11px;font-weight:600;background:white;color:#475569;border:1px solid #D1D5DB;border-radius:6px;cursor:pointer">
+      ⊟ Collapse all
+    </button>
+  </div>`;
+  document.getElementById("main-content").innerHTML = collapseBtn + html;
+  // attach form events for open task
+  if(openTaskId){ attachFormEvents("form-"+openTaskId); }
+}
+
+function renderArchive(){
+  document.getElementById("add-form-top").innerHTML="";
+  if(!archived.length){ document.getElementById("main-content").innerHTML=`<div class="empty">No archived tasks.</div>`; return; }
+  let html = `<div style="font-size:13px;font-weight:700;margin-bottom:12px;color:#6B7280">Archived (${archived.length})</div>`;
+  archived.forEach(t=>{
+    html += `<div class="arch-row">
+      ${avHTML(t.person,20)}
+      <span style="font-size:11px;color:#6B7280;min-width:80px">${esc(t.person)}</span>
+      <span style="font-size:11px;flex:1;color:#6B7280">${esc(t.task)}</span>
+      ${statusPill(t.status)}
+      ${catPill(t.category)}
+      <button class="btn" style="height:24px;font-size:10px;opacity:1" onclick="restoreTask(${t.id})">Restore</button>
+    </div>`;
+  });
+  document.getElementById("main-content").innerHTML = html;
+}
+
+function toggleBulkSelect(id, checked){
+  if(checked) bulkSelected.add(id);
+  else bulkSelected.delete(id);
+  updateBulkBar();
+  // update just this row's checkbox without full re-render
+}
+
+function updateBulkBar(){
+  const bar=document.getElementById("bulk-bar");
+  const count=document.getElementById("bulk-count");
+  if(!bar) return;
+  if(bulkSelected.size>0){
+    bar.style.display="flex";
+    count.textContent=bulkSelected.size+" task"+(bulkSelected.size>1?"s":"")+" selected";
+    // populate person select
+    const ps=document.getElementById("bulk-person");
+    if(ps){
+      const ppl=[...new Set(tasks.map(t=>t.person).filter(Boolean))].sort();
+      ps.innerHTML='<option value="">Reassign to...</option>'+ppl.map(p=>`<option>${p}</option>`).join("");
+    }
+  } else {
+    bar.style.display="none";
+  }
+}
+
+function clearBulk(){
+  bulkSelected.clear();
+  updateBulkBar();
+  renderContent();
+}
+
+function applyBulkChange(field, value){
+  if(!value) return;
+  const toArchive=[];
+  bulkSelected.forEach(id=>{
+    const idx=tasks.findIndex(t=>t.id===id);
+    if(idx>=0){
+      tasks[idx]={...tasks[idx],[field]:value};
+      if(field==="status"&&value==="Done") toArchive.push(tasks[idx]);
+    }
+  });
+  toArchive.forEach(t=>{archived.push(t);tasks=tasks.filter(x=>x.id!==t.id);});
+  saveData();
+  bulkSelected.clear();
+  updateBulkBar();
+  render();
+}
+
+function bulkArchive(){
+  if(!confirm("Archive "+bulkSelected.size+" task(s)?")) return;
+  bulkSelected.forEach(id=>{
+    const t=tasks.find(x=>x.id===id);
+    if(t){archived.push(t);}
+  });
+  tasks=tasks.filter(t=>!bulkSelected.has(t.id));
+  bulkSelected.clear();
+  saveData();
+  updateBulkBar();
+  render();
+}
+
+function cycleStatus(id){
+  const idx=tasks.findIndex(t=>t.id===id);
+  if(idx<0) return;
+  const cycle=["Not Started","In Progress","Done"];
+  const cur=tasks[idx].status;
+  const next=cycle[(cycle.indexOf(cur)+1)%cycle.length];
+  if(next==="Done"){
+    archived.push({...tasks[idx],status:"Done"});
+    tasks.splice(idx,1);
+  } else {
+    tasks[idx]={...tasks[idx],status:next};
+  }
+  saveData();
+  renderContent();
+}
+
+function toggleGroup(key){
+  collapsed[key] = !collapsed[key];
+  const el = document.getElementById("group-body-"+CSS.escape(key));
+  if(el) el.style.display = collapsed[key] ? "none" : "";
+  // Update arrow on header button
+  const hdr = el?.previousElementSibling;
+  if(hdr){
+    const arrow = hdr.querySelector('span:last-child');
+    if(arrow) arrow.textContent = collapsed[key] ? "▶" : "▼";
+  }
+}
+function toggleTask(id){
+  openTaskId = openTaskId===id ? null : id;
+  renderContent();
+}
+
+// ── FORM ──────────────────────────────────────────────────────────────────
+function buildEditForm(t){
+  const id = t ? "form-"+t.id : "new-form";
+  const pOpts = people().map(p=>`<option${t&&t.person===p?" selected":""}>${p}</option>`).join("");
+  const cOpts = CATEGORIES.map(c=>`<option${t&&t.category===c?" selected":""}>${c}</option>`).join("");
+  return `<div id="${id}">
+    <div class="edit-grid">
+      <div class="field"><label>Task</label><textarea id="${id}-task">${t?esc(t.task):""}</textarea></div>
+      <div style="display:flex;flex-direction:column;gap:7px">
+        <div class="field"><label>Assignee</label><select id="${id}-person"><option value="">— select —</option>${pOpts}</select></div>
+        <div class="field"><label>Workflow</label><select id="${id}-cat">${cOpts}</select></div>
+        <div class="field"><label>Status</label><select id="${id}-status">
+          <option${!t||t.status==="Not Started"?" selected":""}>Not Started</option>
+          <option${t&&t.status==="In Progress"?" selected":""}>In Progress</option>
+          <option${t&&t.status==="Done"?" selected":""}>Done</option>
+        </select></div>
+        <div class="field"><label>Priority — set by you</label><select id="${id}-pri">
+          <option value=""${!t||!t.priority?" selected":""}>— not set —</option>
+          <option${t&&t.priority==="High"?" selected":""}>High</option>
+          <option${t&&t.priority==="Medium"?" selected":""}>Medium</option>
+          <option${t&&t.priority==="Low"?" selected":""}>Low</option>
+        </select></div>
+      </div>
+    </div>
+    <div class="form-btns">
+      ${t?`<button class="btn-arch" onclick="archiveTask(${t.id})">Archive task</button>`:`<span style="flex:1"></span>`}
+      <button class="btn-cancel" onclick="cancelForm(${t?t.id:"null"})">Cancel</button>
+      <button class="btn-save" onclick="saveTask(${t?t.id:"null"},'${id}')">Save</button>
+    </div>
+  </div>`;
+}
+
+function attachFormEvents(id){
+  // nothing needed — using inline onclick
+}
+
+function openAdd(){
+  addingNew=true;
+  openTaskId=null;
+  renderContent();
+  document.getElementById("new-form-task")?.focus();
+}
+
+function cancelForm(id){
+  if(id===null||id==="null"){ addingNew=false; }
+  else { openTaskId=null; }
+  renderContent();
+}
+
+function saveTask(id, formId){
+  const task = document.getElementById(formId+"-task")?.value?.trim();
+  if(!task) return;
+  const obj = {
+    task,
+    person: document.getElementById(formId+"-person")?.value||"Unassigned",
+    category: document.getElementById(formId+"-cat")?.value||CATEGORIES[0],
+    status: document.getElementById(formId+"-status")?.value||"Not Started",
+    priority: document.getElementById(formId+"-pri")?.value||"",
+    notes: "",
+    date: ""
+  };
+  if(id===null||id==="null"){
+    tasks.push({...obj,id:nid++});
+    addingNew=false;
+  } else {
+    const idx=tasks.findIndex(t=>t.id===id);
+    if(idx>=0) tasks[idx]={...tasks[idx],...obj};
+    openTaskId=null;
+  }
+  saveData();
+  render();
+}
+
+function archiveTask(id){
+  const t=tasks.find(x=>x.id===id);
+  if(!t)return;
+  archived.push(t);
+  tasks=tasks.filter(x=>x.id!==id);
+  openTaskId=null;
+  saveData();
+  render();
+  document.getElementById("btn-archive").textContent="Archive ("+archived.length+")";
+}
+
+function restoreTask(id){
+  const t=archived.find(x=>x.id===id);
+  if(!t)return;
+  tasks.push(t);
+  archived=archived.filter(x=>x.id!==id);
+  saveData();
+  render();
+  document.getElementById("btn-archive").textContent="Archive ("+archived.length+")";
+}
+
+// ── PROCESS HUB ───────────────────────────────────────────────────────────
+
+const STEP_DETAILS = {"vicai": {"Vendor onboarding & ACH setup": {"summary": "Vendors enrolled in ACH payments via VicPay. New vendors with exact name match auto-enrolled; otherwise paid by check.", "points": ["Bank account linked in Vic.ai Admin > Payables — micro-deposit verification complete", "ACH whitelisting: Stephanie whitelists Vic.ai's ACH details (company ID, org name) with the bank", "Only Vendor Manager users (Stephanie, Leslie, Tracy) can view or add ACH details", "Vivian uploading initial ACH details — use Invite Vendor feature for new vendors", "Many vendor records lack email addresses — requires mail-based onboarding campaign", "Vivian providing public dashboard link to monitor vendor sign-up progress", "New vendors must be created in NetSuite first before they appear in Vic.ai"]}, "Invoice intake & AI predictions": {"summary": "Bills retrieved from vendor portals or forwarded via email. Invoice document pushed to NetSuite under the Communication tab.", "points": ["Attachments now syncing correctly to NetSuite (confirmed in UAT)", "Freight: AI predicts freight lines — identified freight treated as an expense", "Taxes: Expense line created for tax on both PO and non-PO invoices", "Missing invoice number: Vic.ai predicts one using account number + date", "Hyperlink invoices: Cannot retrieve — vendors must send attachments instead", "If vendor cannot send attachments, an exception workflow is required", "AP Inbox pending activation — Thomas from Vic.ai applied fix, 72-hour delay reported", "Mass invoice upload: Leslie can upload ~500 saved invoices by selecting all in a folder"]}, "3-Way PO matching & Sightline mapping": {"summary": "Vic.ai syncs with NetSuite for PO and receipt data every 30 minutes. Matching at PO line level: Ordered Qty, Received Qty, Billed Qty.", "points": ["Manual syncs can be triggered in Vic.ai for faster testing", "Max matchable amount = remaining PO quantity x PO unit price", "PO Requester field must contain a valid Vic.ai user — defaults to Tracy if blank or invalid", "Sightline location mapping fix: SNAP > Naples, SSTU > Stewart (corrected)", "Sightline department fix: was routing to CLIENT NAME (ID 1) instead of Hinckley Services (ID 10) — fixed by Julian", "Sightline PO sync: PENDING — requires GL mapping fix and sandbox testing first", "No process currently exists for applying Sightline credits to POs — action item for Hinckley team"]}, "Approval flow configuration (~64 approvers)": {"summary": "Autonomous approval routing determined by vendor, amount, GL account, and dimension. First matching rule is triggered.", "points": ["~64 approvers configured across all flows", "PO mismatches >10% quantity difference or >$100 value > routed to PO Requester", "Standalone bills >$5k > routed to site-specific General Manager", "Standalone bills <$5k > routed manually by Tracy/Leslie for GL code review", "Flows processed top-to-bottom — bill approved by first matching flow", "Post-approval edits must be made via correction journal in NetSuite — do NOT un-approve the bill", "PO mismatch tolerance set for quantity, unit price, and line amount"]}, "Payment reconciliation process": {"summary": "Vic.ai processes payments from its own bank account, funded by lump-sum transfers from Hinckley's Bank of America.", "points": ["One bank account used for all AP payments", "Hinckley transfers the full batch amount to Vic.ai", "In NetSuite: match the lump-sum bank debit to the full batch of individual bill payments", "Vic.ai provides a monthly report of outstanding (un-cashed) checks", "Hinckley books a liability for outstanding checks to ensure accurate financials", "Check void/reissue: Vic.ai automatically voids and reissues checks not cashed within 30 days", "All stop-pays and reissues must be handled by Vic.ai — not Hinckley"]}, "Sightline credit process definition": {"summary": "No process currently exists for applying Sightline credits to POs in Vic.ai. Hinckley team must define an internal process.", "points": ["Vic.ai treats Sightline PO lines as expense lines — direct credit application not possible", "Credits cannot be applied when balance due is less than total credit amount", "Hinckley team needs to define and document the internal process", "Adina assigned to develop the process", "Blocking issue for full Sightline integration"]}, "Prepayment workaround documented": {"summary": "Vic.ai is a one-way sync and cannot read payment data from NetSuite to automate prepayment linking.", "points": ["Current process: check request > prepayment tracked in separate account > manually applied upon receipt", "Workaround: manually mark the final invoice as paid in Vic.ai", "Long-term: research native NetSuite prepayment features", "Prepayment feature in NetSuite is on but complex — team may disable to prevent errors", "Action: Adina to research native NetSuite prepayment features"]}}, "molo": {"Item list sync (inventory items)": {"summary": "Items categorized into three buckets with different sources of truth. NetSuite is SOT for inventory and special order items.", "points": ["Bucket 1 (MOLO SOT): Non-physical items — labor rates, environmental fees, service charges", "Bucket 2 (NetSuite SOT): Special order items — non-inventoried, one-off jobs", "Bucket 3 (NetSuite SOT): Tracked inventory items — reorderable physical parts", "Duplicate detection based on External ID — if exists, adds to existing item record", "Multi-location items: NetSuite is source of truth, updates pushed to all locations", "Single-location items: MOLO is source of truth", "Subcontractor category on hold due to complex workflows"]}, "Customer & vessel data review": {"summary": "Storage and service customers created in MOLO and pushed to NetSuite. One customer record in each system, synced on changes.", "points": ["148 customers currently in NetSuite — mostly test customers to be deleted", "Duplicate detection enabled in NetSuite based on Phone + Email", "Sales and brokerage customers live exclusively in Sightline for Phase One", "Any update to a MOLO customer gets pushed to NetSuite", "Missing data: Sales rep, category, departments, preferences, credit limit, terms", "Dimitri following up on item and customer list data gaps"]}, "Boat record review & ownership history": {"summary": "Boat records created in MOLO (service & storage) and Sightline (brokerage/sales). Synced to NetSuite as custom records via MOLO bundle.", "points": ["Record includes: HIN, name, Make/Model, Year, Length, Beam, Square Footage", "Boat record updates when ownership changes — script in NetSuite handles this", "Tested in Sandbox — needs further validation in Production", "Ownership History script: Adina following up with Harrison on documentation", "Import from Sightline to NetSuite deferred to Phase 2", "Brian discussing boat record data priority with Andrew"]}, "WIP band-aid fix deployed": {"summary": "Short-term fix for WIP inventory discrepancy. When MOLO sends month-end WIP journal entry, it also sends an inventory adjustment to NetSuite.", "points": ["Problem: NetSuite only decrements inventory when final invoice created, not at WIP stage", "MOLO decrements inventory in real-time when item issued to work order", "Band-aid: deduct WIP from MOLO inbound sync, push WIP count to NetSuite custom field", "Pro: fixes month-end financials. Con: NetSuite inventory inaccurate mid-month", "Long-term fix: send MOLO work orders to NetSuite as Sales Orders (major scope expansion)", "Patrick assigned to implement the band-aid fix"]}, "LOA UoM mapping error fixed": {"summary": "LOA (Length Overall) unit of measure is mapping incorrectly between MOLO and NetSuite.", "points": ["Patrick assigned to investigate and fix the LOA UoM mapping error", "Impacts boat record accuracy and potentially inventory calculations", "Related to the broader item sync and UoM standardization effort"]}, "Labor cost sync on internal invoices": {"summary": "Labor costs from internal work orders are not syncing correctly to NetSuite invoices.", "points": ["Patrick investigating why labor costs not syncing on internal invoices", "Workaround: continue using manual journal entry until MOLO fix deployed", "Intercompany job checkbox must correctly route revenue — Patrick/Adina confirming", "MOLO lacks a job-level field to tag transaction types (Warranty, Sales, etc.)", "Adina discussing the internal WO cost capture issue with Jenna"]}, "Work Order to PO automation scoped": {"summary": "Long-term goal: auto-create POs directly from Work Orders in MOLO, eliminating double entry.", "points": ["Contact: Dan Nelson at MOLO for timeline and cost estimate", "Full flow: MOLO Work Order > NetSuite Sales Order > PO > Receipt > Fulfillment > MOLO WO Update", "Pro: solves inventory accuracy, enables linked purchasing, reduces manual entry", "Con: major scope expansion — could delay May 1st go-live", "Brian assigned to contact Dan Nelson at MOLO for timeline", "Create a consolidated list of critical vs Phase 2 items for Dan resource planning"]}}, "purchasing": {"MOLO POs migrated to NetSuite (Apr 26)": {"summary": "All active MOLO POs migrated to NetSuite on April 26. Receiving against these POs must now be done in NetSuite.", "points": ["Go-live date: April 27 — purchasing migrated from MOLO to NetSuite", "All new transactions must be dated April 27 or later", "Harrison wiped the production environment and notified Patrick to begin MOLO sync", "MOLO purchasing disabled after go-live", "PO numbering: [3-letter location prefix] + [4-digit number starting at 5000] e.g. BBM-5000"]}, "User roles assigned (Procurement Manager 1B)": {"summary": "New users Tracy, Justin, and Sherry assigned the Procurement Manager 1B role. Gretchen creates all user accounts.", "points": ["Role: Procurement Manager 1B for new purchasing users", "Gretchen creates all user accounts and roles in NetSuite", "Two-Factor Authentication (2FA) required for all users", "Scan QR code using Google Authenticator or Microsoft Authenticator", "Select Remember Me for 30 Days on login to reduce daily prompts", "If login fails: re-scan the QR code to link the correct Production NetSuite account"]}, "2FA and user preferences configured": {"summary": "Users must configure NetSuite preferences for optimal purchasing workflow.", "points": ["General tab: Set From Email Address and Email Signature", "Uncheck: Use Multicurrency Expense Reports", "Uncheck: Enable NetSuite Guided Learning", "Set Number of Rows in List Segments to 1,000", "Appearance tab: Check Use Classic Interface (more efficient than ribbon menu)", "Set a Color Theme for visual distinction between accounts", "Dashboard: Remove KPI and Trend Graph portlets, keep Reminders and Shortcuts only"]}, "Item data fixes imported": {"summary": "Missing base pricing and non-inventory item setup issues being resolved via import.", "points": ["Harrison importing item data fixes for missing base pricing", "Non-inventory item setup being corrected", "P&I Item checkbox created on the inventory item form", "Custom bin location table created on the item record", "Location-specific BIN added to the PO PDF", "Chad and Steven consulted on the P&I item strategy"]}, "PO numbering system live": {"summary": "NetSuite PO numbering uses a location prefix + 4-digit number to distinguish from MOLO POs.", "points": ["Format: [3-letter location prefix] + [4-digit number starting at 5000]", "Example: BBM-5000 for Baybridge Marina", "Avoids conflicts with MOLO POs (which use 4000s)", "Clearly identifies NetSuite POs at a glance", "Cheat sheet with NetSuite codes distributed to all purchasers"]}, "Future: WO to PO auto-creation": {"summary": "Future optimization: auto-create POs directly from Work Orders, eliminating double entry.", "points": ["Full flow: MOLO Work Order > NetSuite Sales Order > PO > Receipt > Fulfillment", "Eliminates duplicate entry between MOLO and NetSuite", "Dan Nelson at MOLO being contacted for timeline and cost estimate", "Deferred to Phase 2 — not in current go-live scope"]}}, "paylocity": {"Paylocity JE import tested & approved": {"summary": "Weekly payroll journal entry import process tested. Two-entry process confirmed working.", "points": ["Entry 1 (Concur Journal): Debit all expense accounts with full segmentation, credit Reimbursement Liability account", "Entry 2 (Paylocity Journal): Debit Reimbursement Liability account, credit bank — clearing the balance", "NetSuite connector abandoned as non-functional — no expense reports created in NetSuite", "GL Codes and Approval Defaults must be correct before go-live", "Gretchen to confirm JE structure with Linda, test import with minimal backup", "Attach documentation in NetSuite for audit trail"]}, "Paylocity JE automation configured": {"summary": "Automating the weekly Paylocity JE upload so it no longer needs to be manually uploaded.", "points": ["Gretchen coordinating with Paylocity to finalize automation setup", "Employee reimbursement requests continue to be processed in Paylocity", "Reimbursements flow through as part of the weekly JE (one debit and one credit)", "Paylocity remains the source of truth for all employee data"]}, "Concur P-card export mapped to JE template": {"summary": "P-card data is a mix of standalone expenses and PO-backed purchases. Mapping separates them to prevent duplicate payments.", "points": ["Standalone expenses: imported via journal entry weekly", "PO-backed transactions: filtered out and handled by Vic.ai as normal PO-backed bills", "Gretchen and Stephanie mapping the Concur P-card export to a NetSuite JE template", "Custom PO column in Concur being configured by Stephanie and Gretchen", "PCARD payment term created for payments made through Concur (Corp Card)"]}, "P-card test import run with approval": {"summary": "Test import must be run and approved by Jenna and Nicole before go-live.", "points": ["Gretchen and Stephanie to run test import with minimal backup", "Obtain Jenna and Nicole approval before go-live", "Vic.ai will use receipts as invoices when formal invoice is unavailable", "Needs testing in Vic.ai to confirm this works correctly", "VIT being asked to remove the CLIENT NAME department from the system"]}, "Employee reimbursement flow confirmed": {"summary": "Employee reimbursement process confirmed — processed in Paylocity, flows through as weekly JE.", "points": ["Reimbursement requests continue to be processed in Paylocity", "Flows through as part of the weekly JE as one debit and one credit", "No changes needed to the reimbursement request process for employees"]}, "New employee SOP published": {"summary": "SOP created for adding new employees to NetSuite with correct access, subsidiary, department, and location.", "points": ["Navigate to: List > Employees > Employee > New", "Required: Name, initials, supervisor, subsidiary, email, role", "Set subsidiary to employee's company by default", "Check Give Access and enable Notification Email", "Fill in Department and Location whenever possible to improve transaction automation", "Loom video: loom.com/share/c79852b799b6492fad5747a7750d39e7"]}}, "financial": {"April period locked in NetSuite": {"summary": "NetSuite period ending April 26 locked on Monday. All new transactions must post to April 27 or later.", "points": ["Harrison locked the April 26 period in NetSuite on Monday", "April AP/AR periods also locked", "GL reversal journal entry posted on Monday morning", "Bill dates updated to April 27 — original dates moved to True Invoice Date field", "True Invoice Date: custom NetSuite field (mapped to field 5050) captures original invoice date"]}, "Trial balance imported & reconciled": {"summary": "Historical trial balances being imported into NetSuite. Delta analysis run after each import.", "points": ["Gretchen managing all imports: 2025 monthly trial balances and 2026 pre-go-live data", "Import forces all historical transactions into the current NetSuite period (April 2026)", "After import: review AR Aging, AP Aging, and Inventory Report", "Create delta by comparing TB April 2026 before and after import", "Import a journal entry reversing the GL impact of the transactional import", "Lock prior MOLO periods to prevent backdating (locked through 03.31.2026)"]}, "Revenue recognition (REVREC) configured": {"summary": "Revenue Recognition is on in NetSuite. Revenue Commitments is off — needed for recognizing unbilled revenue.", "points": ["Revenue Recognition: ON in NetSuite", "Revenue Commitments: OFF — Adina asked BCC for rationale", "Revenue Commitments needed for recognizing unbilled revenue", "REVREC Package Hierarchy needs to be confirmed by Jenna", "Revenue allocation report for packages being created by Harrison", "Nicole clarifying production's RevRec needs in meeting with Gretchen"]}, "Intercompany clearing process defined": {"summary": "~30-40 intercompany invoices per month currently handled manually. Goal: automate using NetSuite rules.", "points": ["MOLO uses Intercompany Payment method to clear AR", "NetSuite reclassifies revenue/COGS for 5-10 intercompany customers", "Intercompany Clearing GL account being created in NetSuite", "New MOLO payment type being created to link to the new GL account", "AR/AP clearing process reviewed with Nicole and Brian for final approval", "MOLO lacks job-level field to tag transaction types — limits automation", "Laura digitizing the workflow; Harrison modeling solution in NetSuite"]}, "Production overhead allocation automated": {"summary": "Monthly production overhead allocation automated in NetSuite using Dynamic Allocation schedules and Statistical Accounts.", "points": ["Timing: final month-end step, performed after revenue recognition", "Allocation weights are dynamic: Labor Hours (most depts), Material Spend (purchasing/stockroom)", "NetSuite Dynamic Allocation uses Statistical Accounts to define variable weights", "Statistical Journal Entries update balances — do not require balanced debit/credit", "Source tab: defines pool of expenses, credit account set to 5905 Applied Overhead", "Destination tab: defines boat lines and departments receiving allocated costs", "Requirement: allocation must be net zero"]}, "BI / data lake project kicked off": {"summary": "BI team meeting scheduled to kick off the data lake project. Reporting timelines being discussed.", "points": ["Laura meeting with BI team on Monday to kick off the data lake project", "Follow-up with Jenna and Andrew to discuss reporting timelines", "GL Account Sync: no automatic sync exists — alert report of NetSuite GL changes for Jenna and Nicole", "Adina scheduling 1:1 with Jenna to discuss GL flow", "Financial schedules being built as Saved Searches in NetSuite"]}, "Management reporting package built": {"summary": "Management report package being built in NetSuite including Service P&L, balance sheet, and allocation schedules.", "points": ["Gretchen building NetSuite Reports for Jenna — Service P&L Statements", "Management Report Creation in progress", "Financial schedules being built as Saved Searches", "Separate allocation schedules being built for all required GL accounts", "Final management package PDF sent to Adina", "R2R review with Adina scheduled", "Divya's MOLO report email redirected to Jenna"]}}, "sysconfig": {"COA restructured & accounts renamed": {"summary": "Chart of accounts being restructured — accounts renamed, inactivated, and grouped. Import mappings updated.", "points": ["Gretchen restructuring COA: renaming, inactivating, and grouping accounts", "Update import mappings to reflect new account IDs", "GL 2818 being renamed to Temporary Deferred Revenue", "Intercompany Clearing GL account being created", "Add indirect expense GLs (e.g. Rent - Indirect) to chart of accounts", "Incorrect reports in NetSuite being renamed and removed", "Minor additions still needed for accounts from the 1/1/2025 trial balance"]}, "GL creation locked to Lou + Gretchen": {"summary": "GL creation and changes in NetSuite restricted to Lou and Gretchen only to maintain data integrity.", "points": ["Adina locking down GL creation/changes in NetSuite to Lou + Gretchen", "Prevents unauthorized GL account creation across the organization", "All GL changes must start in NetSuite regardless of which system the vendor lives in", "Alert report of NetSuite GL changes distributed to Jenna and Nicole to replicate in MOLO/Syteline", "Period locking being implemented post-go-live to prevent posting to closed periods"]}, "Roles assigned (Leslie, Tracy, new users)": {"summary": "NetSuite user roles being assigned and configured for all new users.", "points": ["Correct NetSuite roles for Leslie and Tracy being requested from Gretchen", "Procurement Manager 1B role assigned to Tracy, Justin, Sherry", "Gretchen creates all user accounts and roles", "2FA required for all users — Google or Microsoft Authenticator", "Show Internal IDs enabled for stable data imports", "Rows per page increased to 1000 for large list navigation", "Duplicate Number Warnings set to Block to prevent duplicate bill numbers"]}, "Sandbox visual cue applied": {"summary": "Visual cue applied to Sandbox environment to clearly distinguish it from Production.", "points": ["Disable Redwood theme in Sandbox", "Apply a different color theme to visually distinguish Sandbox from Production", "Prevents accidental transactions in the wrong environment", "Classic Interface recommended — more efficient than ribbon menu", "Customize dashboards using Reminders, Shortcuts, and Custom Content portlets"]}, "NetSuite features configured": {"summary": "NetSuite feature flags reviewed and configured. Unused features disabled to reduce clutter.", "points": ["Multiple Currencies: grayed out due to existing test transactions", "Revenue Recognition: ON. Revenue Commitments: OFF (needs review)", "Inventory Costing: Group Average is OFF — intentional for location-specific costing", "Inventory Status: OFF — should be enabled post-go-live to track condition", "Consolidated Payments: OFF — Adina asking BCC why", "Prepayments: ON but complex — team may disable to prevent errors", "Period Locking: being implemented post-go-live"]}, "Sightline GL mapping corrected": {"summary": "Sightline location and department mapping errors identified and corrected.", "points": ["Location mapping fix: SNAP > Naples, SSTU > Stewart (corrected during testing)", "Department fix: Sightline POs were mapping to CLIENT NAME (ID 1) instead of Hinckley Services (ID 10)", "Fix implemented by Julian — confirmed working on new bills", "Sightline PO sync: still pending — requires GL mapping fix and sandbox testing", "Peter being asked to automate the Sightline PO file export", "Peter being asked to re-upload the 82,670-record history file"]}, "Exception Management enabled on dashboards": {"summary": "Exception Management portlet being enabled on all user dashboards to surface issues proactively.", "points": ["Enable Exception Management for Hinckley in NetSuite", "Enable Exception Management portlet on all user dashboards", "Custom NetSuite saved search for GL activity being created by Adina", "Saved search to flag transactions posted to prior periods before the April lock", "Outlook sync connector being investigated by Harrison"]}}};
+
+let openMeeting=null;
+
+function toggleMeeting(id){
+  openMeeting=openMeeting===id?null:id;
+  renderMeetings();
+}
+
+function renderMeetings(){
+  let html="";
+  MEETINGS.forEach(m=>{
+    const isOpen=openMeeting===m.id;
+    const dateParts=m.date.split(" ");
+    html+=`<div style="border:1.5px solid #E2E8F0;border-radius:12px;overflow:hidden;margin-bottom:10px">
+
+      <!-- Collapsed header row — always visible -->
+      <button onclick="toggleMeeting('${m.id}')" style="width:100%;display:flex;align-items:center;gap:14px;padding:16px 20px;background:${isOpen?"#F8FAFC":"#fff"};border:none;cursor:pointer;text-align:left;font-family:inherit">
+        <div style="width:44px;height:44px;border-radius:10px;background:#1D4ED818;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0">
+          <span style="font-size:9px;font-weight:700;color:#1D4ED8;text-transform:uppercase;letter-spacing:.05em">${esc(dateParts[0]||"")}</span>
+          <span style="font-size:16px;font-weight:800;color:#1D4ED8;line-height:1">${esc((dateParts[1]||"").replace(",",""))}</span>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:700;color:#0F172A;margin-bottom:3px">${esc(m.title)}</div>
+          <div style="font-size:11px;color:#94A3B8">${(m.attendees||[]).join(" · ")}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+          <span style="font-size:10px;font-weight:600;background:#EFF6FF;color:#1D4ED8;padding:2px 10px;border-radius:99px">${m.topics.length} topics</span>
+          <span style="font-size:12px;color:#94A3B8">${isOpen?"▲":"▼"}</span>
+        </div>
+      </button>
+
+      ${isOpen?`<div style="border-top:1px solid #E2E8F0;padding:20px">
+        ${m.topics.map(t=>`
+          <div style="border:1.5px solid ${t.color}30;border-radius:12px;overflow:hidden;margin-bottom:14px">
+            <div style="background:${t.color}12;padding:10px 16px;border-bottom:1px solid ${t.color}20;display:flex;align-items:center;gap:10px">
+              <span style="width:8px;height:8px;border-radius:50%;background:${t.color};flex-shrink:0"></span>
+              <span style="font-size:13px;font-weight:700;color:#0F172A">${esc(t.area)}</span>
+            </div>
+            <div style="background:#fff;padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:20px">
+              <div>
+                <div style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Discussion Notes</div>
+                ${t.notes.map(n=>`<div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid #F8FAFC;font-size:12px;color:#0F172A;line-height:1.4">
+                  <span style="color:${t.color};flex-shrink:0;margin-top:2px">•</span>
+                  <span>${esc(n)}</span>
+                </div>`).join("")}
+              </div>
+              <div>
+                <div style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Action Items</div>
+                ${t.actionItems.map((a,i)=>`<div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid #F8FAFC;font-size:12px;color:#0F172A;line-height:1.4">
+                  <span style="background:#1D4ED8;color:#fff;border-radius:99px;font-size:9px;font-weight:700;padding:1px 6px;flex-shrink:0;margin-top:2px">${i+1}</span>
+                  <span>${esc(a)}</span>
+                </div>`).join("")}
+              </div>
+            </div>
+          </div>`).join("")}
+        <div style="font-size:11px;color:#94A3B8;padding:4px 2px">Next meeting: ${esc(m.nextMeeting||"TBD")}</div>
+      </div>`:""}
+
+    </div>`;
+  });
+  document.getElementById("screen-meetings").innerHTML=html;
+}
+
+const DOC_LINKS = {};
+
+const CHEAT_SHEETS = {}
+
+function printCheatSheet(){
+  const COLORS = {vicai:"#B45309",molo:"#16793A",purchasing:"#1D4ED8",paylocity:"#7C3AED",financial:"#0D9488",sysconfig:"#475569"};
+  let body = `<h1 style="font-family:Arial;font-size:28px;color:#0F172A;margin-bottom:4px">CLIENT NAME</h1>
+    <div style="font-family:Arial;font-size:14px;color:#64748B;margin-bottom:4px">Process Cheat Sheet — Dos &amp; Don&#x27;ts</div>
+    <div style="font-family:Arial;font-size:11px;color:#94A3B8;font-style:italic;border-bottom:2px solid #E2E8F0;padding-bottom:12px;margin-bottom:24px">NetSuite · MOLO · Vic.AI · Paylocity Implementation | Generated ${new Date().toLocaleDateString("en-US",{month:"long",year:"numeric"})}</div>`;
+
+  WORKFLOWS.forEach((w,i)=>{
+    const cs = CHEAT_SHEETS[w.id];
+    if(!cs) return;
+    const color = COLORS[w.id]||"#374151";
+    body += `<div style="page-break-before:${i>0?"always":"auto"};padding-top:${i>0?"20px":"0"}">
+      <h2 style="font-family:Arial;font-size:20px;font-weight:800;color:${color};border-bottom:3px solid ${color};padding-bottom:6px;margin-bottom:16px">${esc(w.name)}</h2>
+      <h3 style="font-family:Arial;font-size:13px;font-weight:700;color:#16A34A;margin-bottom:8px">✅ DO</h3>
+      <ul style="font-family:Arial;font-size:12px;color:#0F172A;line-height:1.6;margin:0 0 20px;padding-left:20px">
+        ${cs.dos.map(d=>`<li style="margin-bottom:4px">${esc(d)}</li>`).join("")}
+      </ul>
+      <h3 style="font-family:Arial;font-size:13px;font-weight:700;color:#DC2626;margin-bottom:8px">🚫 DON'T</h3>
+      <ul style="font-family:Arial;font-size:12px;color:#0F172A;line-height:1.6;margin:0 0 20px;padding-left:20px">
+        ${cs.donts.map(d=>`<li style="margin-bottom:4px">${esc(d)}</li>`).join("")}
+      </ul>
+    </div>`;
+  });
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Hinckley Cheat Sheet</title>
+    <style>@media print{@page{margin:1.5cm;size:A4} body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style>
+  </head><body style="max-width:800px;margin:0 auto;padding:32px">${body}</body></html>`;
+
+  const blob = new Blob([html],{type:"text/html;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "Hinckley_Cheat_Sheet.html";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function renderHub(){
+  const WF_ICONS={"vicai":"🧾","molo":"🔄","purchasing":"🛒","paylocity":"👥","financial":"📊","sysconfig":"⚙️"};
+  const gradMap={"#F59E0B":"#FEF9EC","#22C55E":"#F0FBF4","#3B82F6":"#EFF4FE","#A855F7":"#F8F3FE","#14B8A6":"#F0FBFA","#64748B":"#F4F6F8"};
+  const accentMap={"#F59E0B":"#B45309","#22C55E":"#16793A","#3B82F6":"#1D4ED8","#A855F7":"#7C3AED","#14B8A6":"#0D9488","#64748B":"#475569"};
+  let html="";
+  WORKFLOWS.forEach(w=>{
+    const wTasks=tasks.filter(t=>t.category===w.cat);
+    const open=wTasks.filter(t=>t.status!=="Done").length;
+    const done=wTasks.filter(t=>t.status==="Done").length;
+    const ip=wTasks.filter(t=>t.status==="In Progress").length;
+    const stepsDone=w.steps.filter(s=>s[1]==="Done").length;
+    const pct=Math.round((stepsDone/w.steps.length)*100);
+    const isOpen=openWf===w.id;
+    const icon=WF_ICONS[w.id]||"📋";
+    const grad=gradMap[w.color]||"#F8FAFC";
+    const accent=accentMap[w.color]||w.color;
+
+    html+=`
+    <div style="border:1.5px solid ${accent}25;border-radius:14px;overflow:hidden;margin-bottom:14px;box-shadow:0 1px 6px rgba(0,0,0,.06)">
+
+      <!-- Header row — click to expand -->
+      <button style="width:100%;background:${grad};border:none;cursor:pointer;padding:20px 24px;text-align:left;font-family:inherit;display:flex;align-items:center;gap:16px;border-bottom:${isOpen?`1.5px solid ${accent}20`:"none"}" onclick="toggleWf('${w.id}')">
+        <span style="font-size:28px;line-height:1;flex-shrink:0">${icon}</span>
+        <div style="flex:1">
+          <div style="font-size:16px;font-weight:800;color:${accent};margin-bottom:6px">${esc(w.name)}</div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            ${open>0?`<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:${accent}18;color:${accent}">${open} open</span>`:""}
+            ${ip>0?`<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:${accent}18;color:${accent}">${ip} active</span>`:""}
+            ${done>0?`<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:${accent}18;color:${accent}">${done} done</span>`:""}
+            <span style="font-size:11px;color:#94A3B8;margin-left:4px">${w.phase}</span>
+          </div>
+        </div>
+        <div style="flex-shrink:0;text-align:right">
+          <div style="width:80px;height:5px;background:${accent}15;border-radius:99px;overflow:hidden;margin-bottom:4px">
+            <div style="height:5px;width:${pct}%;background:${accent};border-radius:99px"></div>
+          </div>
+          <div style="font-size:11px;font-weight:700;color:${accent}">${pct}%</div>
+        </div>
+        <span style="font-size:12px;color:#94A3B8;flex-shrink:0;margin-left:8px">${isOpen?"▲":"▼"}</span>
+      </button>
+
+      <!-- Expanded body -->
+      ${isOpen?`<div style="background:#fff;padding:24px">
+
+        <!-- Team + Docs bar -->
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid #F1F5F9">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;flex:1">
+            ${w.owners.map(o=>`<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;background:${ac(o)[0]};color:${ac(o)[1]};padding:4px 12px;border-radius:99px">${avHTML(o,16)} ${esc(o)}</span>`).join("")}
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            ${w.docs.map(d=>{const lnk=DOC_LINKS[d];return lnk?`<a href="${lnk}" target="_blank" style="font-size:10px;color:#3B82F6;text-decoration:none;display:inline-flex;align-items:center;gap:3px;margin-right:8px">📄 ${esc(d)} ↗</a>`:`<span style="font-size:10px;color:#3B82F6;margin-right:8px">📄 ${esc(d)}</span>`;}).join("")}
+          </div>
+        </div>
+
+        <!-- Top: steps left, dos/donts right -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px">
+
+          <!-- Steps -->
+          <div>
+            <div class="wf-section-title" style="margin-top:0">Process steps</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              ${w.steps.map(([label,status],si)=>{
+                const isIP=status==="In Progress";
+                const stepKey=w.id+"|||"+label;
+                const isStepOpen=openStep===stepKey;
+                const detail=(STEP_DETAILS[w.id]||{})[label];
+                const statusDot=isIP?"#3B82F6":"#CBD5E1";
+                return `<div style="border:1.5px solid ${isStepOpen?accent+"60":accent+"20"};border-radius:10px;overflow:hidden;background:${isStepOpen?accent+"08":"#FAFAFA"}">
+                  <button onclick="toggleStep('${stepKey.replace(/'/g,"\\'")}',event)" style="width:100%;display:flex;align-items:flex-start;gap:10px;padding:11px 14px;background:transparent;border:none;cursor:pointer;text-align:left;font-family:inherit">
+                    <span style="width:8px;height:8px;border-radius:50%;background:${statusDot};flex-shrink:0;margin-top:4px"></span>
+                    <div style="flex:1">
+                      <div style="font-size:12px;font-weight:700;color:#0F172A;line-height:1.35;margin-bottom:2px">${esc(label)}</div>
+                      <div style="font-size:10px;color:${accent};font-weight:600">${detail?"Click for notes":"No notes yet"}</div>
+                    </div>
+                    <span style="font-size:11px;color:#94A3B8;flex-shrink:0">${isStepOpen?"▲":"▼"}</span>
+                  </button>
+                  ${isStepOpen&&detail?`<div style="padding:0 14px 14px;border-top:1px solid ${accent}15">
+                    <div style="font-size:11px;color:#475569;line-height:1.55;margin:10px 0 10px;font-style:italic">${esc(detail.summary)}</div>
+                    ${detail.points.map(p=>`<div style="display:flex;gap:8px;padding:5px 0;font-size:11px;color:#0F172A;border-bottom:1px solid ${accent}10;line-height:1.45">
+                      <span style="color:${accent};flex-shrink:0;margin-top:1px;font-weight:700">›</span>
+                      <span>${esc(p)}</span>
+                    </div>`).join("")}
+                  </div>`:""}
+                </div>`;
+              }).join("")}
+            </div>
+          </div>
+
+          <!-- Dos and Don'ts -->
+          <div>
+            ${CHEAT_SHEETS[w.id]?`<div>
+              <div style="margin-bottom:14px">
+                <div style="font-size:11px;font-weight:700;color:#16A34A;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">✅ Do</div>
+                ${CHEAT_SHEETS[w.id].dos.map(d=>`<div style="display:flex;gap:7px;padding:5px 0;border-bottom:1px solid #F0FDF4;font-size:11px;color:#0F172A;line-height:1.4">
+                  <span style="color:#16A34A;flex-shrink:0;font-weight:700;margin-top:1px">›</span>
+                  <span>${esc(d)}</span>
+                </div>`).join("")}
+              </div>
+              <div style="margin-top:14px">
+                <div style="font-size:11px;font-weight:700;color:#DC2626;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">🚫 Don't</div>
+                ${CHEAT_SHEETS[w.id].donts.map(d=>`<div style="display:flex;gap:7px;padding:5px 0;border-bottom:1px solid #FEF2F2;font-size:11px;color:#0F172A;line-height:1.4">
+                  <span style="color:#DC2626;flex-shrink:0;font-weight:700;margin-top:1px">›</span>
+                  <span>${esc(d)}</span>
+                </div>`).join("")}
+              </div>
+            </div>`:""}
+          </div>
+
+        </div>
+
+        <!-- Bottom: open tasks full width in 2-col grid -->
+        <div style="border-top:1px solid #F1F5F9;padding-top:18px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
+            <div class="wf-section-title" style="margin-top:0;margin-bottom:0">Open tasks (${open})</div>
+            ${hubBulkSelected.size>0?`<div style="display:flex;align-items:center;gap:8px;margin-left:auto;background:#1D4ED8;padding:5px 12px;border-radius:8px">
+              <span style="font-size:11px;font-weight:700;color:#fff">${hubBulkSelected.size} selected</span>
+              <select onchange="applyHubBulkStatus(this.value,event)" style="height:24px;padding:0 6px;font-size:11px;border:none;border-radius:5px;background:#fff;color:#111;cursor:pointer">
+                <option value="">Change status...</option>
+                <option>Not Started</option><option>In Progress</option><option>Done</option>
+              </select>
+              <button onclick="clearHubBulk(event)" style="height:24px;padding:0 8px;font-size:11px;font-weight:600;background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:5px;cursor:pointer">✕</button>
+            </div>`:""}
+          </div>
+          ${open===0?`<div style="font-size:12px;color:#94A3B8;padding:8px 0">All tasks done 🎉</div>`:""}
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px">
+            ${wTasks.filter(t=>t.status!=="Done").map(t=>{
+              const isHubChecked=hubBulkSelected.has(t.id);
+              const isHubOpen=hubEditId===t.id;
+              return `<div style="display:flex;align-items:stretch;border-bottom:1px solid #E5E7EB;background:${isHubChecked?"#EFF6FF":"transparent"}">
+                <label style="display:flex;align-items:center;padding:0 6px 0 4px;cursor:pointer;flex-shrink:0" onclick="event.stopPropagation()">
+                  <input type="checkbox" ${isHubChecked?"checked":""} onchange="toggleHubBulk(${t.id},this.checked,event)" style="width:13px;height:13px;cursor:pointer;accent-color:#1D4ED8">
+                </label>
+                <button onclick="toggleHubEdit(${t.id},event)" style="flex:1;display:flex;align-items:flex-start;gap:8px;padding:9px 6px 9px 2px;background:transparent;border:none;cursor:pointer;text-align:left;font-family:inherit;border-radius:6px">
+                  <span style="width:7px;height:7px;border-radius:50%;background:${STATUS_DOT[t.status]||"#CBD5E1"};flex-shrink:0;margin-top:4px"></span>
+                  <span style="font-size:12px;flex:1;color:#0F172A;line-height:1.4">${esc(t.task)}</span>
+                  <span style="font-size:10px;font-weight:700;background:${ac(t.person)[0]};color:${ac(t.person)[1]};padding:2px 8px;border-radius:99px;white-space:nowrap;flex-shrink:0">${esc(t.person)}</span>
+                  <span style="font-size:10px;color:#94A3B8;flex-shrink:0;margin-left:4px">${isHubOpen?"▲":"▼"}</span>
+                </button>
+                ${isHubOpen?`<div style="grid-column:1/-1">${buildHubEditForm(t)}</div>`:""}
+              </div>`;
+            }).join("")}
+          </div>
+        </div>
+
+      </div>`:""}
+    </div>`;
+  });
+  document.getElementById("hub-grid").innerHTML=html;
+  renderDocLibrary();
+}
+
+function toggleDocLibrary(){
+  const el = document.getElementById("doc-library");
+  const arrow = document.getElementById("doc-library-arrow");
+  if(!el) return;
+  const isHidden = el.style.display === "none";
+  el.style.display = isHidden ? "" : "none";
+  if(arrow) arrow.textContent = isHidden ? "▼" : "▶";
+}
+
+function renderDocLibrary(){
+  const el = document.getElementById("doc-library");
+  if(!el) return;
+
+  const DOC_SECTIONS = [
+    {
+      label:"Vic.AI / AP",
+      color:"#F59E0B",
+      bg:"#FEF9EC",
+      docs:["VIC.AI Process.docx","VicAI Guidebook 4-26-26.docx"]
+    },
+    {
+      label:"MOLO Integration",
+      color:"#22C55E",
+      bg:"#F0FBF4",
+      docs:["Molo to NetSuite Flow.docx","Service Items.docx","MOLO Purchasing Process 4-26-26.docx","Hinckley Yacht Workflow Updated 2-25-26.docx"]
+    },
+    {
+      label:"NetSuite Purchasing",
+      color:"#3B82F6",
+      bg:"#EFF4FE",
+      docs:["NetSuite_Purchasing_4-26-26.docx","NetSuite Purchasing 4-26-26.docx"]
+    },
+    {
+      label:"Paylocity / Concur / HR",
+      color:"#A855F7",
+      bg:"#F8F3FE",
+      docs:["Concur & Paylocity.docx","Creating New Employee.docx"]
+    },
+    {
+      label:"Financial Close",
+      color:"#14B8A6",
+      bg:"#F0FBFA",
+      docs:["Intercompany_Revenue_Summary.docx","Production Allocation Process.docx","Hinckley Primary Source of Truth.docx"]
+    },
+    {
+      label:"System Config",
+      color:"#64748B",
+      bg:"#F4F6F8",
+      docs:["NetSuite Enabled Features and General Preferences.docx","NetSuite Tips and Tricks.docx"]
+    },
+    {
+      label:"Project Management",
+      color:"#EC4899",
+      bg:"#FDF2F8",
+      docs:["Hinckley_Project_ToDo.docx"]
+    },
+  ];
+
+  let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">';
+
+  DOC_SECTIONS.forEach(section=>{
+    html += `<div style="border:1.5px solid ${section.color}30;border-radius:12px;overflow:hidden">
+      <div style="background:${section.bg};padding:10px 14px;border-bottom:1px solid ${section.color}20;display:flex;align-items:center;gap:8px">
+        <span style="width:8px;height:8px;border-radius:50%;background:${section.color};flex-shrink:0"></span>
+        <span style="font-size:12px;font-weight:700;color:#0F172A">${section.label}</span>
+      </div>
+      <div style="background:#fff;padding:10px 14px">
+        ${section.docs.map(d=>{
+          const lnk = DOC_LINKS[d];
+          return lnk
+            ? `<a href="${lnk}" target="_blank" style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #F8FAFC;text-decoration:none;color:#0F172A">
+                <span style="font-size:14px;flex-shrink:0">📄</span>
+                <span style="font-size:11px;flex:1;line-height:1.3">${esc(d)}</span>
+                <span style="font-size:10px;color:${section.color};font-weight:600;flex-shrink:0">Open ↗</span>
+              </a>`
+            : `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #F8FAFC">
+                <span style="font-size:14px;flex-shrink:0">📄</span>
+                <span style="font-size:11px;flex:1;color:#94A3B8">${esc(d)}</span>
+              </div>`;
+        }).join("")}
+      </div>
+    </div>`;
+  });
+
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function toggleWf(id){
+  openWf = openWf===id ? null : id;
+  openStep = null;
+  hubEditId = null;
+  renderHub();
+}
+
+function toggleHubBulk(id, checked, e){
+  e.stopPropagation();
+  if(checked) hubBulkSelected.add(id);
+  else hubBulkSelected.delete(id);
+  renderHub();
+}
+
+function applyHubBulkStatus(status, e){
+  e.stopPropagation();
+  if(!status) return;
+  const toArchive=[];
+  hubBulkSelected.forEach(id=>{
+    const idx=tasks.findIndex(t=>t.id===id);
+    if(idx>=0){
+      tasks[idx]={...tasks[idx],status};
+      if(status==="Done") toArchive.push(tasks[idx]);
+    }
+  });
+  toArchive.forEach(t=>{archived.push(t);tasks=tasks.filter(x=>x.id!==t.id);});
+  hubBulkSelected.clear();
+  saveData();
+  renderHub();
+  if(screen==="tasks") render();
+}
+
+function clearHubBulk(e){
+  e.stopPropagation();
+  hubBulkSelected.clear();
+  renderHub();
+}
+
+function toggleHubEdit(id, e){
+  e.stopPropagation();
+  hubEditId = hubEditId===id ? null : id;
+  openStep = null;
+  renderHub();
+}
+
+function buildHubEditForm(t){
+  const pOpts = people().map(p=>`<option${t.person===p?" selected":""}>${p}</option>`).join("");
+  const cOpts = CATEGORIES.map(c=>`<option${t.category===c?" selected":""}>${c}</option>`).join("");
+  const fid = "hub-form-"+t.id;
+  return `<div id="${fid}" style="background:#F8FAFC;border-radius:8px;padding:12px;margin:0 4px 8px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <div>
+        <label style="font-size:10px;font-weight:700;color:#6B7280;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em">Task</label>
+        <textarea id="${fid}-task" style="width:100%;height:60px;padding:5px 7px;font-size:11px;border:1px solid #D1D5DB;border-radius:6px;resize:vertical;font-family:inherit;background:#fff;color:#111">${esc(t.task)}</textarea>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div>
+          <label style="font-size:10px;font-weight:700;color:#6B7280;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em">Assignee</label>
+          <select id="${fid}-person" style="width:100%;height:27px;padding:0 7px;font-size:11px;border:1px solid #D1D5DB;border-radius:6px;background:#fff;color:#111;font-family:inherit">${pOpts}</select>
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;color:#6B7280;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em">Status</label>
+          <select id="${fid}-status" style="width:100%;height:27px;padding:0 7px;font-size:11px;border:1px solid #D1D5DB;border-radius:6px;background:#fff;color:#111;font-family:inherit">
+            <option${t.status==="Not Started"?" selected":""}>Not Started</option>
+            <option${t.status==="In Progress"?" selected":""}>In Progress</option>
+            <option${t.status==="Done"?" selected":""}>Done</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;color:#6B7280;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em">Priority — set by you</label>
+          <select id="${fid}-pri" style="width:100%;height:27px;padding:0 7px;font-size:11px;border:1px solid #D1D5DB;border-radius:6px;background:#fff;color:#111;font-family:inherit">
+            <option value=""${!t.priority?" selected":""}>— not set —</option>
+            <option${t.priority==="High"?" selected":""}>High</option>
+            <option${t.priority==="Medium"?" selected":""}>Medium</option>
+            <option${t.priority==="Low"?" selected":""}>Low</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:7px;align-items:center">
+      <button onclick="hubArchiveTask(${t.id})" style="background:none;border:none;color:#DC2626;font-size:11px;font-weight:600;cursor:pointer;margin-right:auto;padding:0">Archive task</button>
+      <button onclick="hubEditId=null;renderHub()" style="height:26px;padding:0 12px;font-size:11px;background:#fff;color:#6B7280;border:1px solid #D1D5DB;border-radius:6px;cursor:pointer;font-family:inherit">Cancel</button>
+      <button onclick="saveHubTask(${t.id},'${fid}')" style="height:26px;padding:0 14px;font-size:11px;font-weight:700;background:#1D4ED8;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit">Save</button>
+    </div>
+  </div>`;
+}
+
+function saveHubTask(id, fid){
+  const task = document.getElementById(fid+"-task")?.value?.trim();
+  if(!task) return;
+  const idx = tasks.findIndex(t=>t.id===id);
+  if(idx<0) return;
+  tasks[idx] = {
+    ...tasks[idx],
+    task,
+    person: document.getElementById(fid+"-person")?.value || tasks[idx].person,
+    status: document.getElementById(fid+"-status")?.value || tasks[idx].status,
+    priority: document.getElementById(fid+"-pri")?.value || "",
+  };
+  hubEditId = null;
+  saveData();
+  renderHub();
+  // Also refresh task list if visible
+  if(screen==="tasks") render();
+}
+
+function hubArchiveTask(id){
+  const t = tasks.find(x=>x.id===id);
+  if(!t) return;
+  archived.push(t);
+  tasks = tasks.filter(x=>x.id!==id);
+  hubEditId = null;
+  saveData();
+  renderHub();
+  if(screen==="tasks") render();
+}
+
+function toggleStep(key, e){
+  e.stopPropagation();
+  openStep = openStep===key ? null : key;
+  renderHub();
+}
+
+// ── EXPORT ────────────────────────────────────────────────────────────────
+function exportPDF(){
+  const date = new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"});
+  const ps = [...new Set(tasks.map(t=>t.person).filter(Boolean))].sort();
+  let rows = "";
+  ps.forEach(person=>{
+    const pt = tasks.filter(t=>t.person===person);
+    if(!pt.length) return;
+    rows += `<tr><td colspan="5" style="background:#F8FAFC;padding:10px 12px;font-weight:700;font-size:13px;border-bottom:2px solid #E2E8F0;color:#0F172A">${person} <span style="font-weight:400;font-size:11px;color:#94A3B8">${pt.length} tasks</span></td></tr>`;
+    pt.forEach(t=>{
+      const sc = STATUS_COL[t.status]||"#64748B";
+      const cc = CAT_COLOR[t.category]||"#64748B";
+      const ds = t.date ? new Date(t.date+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"}) : "—";
+      rows += `<tr style="border-bottom:1px solid #F1F5F9">
+        <td style="padding:8px 12px;font-size:11px;color:#0F172A">${t.task}</td>
+        <td style="padding:8px 12px"><span style="background:${sc}18;color:${sc};padding:2px 8px;border-radius:99px;font-size:10px;font-weight:600;white-space:nowrap">${t.status}</span></td>
+        <td style="padding:8px 12px"><span style="background:${cc}18;color:${cc};padding:2px 7px;border-radius:99px;font-size:10px;font-weight:600;white-space:nowrap">${t.category}</span></td>
+        <td style="padding:8px 12px;font-size:10px;font-weight:${t.priority?700:400};color:${t.priority==="High"?"#991B1B":t.priority==="Medium"?"#92400E":t.priority==="Low"?"#166534":"#CBD5E1"}">${t.priority||"—"}</td>
+        <td style="padding:8px 12px;font-size:10px;color:#94A3B8;white-space:nowrap">${ds}</td>
+      </tr>`;
+    });
+  });
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Hinckley Task Report</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:system-ui,sans-serif;color:#0F172A;padding:32px;font-size:12px}
+    h1{font-size:22px;font-weight:700;margin-bottom:4px}
+    .sub{font-size:12px;color:#94A3B8;margin-bottom:24px}
+    .stats{display:flex;gap:16px;margin-bottom:28px;flex-wrap:wrap}
+    .stat{background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:10px 18px}
+    .stat-n{font-size:24px;font-weight:700}
+    .stat-l{font-size:10px;color:#94A3B8;text-transform:uppercase;letter-spacing:.05em}
+    table{width:100%;border-collapse:collapse}
+    th{text-align:left;font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.05em;padding:8px 12px;border-bottom:2px solid #E2E8F0}
+    @media print{@page{margin:1.5cm;size:A4} body{padding:0}}
+  </style></head><body>
+  <h1>CLIENT NAME — Task Report</h1>
+  <div class="sub">Generated ${date} &middot; ${tasks.length} tasks &middot; ${archived.length} archived</div>
+  <div class="stats">
+    <div class="stat"><div class="stat-n">${tasks.length}</div><div class="stat-l">Total tasks</div></div>
+    <div class="stat"><div class="stat-n">${tasks.filter(t=>t.status==="Not Started").length}</div><div class="stat-l">Not started</div></div>
+    <div class="stat"><div class="stat-n">${tasks.filter(t=>t.status==="In Progress").length}</div><div class="stat-l">In progress</div></div>
+    <div class="stat"><div class="stat-n">${tasks.filter(t=>t.status==="Done").length}</div><div class="stat-l">Done</div></div>
+  </div>
+  <table><thead><tr><th>Task</th><th>Status</th><th>Workflow</th><th>Priority</th><th>Date</th></tr></thead>
+  <tbody>${rows}</tbody></table>
+  </body></html>`;
+
+  // Download as HTML file — user opens it and prints to PDF
+  const blob = new Blob([html], {type:"text/html;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "Hinckley_Report_"+new Date().toISOString().slice(0,10)+".html";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function exportExcel(){
+  const esc2 = v => `"${(v||"").toString().replace(/"/g,'""')}"`;
+  const headers = ["Task","Assignee","Workflow","Status","Priority","Date","Notes"];
+  const rows = tasks.map(t=>[esc2(t.task),esc2(t.person),esc2(t.category),esc2(t.status),esc2(t.priority),esc2(t.date),esc2(t.notes)].join(","));
+  const archRows = archived.map(t=>[esc2(t.task),esc2(t.person),esc2(t.category),esc2("ARCHIVED - "+t.status),esc2(t.priority),esc2(t.date),esc2(t.notes)].join(","));
+  const csv = [headers.join(","), ...rows, "", "--- ARCHIVED ---", ...archRows].join("\n");
+  const blob = new Blob(["\uFEFF"+csv], {type:"text/csv;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "Hinckley_Tasks_"+new Date().toISOString().slice(0,10)+".csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ── FILTER EVENTS ─────────────────────────────────────────────────────────
+document.getElementById("filter-secondary").addEventListener("change",function(){filterSecondary=this.value;render();});
+document.addEventListener("change",function(e){
+  if(e.target.id==="bulk-status") applyBulkChange("status",e.target.value);
+  if(e.target.id==="bulk-priority") applyBulkChange("priority",e.target.value);
+  if(e.target.id==="bulk-person") applyBulkChange("person",e.target.value);
+});
+document.getElementById("filter-status").addEventListener("change",function(){filterStatus=this.value;render();});
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+loadData();
+// Default: collapse all groups
+const _initKeys = [...new Set(tasks.map(t=>t.person).filter(Boolean))].sort();
+_initKeys.forEach(k=>{ collapsed[k]=true; });
+CATEGORIES.forEach(k=>{ collapsed[k]=true; });
+render();
+</script>
+</body>
+</html>
