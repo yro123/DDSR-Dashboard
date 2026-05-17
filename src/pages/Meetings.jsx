@@ -75,7 +75,7 @@ export default function Meetings() {
                           {(t.notes || []).map((n, i) => (
                             <div key={i} style={{ display: 'flex', gap: 8, padding: '5px 0', borderBottom: '1px solid #F8FAFC', fontSize: 12, color: '#0F172A', lineHeight: 1.4 }}>
                               <span style={{ color: t.color, flexShrink: 0, marginTop: 2 }}>•</span>
-                              <span>{n}</span>
+                              <span>{n.note_text || n}</span>
                             </div>
                           ))}
                         </div>

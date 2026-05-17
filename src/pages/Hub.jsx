@@ -14,7 +14,7 @@ const GRAD = {
 }
 
 export default function Hub() {
-  const { slug, authFetch } = useProject()
+  const { slug, authFetch, isAdmin } = useProject()
   const [workflows, setWorkflows] = useState([])
   const [tasks, setTasks]         = useState([])
   const [loading, setLoading]     = useState(true)
@@ -29,6 +29,20 @@ export default function Hub() {
       authFetch(`/api/tasks?slug=${slug}`).then(r => r.json()),
     ]).then(([w, t]) => { setWorkflows(w); setTasks(t); setLoading(false) })
   }, [slug, authFetch])
+
+  const STEP_CYCLE = { 'Not Started': 'In Progress', 'In Progress': 'Done', 'Done': 'Not Started' }
+
+  function cycleStepStatus(e, wfId, stepId, currentStatus) {
+    e.stopPropagation()
+    if (!isAdmin) return
+    const next = STEP_CYCLE[currentStatus] || 'Not Started'
+    setWorkflows(prev => prev.map(w => w.id === wfId
+      ? { ...w, steps: w.steps.map(s => s.id === stepId ? { ...s, status: next } : s) }
+      : w
+    ))
+    authFetch(`/api/workflow-steps/${stepId}`, { method: 'PUT', body: JSON.stringify({ status: next }) })
+      .then(r => { if (!r.ok) authFetch(`/api/workflows?slug=${slug}`).then(r2 => r2.json()).then(setWorkflows) })
+  }
 
   if (loading) return <Layout><div style={{ padding: 40, color: '#94A3B8' }}>Loading…</div></Layout>
 
@@ -112,10 +126,15 @@ export default function Hub() {
                         <div className="step-row" onClick={() => setOpenStep(isStepOpen ? null : s.id)}>
                           <span style={{ width: 10, height: 10, borderRadius: '50%', background: STATUS_DOT[s.status] || '#CBD5E1', flexShrink: 0, display: 'inline-block' }} />
                           <span className="step-label">{s.label}</span>
-                          <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
-                            background: s.status === 'Done' ? '#F0FDF4' : s.status === 'In Progress' ? '#EFF6FF' : '#F1F5F9',
-                            color: s.status === 'Done' ? '#16A34A' : s.status === 'In Progress' ? '#1D4ED8' : '#64748B',
-                          }}>{s.status}</span>
+                          <span
+                            onClick={isAdmin ? e => cycleStepStatus(e, w.id, s.id, s.status) : undefined}
+                            title={isAdmin ? 'Click to cycle status' : undefined}
+                            style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
+                              background: s.status === 'Done' ? '#F0FDF4' : s.status === 'In Progress' ? '#EFF6FF' : '#F1F5F9',
+                              color: s.status === 'Done' ? '#16A34A' : s.status === 'In Progress' ? '#1D4ED8' : '#64748B',
+                              cursor: isAdmin ? 'pointer' : 'default',
+                              outline: isAdmin ? undefined : 'none',
+                            }}>{s.status}</span>
                           <span style={{ fontSize: 10, color: '#CBD5E1' }}>{isStepOpen ? '▲' : '▼'}</span>
                         </div>
                         {isStepOpen && s.summary && (

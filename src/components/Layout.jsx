@@ -46,6 +46,9 @@ export default function Layout({ children }) {
             <button className={screen === 'tasks'    ? 'on' : ''} onClick={() => navigate(`/${slug}/tasks`)}>☑ Tasks</button>
             <button className={screen === 'hub'      ? 'on' : ''} onClick={() => navigate(`/${slug}/hub`)}>⬡ Process Hub</button>
             <button className={screen === 'meetings' ? 'on' : ''} onClick={() => navigate(`/${slug}/meetings`)}>📋 Meeting Notes</button>
+            {isAdmin && (
+              <button className={screen === 'admin' ? 'on' : ''} onClick={() => navigate('/admin')}>⚙ Admin</button>
+            )}
           </div>
           <UserButton afterSignOutUrl="/sign-in" />
         </div>

@@ -5,6 +5,7 @@ import Tasks    from './pages/Tasks'
 import Hub      from './pages/Hub'
 import Meetings from './pages/Meetings'
 import SignIn   from './pages/SignIn'
+import Admin    from './pages/Admin'
 
 function AuthGuard({ children }) {
   const { isSignedIn, isLoaded } = useAuth()
@@ -18,6 +19,7 @@ function AuthenticatedApp() {
     <ProjectProvider>
       <Routes>
         <Route path="/" element={<Navigate to="/hinckley/tasks" replace />} />
+        <Route path="/admin"           element={<Admin />} />
         <Route path="/:slug/tasks"    element={<Tasks />} />
         <Route path="/:slug/hub"      element={<Hub />} />
         <Route path="/:slug/meetings" element={<Meetings />} />

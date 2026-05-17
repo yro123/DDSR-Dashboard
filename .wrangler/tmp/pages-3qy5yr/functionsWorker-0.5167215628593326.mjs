@@ -1,10 +1,192 @@
 var __defProp = Object.defineProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 
-// .wrangler/tmp/pages-PmSqOT/functionsWorker-0.913364285362413.mjs
-var __defProp2 = Object.defineProperty;
-var __name2 = /* @__PURE__ */ __name((target, value) => __defProp2(target, "name", { value, configurable: true }), "__name");
+// api/clients/[id].js
+async function onRequestPut({ env, params, request }) {
+  const { name, display_name, slug, is_active } = await request.json();
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  await env.ddsr_dashboard.prepare(`
+    UPDATE clients SET name = ?, display_name = ?, slug = ?, is_active = ?, updated_at = ?
+    WHERE id = ?
+  `).bind(
+    name?.trim() || null,
+    display_name?.trim() || null,
+    slug?.trim() || null,
+    is_active ?? 1,
+    now,
+    params.id
+  ).run();
+  const client = await env.ddsr_dashboard.prepare("SELECT * FROM clients WHERE id = ?").bind(params.id).first();
+  if (!client) return Response.json({ error: "Not found" }, { status: 404 });
+  return Response.json(client);
+}
+__name(onRequestPut, "onRequestPut");
+
+// api/documents/[id].js
+async function onRequestPut2({ env, params, request }) {
+  const { workflow_id, name, url, doc_type } = await request.json();
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  await env.ddsr_dashboard.prepare(`
+    UPDATE documents SET workflow_id = ?, name = ?, url = ?, doc_type = ?, updated_at = ?
+    WHERE id = ?
+  `).bind(workflow_id || null, name?.trim() || null, url || null, doc_type || null, now, params.id).run();
+  const doc = await env.ddsr_dashboard.prepare("SELECT * FROM documents WHERE id = ?").bind(params.id).first();
+  if (!doc) return Response.json({ error: "Not found" }, { status: 404 });
+  return Response.json(doc);
+}
+__name(onRequestPut2, "onRequestPut");
+async function onRequestDelete({ env, params }) {
+  await env.ddsr_dashboard.prepare("UPDATE documents SET is_active = 0 WHERE id = ?").bind(params.id).run();
+  return Response.json({ deleted: true });
+}
+__name(onRequestDelete, "onRequestDelete");
+
+// api/meeting-action-items/[id].js
+async function onRequestPut3({ env, params, request }) {
+  const { action_text, assignee_name, assignee_id, status } = await request.json();
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  await env.ddsr_dashboard.prepare(`
+    UPDATE meeting_action_items SET action_text = ?, assignee_name = ?, assignee_id = ?, status = ?, updated_at = ?
+    WHERE id = ?
+  `).bind(action_text?.trim() || null, assignee_name || null, assignee_id || null, status || "Open", now, params.id).run();
+  const item = await env.ddsr_dashboard.prepare("SELECT * FROM meeting_action_items WHERE id = ?").bind(params.id).first();
+  if (!item) return Response.json({ error: "Not found" }, { status: 404 });
+  return Response.json(item);
+}
+__name(onRequestPut3, "onRequestPut");
+async function onRequestDelete2({ env, params }) {
+  await env.ddsr_dashboard.prepare("DELETE FROM meeting_action_items WHERE id = ?").bind(params.id).run();
+  return Response.json({ deleted: true });
+}
+__name(onRequestDelete2, "onRequestDelete");
+
+// api/meeting-notes/[id].js
+async function onRequestPut4({ env, params, request }) {
+  const { note_text, sort_order } = await request.json();
+  await env.ddsr_dashboard.prepare(`
+    UPDATE meeting_notes SET note_text = ?, sort_order = ? WHERE id = ?
+  `).bind(note_text?.trim() || null, sort_order ?? 0, params.id).run();
+  const note = await env.ddsr_dashboard.prepare("SELECT * FROM meeting_notes WHERE id = ?").bind(params.id).first();
+  if (!note) return Response.json({ error: "Not found" }, { status: 404 });
+  return Response.json(note);
+}
+__name(onRequestPut4, "onRequestPut");
+async function onRequestDelete3({ env, params }) {
+  await env.ddsr_dashboard.prepare("DELETE FROM meeting_notes WHERE id = ?").bind(params.id).run();
+  return Response.json({ deleted: true });
+}
+__name(onRequestDelete3, "onRequestDelete");
+
+// api/meeting-topics/[id].js
+async function onRequestPut5({ env, params, request }) {
+  const body = await request.json();
+  const { area, color, workflow_id, sort_order } = body;
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  await env.ddsr_dashboard.prepare(`
+    UPDATE meeting_topics SET area = ?, color = ?, workflow_id = ?, sort_order = ?, updated_at = ?
+    WHERE id = ?
+  `).bind(area?.trim() || null, color || null, workflow_id || null, sort_order ?? 0, now, params.id).run();
+  const topic = await env.ddsr_dashboard.prepare("SELECT * FROM meeting_topics WHERE id = ?").bind(params.id).first();
+  if (!topic) return Response.json({ error: "Not found" }, { status: 404 });
+  return Response.json(topic);
+}
+__name(onRequestPut5, "onRequestPut");
+async function onRequestDelete4({ env, params }) {
+  await env.ddsr_dashboard.prepare("DELETE FROM meeting_topics WHERE id = ?").bind(params.id).run();
+  return Response.json({ deleted: true });
+}
+__name(onRequestDelete4, "onRequestDelete");
+
+// api/meetings/[id].js
+async function onRequestPut6({ env, params, request }) {
+  const body = await request.json();
+  const { meeting_date, display_date, title, meeting_type, location, next_meeting, is_published } = body;
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  await env.ddsr_dashboard.prepare(`
+    UPDATE meetings SET
+      meeting_date = ?, display_date = ?, title = ?, meeting_type = ?,
+      location = ?, next_meeting = ?, is_published = ?, updated_at = ?
+    WHERE id = ?
+  `).bind(
+    meeting_date,
+    display_date || meeting_date,
+    title?.trim() || null,
+    meeting_type || null,
+    location || null,
+    next_meeting || null,
+    is_published ?? 1,
+    now,
+    params.id
+  ).run();
+  const meeting = await env.ddsr_dashboard.prepare("SELECT * FROM meetings WHERE id = ?").bind(params.id).first();
+  if (!meeting) return Response.json({ error: "Not found" }, { status: 404 });
+  return Response.json(meeting);
+}
+__name(onRequestPut6, "onRequestPut");
+async function onRequestDelete5({ env, params }) {
+  await env.ddsr_dashboard.prepare("DELETE FROM meetings WHERE id = ?").bind(params.id).run();
+  return Response.json({ deleted: true });
+}
+__name(onRequestDelete5, "onRequestDelete");
+
+// api/people/[id].js
+async function onRequestPut7({ env, params, request }) {
+  const body = await request.json();
+  const { name, role, org_type, email, avatar_bg, avatar_fg, is_active } = body;
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  await env.ddsr_dashboard.prepare(`
+    UPDATE people SET name = ?, role = ?, org_type = ?, email = ?, avatar_bg = ?, avatar_fg = ?, is_active = ?, updated_at = ?
+    WHERE id = ?
+  `).bind(
+    name?.trim() || null,
+    role || null,
+    org_type || null,
+    email || null,
+    avatar_bg || null,
+    avatar_fg || null,
+    is_active ?? 1,
+    now,
+    params.id
+  ).run();
+  const person = await env.ddsr_dashboard.prepare("SELECT * FROM people WHERE id = ?").bind(params.id).first();
+  if (!person) return Response.json({ error: "Not found" }, { status: 404 });
+  return Response.json(person);
+}
+__name(onRequestPut7, "onRequestPut");
+
+// api/projects/[slug].js
 async function onRequestGet({ env, params }) {
+  const project = await env.ddsr_dashboard.prepare(`
+    SELECT id, name, client_display_name, subtitle, slug, go_live_date, project_start_date, project_end_date, is_active, client_id
+    FROM projects WHERE slug = ?
+  `).bind(params.slug).first();
+  if (!project) return Response.json({ error: "Not found" }, { status: 404 });
+  return Response.json(project);
+}
+__name(onRequestGet, "onRequestGet");
+async function onRequestPut8({ env, params, request }) {
+  const { name, subtitle, go_live_date, project_start_date, project_end_date } = await request.json();
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  await env.ddsr_dashboard.prepare(`
+    UPDATE projects SET name = ?, subtitle = ?, go_live_date = ?, project_start_date = ?, project_end_date = ?, updated_at = ?
+    WHERE slug = ?
+  `).bind(
+    name?.trim() || null,
+    subtitle?.trim() || null,
+    go_live_date || null,
+    project_start_date || null,
+    project_end_date || null,
+    now,
+    params.slug
+  ).run();
+  const project = await env.ddsr_dashboard.prepare("SELECT * FROM projects WHERE slug = ?").bind(params.slug).first();
+  if (!project) return Response.json({ error: "Not found" }, { status: 404 });
+  return Response.json(project);
+}
+__name(onRequestPut8, "onRequestPut");
+
+// api/tasks/[id].js
+async function onRequestGet2({ env, params }) {
   const task = await env.ddsr_dashboard.prepare(`
     SELECT t.*, w.short_name as workflow_name, w.color as workflow_color
     FROM tasks t
@@ -14,9 +196,8 @@ async function onRequestGet({ env, params }) {
   if (!task) return Response.json({ error: "Not found" }, { status: 404 });
   return Response.json(task);
 }
-__name(onRequestGet, "onRequestGet");
-__name2(onRequestGet, "onRequestGet");
-async function onRequestPut({ env, params, request }) {
+__name(onRequestGet2, "onRequestGet");
+async function onRequestPut9({ env, params, request }) {
   const body = await request.json();
   const { workflow_id, assignee_id, assignee_name, title, notes, status, priority, due_date, is_archived } = body;
   const now = (/* @__PURE__ */ new Date()).toISOString();
@@ -52,15 +233,46 @@ async function onRequestPut({ env, params, request }) {
   const task = await env.ddsr_dashboard.prepare("SELECT * FROM tasks WHERE id = ?").bind(params.id).first();
   return Response.json(task);
 }
-__name(onRequestPut, "onRequestPut");
-__name2(onRequestPut, "onRequestPut");
-async function onRequestDelete({ env, params }) {
+__name(onRequestPut9, "onRequestPut");
+async function onRequestDelete6({ env, params }) {
   await env.ddsr_dashboard.prepare("DELETE FROM tasks WHERE id = ?").bind(params.id).run();
   return Response.json({ deleted: true });
 }
-__name(onRequestDelete, "onRequestDelete");
-__name2(onRequestDelete, "onRequestDelete");
-async function onRequestGet2({ env }) {
+__name(onRequestDelete6, "onRequestDelete");
+
+// api/workflow-steps/[id].js
+async function onRequestPut10({ env, params, request }) {
+  const { status } = await request.json();
+  const valid = ["Not Started", "In Progress", "Done"];
+  if (!valid.includes(status)) return Response.json({ error: "Invalid status" }, { status: 400 });
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  await env.ddsr_dashboard.prepare(`
+    UPDATE workflow_steps SET status = ?, updated_at = ? WHERE id = ?
+  `).bind(status, now, params.id).run();
+  const step = await env.ddsr_dashboard.prepare("SELECT * FROM workflow_steps WHERE id = ?").bind(params.id).first();
+  if (!step) return Response.json({ error: "Not found" }, { status: 404 });
+  return Response.json(step);
+}
+__name(onRequestPut10, "onRequestPut");
+
+// api/clients.js
+async function onRequestPost({ env, request }) {
+  const { name, display_name, slug } = await request.json();
+  if (!name?.trim()) return Response.json({ error: "name is required" }, { status: 400 });
+  if (!display_name?.trim()) return Response.json({ error: "display_name is required" }, { status: 400 });
+  if (!slug?.trim()) return Response.json({ error: "slug is required" }, { status: 400 });
+  const existing = await env.ddsr_dashboard.prepare("SELECT id FROM clients WHERE slug = ?").bind(slug.trim()).first();
+  if (existing) return Response.json({ error: "Slug already in use" }, { status: 409 });
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const { meta } = await env.ddsr_dashboard.prepare(`
+    INSERT INTO clients (name, display_name, slug, is_active, created_at, updated_at)
+    VALUES (?, ?, ?, 1, ?, ?)
+  `).bind(name.trim(), display_name.trim(), slug.trim(), now, now).run();
+  const client = await env.ddsr_dashboard.prepare("SELECT * FROM clients WHERE id = ?").bind(meta.last_row_id).first();
+  return Response.json(client, { status: 201 });
+}
+__name(onRequestPost, "onRequestPost");
+async function onRequestGet3({ env }) {
   const db = env.ddsr_dashboard;
   const clients = await db.prepare(
     `SELECT id, slug, display_name, name, is_active FROM clients WHERE is_active = 1 ORDER BY name`
@@ -74,9 +286,10 @@ async function onRequestGet2({ env }) {
   }));
   return Response.json(result);
 }
-__name(onRequestGet2, "onRequestGet2");
-__name2(onRequestGet2, "onRequestGet");
-async function onRequestGet3({ env, request }) {
+__name(onRequestGet3, "onRequestGet");
+
+// api/documents.js
+async function onRequestGet4({ env, request }) {
   const url = new URL(request.url);
   const slug = url.searchParams.get("slug");
   let projectId = url.searchParams.get("project_id") || 1;
@@ -85,8 +298,97 @@ async function onRequestGet3({ env, request }) {
     if (!proj) return Response.json({ error: "Project not found" }, { status: 404 });
     projectId = proj.id;
   }
+  const { results } = await env.ddsr_dashboard.prepare(`
+    SELECT d.*, w.name as workflow_name FROM documents d
+    LEFT JOIN workflows w ON d.workflow_id = w.id
+    WHERE d.project_id = ? AND d.is_active = 1
+    ORDER BY w.sort_order, d.id
+  `).bind(projectId).all();
+  return Response.json(results);
+}
+__name(onRequestGet4, "onRequestGet");
+async function onRequestPost2({ env, request }) {
+  const body = await request.json();
+  let { project_id, slug, workflow_id, name, url, doc_type } = body;
+  if (slug && !project_id) {
+    const proj = await env.ddsr_dashboard.prepare("SELECT id FROM projects WHERE slug = ? LIMIT 1").bind(slug).first();
+    if (!proj) return Response.json({ error: "Project not found" }, { status: 404 });
+    project_id = proj.id;
+  }
+  if (!project_id) return Response.json({ error: "project_id or slug required" }, { status: 400 });
+  if (!name?.trim()) return Response.json({ error: "name is required" }, { status: 400 });
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const { meta } = await env.ddsr_dashboard.prepare(`
+    INSERT INTO documents (project_id, workflow_id, name, url, doc_type, is_active, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, 1, ?, ?)
+  `).bind(project_id, workflow_id || null, name.trim(), url || null, doc_type || null, now, now).run();
+  const doc = await env.ddsr_dashboard.prepare("SELECT * FROM documents WHERE id = ?").bind(meta.last_row_id).first();
+  return Response.json(doc, { status: 201 });
+}
+__name(onRequestPost2, "onRequestPost");
+
+// api/meeting-action-items.js
+async function onRequestPost3({ env, request }) {
+  const body = await request.json();
+  const { topic_id, action_text, assignee_name, assignee_id, sort_order } = body;
+  if (!topic_id) return Response.json({ error: "topic_id is required" }, { status: 400 });
+  if (!action_text?.trim()) return Response.json({ error: "action_text is required" }, { status: 400 });
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const { meta } = await env.ddsr_dashboard.prepare(`
+    INSERT INTO meeting_action_items (topic_id, action_text, assignee_name, assignee_id, status, sort_order, created_at, updated_at)
+    VALUES (?, ?, ?, ?, 'Open', ?, ?, ?)
+  `).bind(topic_id, action_text.trim(), assignee_name || null, assignee_id || null, sort_order ?? 0, now, now).run();
+  const item = await env.ddsr_dashboard.prepare("SELECT * FROM meeting_action_items WHERE id = ?").bind(meta.last_row_id).first();
+  return Response.json(item, { status: 201 });
+}
+__name(onRequestPost3, "onRequestPost");
+
+// api/meeting-notes.js
+async function onRequestPost4({ env, request }) {
+  const body = await request.json();
+  const { topic_id, note_text, sort_order } = body;
+  if (!topic_id) return Response.json({ error: "topic_id is required" }, { status: 400 });
+  if (!note_text?.trim()) return Response.json({ error: "note_text is required" }, { status: 400 });
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const { meta } = await env.ddsr_dashboard.prepare(`
+    INSERT INTO meeting_notes (topic_id, note_text, sort_order, created_at)
+    VALUES (?, ?, ?, ?)
+  `).bind(topic_id, note_text.trim(), sort_order ?? 0, now).run();
+  const note = await env.ddsr_dashboard.prepare("SELECT * FROM meeting_notes WHERE id = ?").bind(meta.last_row_id).first();
+  return Response.json(note, { status: 201 });
+}
+__name(onRequestPost4, "onRequestPost");
+
+// api/meeting-topics.js
+async function onRequestPost5({ env, request }) {
+  const body = await request.json();
+  const { meeting_id, area, color, workflow_id, sort_order } = body;
+  if (!meeting_id) return Response.json({ error: "meeting_id is required" }, { status: 400 });
+  if (!area?.trim()) return Response.json({ error: "area is required" }, { status: 400 });
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const { meta } = await env.ddsr_dashboard.prepare(`
+    INSERT INTO meeting_topics (meeting_id, area, color, workflow_id, sort_order, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).bind(meeting_id, area.trim(), color || "#6366F1", workflow_id || null, sort_order ?? 0, now, now).run();
+  const topic = await env.ddsr_dashboard.prepare("SELECT * FROM meeting_topics WHERE id = ?").bind(meta.last_row_id).first();
+  return Response.json(topic, { status: 201 });
+}
+__name(onRequestPost5, "onRequestPost");
+
+// api/meetings.js
+async function onRequestGet5({ env, request }) {
+  const url = new URL(request.url);
+  const slug = url.searchParams.get("slug");
+  const showAll = url.searchParams.get("all") === "1";
+  let projectId = url.searchParams.get("project_id") || 1;
+  if (slug) {
+    const proj = await env.ddsr_dashboard.prepare("SELECT id FROM projects WHERE slug = ? LIMIT 1").bind(slug).first();
+    if (!proj) return Response.json({ error: "Project not found" }, { status: 404 });
+    projectId = proj.id;
+  }
+  const publishedFilter = showAll ? "" : "AND is_published = 1";
   const { results: meetings } = await env.ddsr_dashboard.prepare(`
-    SELECT * FROM meetings WHERE project_id = ? AND is_published = 1 ORDER BY meeting_date DESC, id DESC
+    SELECT * FROM meetings WHERE project_id = ? ${publishedFilter} ORDER BY meeting_date DESC, id DESC
   `).bind(projectId).all();
   const { results: attendees } = await env.ddsr_dashboard.prepare(`
     SELECT ma.*, p.avatar_bg, p.avatar_fg
@@ -116,7 +418,7 @@ async function onRequestGet3({ env, request }) {
   `).bind(projectId).all();
   const topicsWithContent = topics.map((t) => ({
     ...t,
-    notes: notes.filter((n) => n.topic_id === t.id).map((n) => n.note_text),
+    notes: notes.filter((n) => n.topic_id === t.id),
     actionItems: actions.filter((a) => a.topic_id === t.id)
   }));
   const data = meetings.map((m) => ({
@@ -126,9 +428,74 @@ async function onRequestGet3({ env, request }) {
   }));
   return Response.json(data);
 }
-__name(onRequestGet3, "onRequestGet3");
-__name2(onRequestGet3, "onRequestGet");
-async function onRequestGet4({ env, request }) {
+__name(onRequestGet5, "onRequestGet");
+
+// api/meetings/index.js
+async function onRequestPost6({ env, request }) {
+  const body = await request.json();
+  const { project_id, slug, meeting_date, display_date, title, meeting_type, location, next_meeting } = body;
+  let projectId = project_id;
+  if (slug && !projectId) {
+    const proj = await env.ddsr_dashboard.prepare("SELECT id FROM projects WHERE slug = ? LIMIT 1").bind(slug).first();
+    if (!proj) return Response.json({ error: "Project not found" }, { status: 404 });
+    projectId = proj.id;
+  }
+  if (!projectId) return Response.json({ error: "project_id or slug required" }, { status: 400 });
+  if (!title?.trim()) return Response.json({ error: "title is required" }, { status: 400 });
+  if (!meeting_date) return Response.json({ error: "meeting_date is required" }, { status: 400 });
+  const meetingSlug = slug || meeting_date.replace(/-/g, "");
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const { meta } = await env.ddsr_dashboard.prepare(`
+    INSERT INTO meetings (project_id, slug, meeting_date, display_date, title, meeting_type, location, next_meeting, is_published, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+  `).bind(
+    projectId,
+    meetingSlug,
+    meeting_date,
+    display_date || meeting_date,
+    title.trim(),
+    meeting_type || null,
+    location || null,
+    next_meeting || null,
+    now,
+    now
+  ).run();
+  const meeting = await env.ddsr_dashboard.prepare("SELECT * FROM meetings WHERE id = ?").bind(meta.last_row_id).first();
+  return Response.json(meeting, { status: 201 });
+}
+__name(onRequestPost6, "onRequestPost");
+
+// api/people.js
+async function onRequestPost7({ env, request }) {
+  const body = await request.json();
+  let { project_id, slug, name, role, org_type, email, avatar_bg, avatar_fg } = body;
+  if (slug && !project_id) {
+    const proj = await env.ddsr_dashboard.prepare("SELECT id FROM projects WHERE slug = ? LIMIT 1").bind(slug).first();
+    if (!proj) return Response.json({ error: "Project not found" }, { status: 404 });
+    project_id = proj.id;
+  }
+  if (!project_id) return Response.json({ error: "project_id or slug required" }, { status: 400 });
+  if (!name?.trim()) return Response.json({ error: "name is required" }, { status: 400 });
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const { meta } = await env.ddsr_dashboard.prepare(`
+    INSERT INTO people (project_id, name, role, org_type, email, avatar_bg, avatar_fg, is_active, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+  `).bind(
+    project_id,
+    name.trim(),
+    role || null,
+    org_type || null,
+    email || null,
+    avatar_bg || "#DBEAFE",
+    avatar_fg || "#1E40AF",
+    now,
+    now
+  ).run();
+  const person = await env.ddsr_dashboard.prepare("SELECT * FROM people WHERE id = ?").bind(meta.last_row_id).first();
+  return Response.json(person, { status: 201 });
+}
+__name(onRequestPost7, "onRequestPost");
+async function onRequestGet6({ env, request }) {
   const url = new URL(request.url);
   const slug = url.searchParams.get("slug");
   let projectId = url.searchParams.get("project_id") || 1;
@@ -142,8 +509,42 @@ async function onRequestGet4({ env, request }) {
   `).bind(projectId).all();
   return Response.json(results);
 }
-__name(onRequestGet4, "onRequestGet4");
-__name2(onRequestGet4, "onRequestGet");
+__name(onRequestGet6, "onRequestGet");
+
+// api/projects.js
+async function onRequestPost8({ env, request }) {
+  const body = await request.json();
+  const { client_id, name, subtitle, slug, go_live_date, project_start_date } = body;
+  if (!client_id) return Response.json({ error: "client_id is required" }, { status: 400 });
+  if (!name?.trim()) return Response.json({ error: "name is required" }, { status: 400 });
+  if (!slug?.trim()) return Response.json({ error: "slug is required" }, { status: 400 });
+  const existing = await env.ddsr_dashboard.prepare("SELECT id FROM projects WHERE slug = ?").bind(slug.trim()).first();
+  if (existing) return Response.json({ error: "Slug already in use" }, { status: 409 });
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const { meta } = await env.ddsr_dashboard.prepare(`
+    INSERT INTO projects (client_id, name, client_display_name, subtitle, slug, go_live_date, project_start_date, is_active, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+  `).bind(
+    client_id,
+    name.trim(),
+    name.trim(),
+    subtitle?.trim() || null,
+    slug.trim(),
+    go_live_date || null,
+    project_start_date || null,
+    now,
+    now
+  ).run();
+  await env.ddsr_dashboard.prepare(`
+    INSERT INTO people (project_id, name, role, org_type, avatar_bg, avatar_fg, is_active, created_at, updated_at)
+    VALUES (?, 'Unassigned', null, null, '#F1F5F9', '#94A3B8', 1, ?, ?)
+  `).bind(meta.last_row_id, now, now).run();
+  const project = await env.ddsr_dashboard.prepare("SELECT * FROM projects WHERE id = ?").bind(meta.last_row_id).first();
+  return Response.json(project, { status: 201 });
+}
+__name(onRequestPost8, "onRequestPost");
+
+// api/tasks.js
 async function resolveProjectId(env, url) {
   const slug = url.searchParams.get("slug");
   if (slug) {
@@ -154,8 +555,7 @@ async function resolveProjectId(env, url) {
   return url.searchParams.get("project_id") || 1;
 }
 __name(resolveProjectId, "resolveProjectId");
-__name2(resolveProjectId, "resolveProjectId");
-async function onRequestGet5({ env, request }) {
+async function onRequestGet7({ env, request }) {
   const url = new URL(request.url);
   const projectId = await resolveProjectId(env, url);
   if (projectId === null) return Response.json({ error: "Project not found" }, { status: 404 });
@@ -187,9 +587,8 @@ async function onRequestGet5({ env, request }) {
   const { results } = await env.ddsr_dashboard.prepare(query).bind(...params).all();
   return Response.json(results);
 }
-__name(onRequestGet5, "onRequestGet5");
-__name2(onRequestGet5, "onRequestGet");
-async function onRequestPost({ env, request }) {
+__name(onRequestGet7, "onRequestGet");
+async function onRequestPost9({ env, request }) {
   const body = await request.json();
   let { project_id, slug, workflow_id, assignee_id, assignee_name, title, notes, status, priority, due_date } = body;
   if (slug && !project_id) {
@@ -219,9 +618,10 @@ async function onRequestPost({ env, request }) {
   const task = await env.ddsr_dashboard.prepare("SELECT * FROM tasks WHERE id = ?").bind(meta.last_row_id).first();
   return Response.json(task, { status: 201 });
 }
-__name(onRequestPost, "onRequestPost");
-__name2(onRequestPost, "onRequestPost");
-async function onRequestGet6({ env, request }) {
+__name(onRequestPost9, "onRequestPost");
+
+// api/workflows.js
+async function onRequestGet8({ env, request }) {
   const url = new URL(request.url);
   const slug = url.searchParams.get("slug");
   let projectId = url.searchParams.get("project_id") || 1;
@@ -276,24 +676,27 @@ async function onRequestGet6({ env, request }) {
   }));
   return Response.json(data);
 }
-__name(onRequestGet6, "onRequestGet6");
-__name2(onRequestGet6, "onRequestGet");
-var isTestEnvironment = /* @__PURE__ */ __name2(() => {
+__name(onRequestGet8, "onRequestGet");
+
+// ../node_modules/.pnpm/@clerk+shared@4.12.0_react-_5da07b8bc2a422cf2f0a3aafa80b516b/node_modules/@clerk/shared/dist/runtime/runtimeEnvironment-D1yr0yUs.mjs
+var isTestEnvironment = /* @__PURE__ */ __name(() => {
   try {
     return false;
   } catch {
   }
   return false;
 }, "isTestEnvironment");
-var isProductionEnvironment = /* @__PURE__ */ __name2(() => {
+var isProductionEnvironment = /* @__PURE__ */ __name(() => {
   try {
     return false;
   } catch {
   }
   return false;
 }, "isProductionEnvironment");
+
+// ../node_modules/.pnpm/@clerk+shared@4.12.0_react-_5da07b8bc2a422cf2f0a3aafa80b516b/node_modules/@clerk/shared/dist/runtime/deprecated--jK9xTNh.mjs
 var displayedWarnings = /* @__PURE__ */ new Set();
-var deprecated = /* @__PURE__ */ __name2((fnName, warning, key) => {
+var deprecated = /* @__PURE__ */ __name((fnName, warning, key) => {
   const hideWarning = isTestEnvironment() || isProductionEnvironment();
   const messageId = key ?? fnName;
   if (displayedWarnings.has(messageId) || hideWarning) return;
@@ -301,6 +704,8 @@ var deprecated = /* @__PURE__ */ __name2((fnName, warning, key) => {
   console.warn(`Clerk - DEPRECATION WARNING: "${fnName}" is deprecated and will be removed in the next major release.
 ${warning}`);
 }, "deprecated");
+
+// ../node_modules/.pnpm/@clerk+shared@4.12.0_react-_5da07b8bc2a422cf2f0a3aafa80b516b/node_modules/@clerk/shared/dist/runtime/constants-Bta24VLk.mjs
 var LEGACY_DEV_INSTANCE_SUFFIXES = [
   ".lcl.dev",
   ".lclstage.dev",
@@ -322,16 +727,22 @@ var DEV_OR_STAGING_SUFFIXES = [
   "accountsstage.dev",
   "accounts.dev"
 ];
-var isomorphicAtob = /* @__PURE__ */ __name2((data) => {
+
+// ../node_modules/.pnpm/@clerk+shared@4.12.0_react-_5da07b8bc2a422cf2f0a3aafa80b516b/node_modules/@clerk/shared/dist/runtime/isomorphicAtob-CoF80qYz.mjs
+var isomorphicAtob = /* @__PURE__ */ __name((data) => {
   if (typeof atob !== "undefined" && typeof atob === "function") return atob(data);
   else if (typeof globalThis.Buffer !== "undefined") return globalThis.Buffer.from(data, "base64").toString();
   return data;
 }, "isomorphicAtob");
-var isomorphicBtoa = /* @__PURE__ */ __name2((data) => {
+
+// ../node_modules/.pnpm/@clerk+shared@4.12.0_react-_5da07b8bc2a422cf2f0a3aafa80b516b/node_modules/@clerk/shared/dist/runtime/isomorphicBtoa-DWmLcIHi.mjs
+var isomorphicBtoa = /* @__PURE__ */ __name((data) => {
   if (typeof btoa !== "undefined" && typeof btoa === "function") return btoa(data);
   else if (typeof globalThis.Buffer !== "undefined") return globalThis.Buffer.from(data).toString("base64");
   return data;
 }, "isomorphicBtoa");
+
+// ../node_modules/.pnpm/@clerk+shared@4.12.0_react-_5da07b8bc2a422cf2f0a3aafa80b516b/node_modules/@clerk/shared/dist/runtime/keys-ChIG_Ewf.mjs
 var PUBLISHABLE_KEY_LIVE_PREFIX = "pk_live_";
 var PUBLISHABLE_KEY_TEST_PREFIX = "pk_test_";
 function isValidDecodedPublishableKey(decoded) {
@@ -341,7 +752,6 @@ function isValidDecodedPublishableKey(decoded) {
   return withoutTrailing.includes(".");
 }
 __name(isValidDecodedPublishableKey, "isValidDecodedPublishableKey");
-__name2(isValidDecodedPublishableKey, "isValidDecodedPublishableKey");
 function parsePublishableKey(key, options = {}) {
   key = key || "";
   if (!key || !isPublishableKey(key)) {
@@ -370,7 +780,6 @@ function parsePublishableKey(key, options = {}) {
   };
 }
 __name(parsePublishableKey, "parsePublishableKey");
-__name2(parsePublishableKey, "parsePublishableKey");
 function isPublishableKey(key = "") {
   try {
     if (!(key.startsWith(PUBLISHABLE_KEY_LIVE_PREFIX) || key.startsWith(PUBLISHABLE_KEY_TEST_PREFIX))) return false;
@@ -384,10 +793,9 @@ function isPublishableKey(key = "") {
   }
 }
 __name(isPublishableKey, "isPublishableKey");
-__name2(isPublishableKey, "isPublishableKey");
 function createDevOrStagingUrlCache() {
   const devOrStagingUrlCache = /* @__PURE__ */ new Map();
-  return { isDevOrStagingUrl: /* @__PURE__ */ __name2((url) => {
+  return { isDevOrStagingUrl: /* @__PURE__ */ __name((url) => {
     if (!url) return false;
     const hostname = typeof url === "string" ? url : url.hostname;
     let res = devOrStagingUrlCache.get(hostname);
@@ -399,43 +807,41 @@ function createDevOrStagingUrlCache() {
   }, "isDevOrStagingUrl") };
 }
 __name(createDevOrStagingUrlCache, "createDevOrStagingUrlCache");
-__name2(createDevOrStagingUrlCache, "createDevOrStagingUrlCache");
 function isProductionFromPublishableKey(apiKey) {
   return apiKey.startsWith("live_") || apiKey.startsWith("pk_live_");
 }
 __name(isProductionFromPublishableKey, "isProductionFromPublishableKey");
-__name2(isProductionFromPublishableKey, "isProductionFromPublishableKey");
 function isDevelopmentFromSecretKey(apiKey) {
   return apiKey.startsWith("test_") || apiKey.startsWith("sk_test_");
 }
 __name(isDevelopmentFromSecretKey, "isDevelopmentFromSecretKey");
-__name2(isDevelopmentFromSecretKey, "isDevelopmentFromSecretKey");
 async function getCookieSuffix(publishableKey, subtle = globalThis.crypto.subtle) {
   const data = new TextEncoder().encode(publishableKey);
   const digest = await subtle.digest("sha-1", data);
   return isomorphicBtoa(String.fromCharCode(...new Uint8Array(digest))).replace(/\+/gi, "-").replace(/\//gi, "_").substring(0, 8);
 }
 __name(getCookieSuffix, "getCookieSuffix");
-__name2(getCookieSuffix, "getCookieSuffix");
-var getSuffixedCookieName = /* @__PURE__ */ __name2((cookieName, cookieSuffix) => {
+var getSuffixedCookieName = /* @__PURE__ */ __name((cookieName, cookieSuffix) => {
   return `${cookieName}_${cookieSuffix}`;
 }, "getSuffixedCookieName");
+
+// ../node_modules/.pnpm/@clerk+shared@4.12.0_react-_5da07b8bc2a422cf2f0a3aafa80b516b/node_modules/@clerk/shared/dist/runtime/retry-DqRIhHV5.mjs
 var defaultOptions = {
   initialDelay: 125,
   maxDelayBetweenRetries: 0,
   factor: 2,
-  shouldRetry: /* @__PURE__ */ __name2((_2, iteration) => iteration < 5, "shouldRetry"),
+  shouldRetry: /* @__PURE__ */ __name((_2, iteration) => iteration < 5, "shouldRetry"),
   retryImmediately: false,
   jitter: true
 };
 var RETRY_IMMEDIATELY_DELAY = 100;
-var sleep = /* @__PURE__ */ __name2(async (ms) => new Promise((s2) => setTimeout(s2, ms)), "sleep");
-var applyJitter = /* @__PURE__ */ __name2((delay, jitter) => {
+var sleep = /* @__PURE__ */ __name(async (ms) => new Promise((s2) => setTimeout(s2, ms)), "sleep");
+var applyJitter = /* @__PURE__ */ __name((delay, jitter) => {
   return jitter ? delay * (1 + Math.random()) : delay;
 }, "applyJitter");
-var createExponentialDelayAsyncFn = /* @__PURE__ */ __name2((opts) => {
+var createExponentialDelayAsyncFn = /* @__PURE__ */ __name((opts) => {
   let timesCalled = 0;
-  const calculateDelayInMs = /* @__PURE__ */ __name2(() => {
+  const calculateDelayInMs = /* @__PURE__ */ __name(() => {
     const constant = opts.initialDelay;
     const base = opts.factor;
     let delay = constant * Math.pow(base, timesCalled);
@@ -447,7 +853,7 @@ var createExponentialDelayAsyncFn = /* @__PURE__ */ __name2((opts) => {
     timesCalled++;
   };
 }, "createExponentialDelayAsyncFn");
-var retry = /* @__PURE__ */ __name2(async (callback, options = {}) => {
+var retry = /* @__PURE__ */ __name(async (callback, options = {}) => {
   let iterations = 0;
   const { shouldRetry, initialDelay, maxDelayBetweenRetries, factor, retryImmediately, jitter, onBeforeRetry } = {
     ...defaultOptions,
@@ -469,20 +875,22 @@ var retry = /* @__PURE__ */ __name2(async (callback, options = {}) => {
     else await delay();
   }
 }, "retry");
+
+// ../node_modules/.pnpm/@clerk+shared@4.12.0_react-_5da07b8bc2a422cf2f0a3aafa80b516b/node_modules/@clerk/shared/dist/runtime/url-C6gPMFx5.mjs
 function isLegacyDevAccountPortalOrigin(host) {
   return LEGACY_DEV_INSTANCE_SUFFIXES.some((legacyDevSuffix) => {
     return host.startsWith("accounts.") && host.endsWith(legacyDevSuffix);
   });
 }
 __name(isLegacyDevAccountPortalOrigin, "isLegacyDevAccountPortalOrigin");
-__name2(isLegacyDevAccountPortalOrigin, "isLegacyDevAccountPortalOrigin");
 function isCurrentDevAccountPortalOrigin(host) {
   return CURRENT_DEV_INSTANCE_SUFFIXES.some((currentDevSuffix) => {
     return host.endsWith(currentDevSuffix) && !host.endsWith(".clerk" + currentDevSuffix);
   });
 }
 __name(isCurrentDevAccountPortalOrigin, "isCurrentDevAccountPortalOrigin");
-__name2(isCurrentDevAccountPortalOrigin, "isCurrentDevAccountPortalOrigin");
+
+// ../node_modules/.pnpm/@clerk+shared@4.12.0_react-_5da07b8bc2a422cf2f0a3aafa80b516b/node_modules/@clerk/shared/dist/runtime/clerkRuntimeError-DqAmLuLY.mjs
 function createErrorTypeGuard(ErrorClass) {
   function typeGuard(error) {
     const target = error ?? this;
@@ -493,17 +901,12 @@ function createErrorTypeGuard(ErrorClass) {
     return target instanceof ErrorClass;
   }
   __name(typeGuard, "typeGuard");
-  __name2(typeGuard, "typeGuard");
   return typeGuard;
 }
 __name(createErrorTypeGuard, "createErrorTypeGuard");
-__name2(createErrorTypeGuard, "createErrorTypeGuard");
 var ClerkError = class ClerkError2 extends Error {
   static {
-    __name(this, "ClerkError2");
-  }
-  static {
-    __name2(this, "ClerkError");
+    __name(this, "ClerkError");
   }
   static kind = "ClerkError";
   clerkError = true;
@@ -543,10 +946,7 @@ Docs: ${docsUrl}`;
 };
 var ClerkRuntimeError = class ClerkRuntimeError2 extends ClerkError {
   static {
-    __name(this, "ClerkRuntimeError2");
-  }
-  static {
-    __name2(this, "ClerkRuntimeError");
+    __name(this, "ClerkRuntimeError");
   }
   static kind = "ClerkRuntimeError";
   /**
@@ -562,12 +962,11 @@ var ClerkRuntimeError = class ClerkRuntimeError2 extends ClerkError {
   }
 };
 var isClerkRuntimeError = createErrorTypeGuard(ClerkRuntimeError);
+
+// ../node_modules/.pnpm/@clerk+shared@4.12.0_react-_5da07b8bc2a422cf2f0a3aafa80b516b/node_modules/@clerk/shared/dist/runtime/error-NXMTfCAv.mjs
 var ClerkAPIError = class {
   static {
     __name(this, "ClerkAPIError");
-  }
-  static {
-    __name2(this, "ClerkAPIError");
   }
   static kind = "ClerkAPIError";
   code;
@@ -600,13 +999,9 @@ function parseError(error) {
   return new ClerkAPIError(error);
 }
 __name(parseError, "parseError");
-__name2(parseError, "parseError");
 var ClerkAPIResponseError = class ClerkAPIResponseError2 extends ClerkError {
   static {
-    __name(this, "ClerkAPIResponseError2");
-  }
-  static {
-    __name2(this, "ClerkAPIResponseError");
+    __name(this, "ClerkAPIResponseError");
   }
   static kind = "ClerkAPIResponseError";
   status;
@@ -660,7 +1055,6 @@ function buildErrorThrower({ packageName, customMessages }) {
     return `${pkg}: ${msg}`;
   }
   __name(buildMessage, "buildMessage");
-  __name2(buildMessage, "buildMessage");
   const messages = {
     ...DefaultMessages,
     ...customMessages
@@ -695,9 +1089,12 @@ function buildErrorThrower({ packageName, customMessages }) {
   };
 }
 __name(buildErrorThrower, "buildErrorThrower");
-__name2(buildErrorThrower, "buildErrorThrower");
+
+// ../node_modules/.pnpm/@clerk+backend@3.4.9_react-_b622d27dd95221a3835e08bcb14a401b/node_modules/@clerk/backend/dist/chunk-YBVFDYDR.mjs
 var errorThrower = buildErrorThrower({ packageName: "@clerk/backend" });
 var { isDevOrStagingUrl } = createDevOrStagingUrlCache();
+
+// ../node_modules/.pnpm/@clerk+backend@3.4.9_react-_b622d27dd95221a3835e08bcb14a401b/node_modules/@clerk/backend/dist/chunk-RZ7A7F6X.mjs
 var TokenVerificationErrorCode = {
   InvalidSecretKey: "clerk_key_invalid"
 };
@@ -729,9 +1126,6 @@ var TokenVerificationError = class _TokenVerificationError extends Error {
   static {
     __name(this, "_TokenVerificationError");
   }
-  static {
-    __name2(this, "_TokenVerificationError");
-  }
   constructor({
     action,
     message,
@@ -755,10 +1149,7 @@ var MachineTokenVerificationErrorCode = {
 };
 var _MachineTokenVerificationError = class _MachineTokenVerificationError2 extends ClerkError {
   static {
-    __name(this, "_MachineTokenVerificationError2");
-  }
-  static {
-    __name2(this, "_MachineTokenVerificationError");
+    __name(this, "_MachineTokenVerificationError");
   }
   constructor({
     message,
@@ -781,7 +1172,11 @@ var _MachineTokenVerificationError = class _MachineTokenVerificationError2 exten
 };
 _MachineTokenVerificationError.kind = "MachineTokenVerificationError";
 var MachineTokenVerificationError = _MachineTokenVerificationError;
+
+// ../node_modules/.pnpm/@clerk+backend@3.4.9_react-_b622d27dd95221a3835e08bcb14a401b/node_modules/@clerk/backend/dist/runtime/browser/crypto.mjs
 var webcrypto = crypto;
+
+// ../node_modules/.pnpm/@clerk+backend@3.4.9_react-_b622d27dd95221a3835e08bcb14a401b/node_modules/@clerk/backend/dist/chunk-J2CDX2WG.mjs
 var globalFetch = fetch.bind(globalThis);
 var runtime = {
   crypto: webcrypto,
@@ -846,7 +1241,6 @@ function parse(string, encoding, opts = {}) {
   return out;
 }
 __name(parse, "parse");
-__name2(parse, "parse");
 function stringify(data, encoding, opts = {}) {
   const { pad = true } = opts;
   const mask = (1 << encoding.bits) - 1;
@@ -872,7 +1266,6 @@ function stringify(data, encoding, opts = {}) {
   return out;
 }
 __name(stringify, "stringify");
-__name2(stringify, "stringify");
 var algToHash = {
   RS256: "SHA-256",
   RS384: "SHA-384",
@@ -897,11 +1290,10 @@ function getCryptoAlgorithm(algorithmName) {
   };
 }
 __name(getCryptoAlgorithm, "getCryptoAlgorithm");
-__name2(getCryptoAlgorithm, "getCryptoAlgorithm");
-var isArrayString = /* @__PURE__ */ __name2((s2) => {
+var isArrayString = /* @__PURE__ */ __name((s2) => {
   return Array.isArray(s2) && s2.length > 0 && s2.every((a) => typeof a === "string");
 }, "isArrayString");
-var assertAudienceClaim = /* @__PURE__ */ __name2((aud, audience) => {
+var assertAudienceClaim = /* @__PURE__ */ __name((aud, audience) => {
   const audienceList = [audience].flat().filter((a) => !!a);
   const audList = [aud].flat().filter((a) => !!a);
   const shouldVerifyAudience = audienceList.length > 0 && audList.length > 0;
@@ -930,7 +1322,7 @@ var assertAudienceClaim = /* @__PURE__ */ __name2((aud, audience) => {
     }
   }
 }, "assertAudienceClaim");
-var assertHeaderType = /* @__PURE__ */ __name2((typ, allowedTypes) => {
+var assertHeaderType = /* @__PURE__ */ __name((typ, allowedTypes) => {
   if (typeof typ === "undefined" && typeof allowedTypes === "undefined") {
     return;
   }
@@ -944,7 +1336,7 @@ var assertHeaderType = /* @__PURE__ */ __name2((typ, allowedTypes) => {
     });
   }
 }, "assertHeaderType");
-var assertHeaderAlgorithm = /* @__PURE__ */ __name2((alg) => {
+var assertHeaderAlgorithm = /* @__PURE__ */ __name((alg) => {
   if (!algs.includes(alg)) {
     throw new TokenVerificationError({
       action: TokenVerificationErrorAction.EnsureClerkJWT,
@@ -953,7 +1345,7 @@ var assertHeaderAlgorithm = /* @__PURE__ */ __name2((alg) => {
     });
   }
 }, "assertHeaderAlgorithm");
-var assertSubClaim = /* @__PURE__ */ __name2((sub) => {
+var assertSubClaim = /* @__PURE__ */ __name((sub) => {
   if (typeof sub !== "string") {
     throw new TokenVerificationError({
       action: TokenVerificationErrorAction.EnsureClerkJWT,
@@ -962,7 +1354,7 @@ var assertSubClaim = /* @__PURE__ */ __name2((sub) => {
     });
   }
 }, "assertSubClaim");
-var assertAuthorizedPartiesClaim = /* @__PURE__ */ __name2((azp, authorizedParties) => {
+var assertAuthorizedPartiesClaim = /* @__PURE__ */ __name((azp, authorizedParties) => {
   if (!azp || !authorizedParties || authorizedParties.length === 0) {
     return;
   }
@@ -973,7 +1365,7 @@ var assertAuthorizedPartiesClaim = /* @__PURE__ */ __name2((azp, authorizedParti
     });
   }
 }, "assertAuthorizedPartiesClaim");
-var assertExpirationClaim = /* @__PURE__ */ __name2((exp, clockSkewInMs) => {
+var assertExpirationClaim = /* @__PURE__ */ __name((exp, clockSkewInMs) => {
   if (typeof exp !== "number") {
     throw new TokenVerificationError({
       action: TokenVerificationErrorAction.EnsureClerkJWT,
@@ -992,7 +1384,7 @@ var assertExpirationClaim = /* @__PURE__ */ __name2((exp, clockSkewInMs) => {
     });
   }
 }, "assertExpirationClaim");
-var assertActivationClaim = /* @__PURE__ */ __name2((nbf, clockSkewInMs) => {
+var assertActivationClaim = /* @__PURE__ */ __name((nbf, clockSkewInMs) => {
   if (typeof nbf === "undefined") {
     return;
   }
@@ -1014,7 +1406,7 @@ var assertActivationClaim = /* @__PURE__ */ __name2((nbf, clockSkewInMs) => {
     });
   }
 }, "assertActivationClaim");
-var assertIssuedAtClaim = /* @__PURE__ */ __name2((iat, clockSkewInMs) => {
+var assertIssuedAtClaim = /* @__PURE__ */ __name((iat, clockSkewInMs) => {
   if (typeof iat === "undefined") {
     return;
   }
@@ -1047,7 +1439,6 @@ function pemToBuffer(secret) {
   return bufView;
 }
 __name(pemToBuffer, "pemToBuffer");
-__name2(pemToBuffer, "pemToBuffer");
 function importKey(key, algorithm, keyUsage) {
   if (typeof key === "object") {
     return runtime.crypto.subtle.importKey("jwk", key, algorithm, false, [keyUsage]);
@@ -1057,7 +1448,6 @@ function importKey(key, algorithm, keyUsage) {
   return runtime.crypto.subtle.importKey(format, keyData, algorithm, false, [keyUsage]);
 }
 __name(importKey, "importKey");
-__name2(importKey, "importKey");
 var DEFAULT_CLOCK_SKEW_IN_MS = 5 * 1e3;
 async function hasValidSignature(jwt, key) {
   const { header, signature, raw } = jwt;
@@ -1080,7 +1470,6 @@ async function hasValidSignature(jwt, key) {
   }
 }
 __name(hasValidSignature, "hasValidSignature");
-__name2(hasValidSignature, "hasValidSignature");
 function decodeJwt(token) {
   const tokenParts = (token || "").toString().split(".");
   if (tokenParts.length !== 3) {
@@ -1112,7 +1501,6 @@ function decodeJwt(token) {
   return { data };
 }
 __name(decodeJwt, "decodeJwt");
-__name2(decodeJwt, "decodeJwt");
 async function verifyJwt(token, options) {
   const { audience, authorizedParties, clockSkewInMs, key, headerType } = options;
   const clockSkew = typeof clockSkewInMs === "number" && Number.isFinite(clockSkewInMs) ? clockSkewInMs : DEFAULT_CLOCK_SKEW_IN_MS;
@@ -1164,58 +1552,60 @@ async function verifyJwt(token, options) {
   return { data: payload };
 }
 __name(verifyJwt, "verifyJwt");
-__name2(verifyJwt, "verifyJwt");
+
+// ../node_modules/.pnpm/@clerk+backend@3.4.9_react-_b622d27dd95221a3835e08bcb14a401b/node_modules/@clerk/backend/dist/chunk-TOROEX6P.mjs
 var __create = Object.create;
-var __defProp22 = Object.defineProperty;
+var __defProp2 = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __typeError = /* @__PURE__ */ __name2((msg) => {
+var __typeError = /* @__PURE__ */ __name((msg) => {
   throw TypeError(msg);
 }, "__typeError");
-var __commonJS = /* @__PURE__ */ __name2((cb, mod) => /* @__PURE__ */ __name2(/* @__PURE__ */ __name(function __require() {
+var __commonJS = /* @__PURE__ */ __name((cb, mod) => /* @__PURE__ */ __name(function __require() {
   return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
-}, "__require"), "__require"), "__commonJS");
-var __copyProps = /* @__PURE__ */ __name2((to, from, except, desc) => {
+}, "__require"), "__commonJS");
+var __copyProps = /* @__PURE__ */ __name((to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
     for (let key of __getOwnPropNames(from))
       if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp22(to, key, { get: /* @__PURE__ */ __name2(() => from[key], "get"), enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+        __defProp2(to, key, { get: /* @__PURE__ */ __name(() => from[key], "get"), enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
   }
   return to;
 }, "__copyProps");
-var __toESM = /* @__PURE__ */ __name2((mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+var __toESM = /* @__PURE__ */ __name((mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
   // If the importer is in node compatibility mode or this is not an ESM
   // file that has been converted to a CommonJS file using a Babel-
   // compatible transform (i.e. "__esModule" has not been set), then set
   // "default" to the CommonJS "module.exports" for node compatibility.
-  isNodeMode || !mod || !mod.__esModule ? __defProp22(target, "default", { value: mod, enumerable: true }) : target,
+  isNodeMode || !mod || !mod.__esModule ? __defProp2(target, "default", { value: mod, enumerable: true }) : target,
   mod
 )), "__toESM");
-var __accessCheck = /* @__PURE__ */ __name2((obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg), "__accessCheck");
-var __privateGet = /* @__PURE__ */ __name2((obj, member, getter) => (__accessCheck(obj, member, "read from private field"), getter ? getter.call(obj) : member.get(obj)), "__privateGet");
-var __privateAdd = /* @__PURE__ */ __name2((obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value), "__privateAdd");
-var __privateSet = /* @__PURE__ */ __name2((obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value), "__privateSet");
-var __privateMethod = /* @__PURE__ */ __name2((obj, member, method) => (__accessCheck(obj, member, "access private method"), method), "__privateMethod");
+var __accessCheck = /* @__PURE__ */ __name((obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg), "__accessCheck");
+var __privateGet = /* @__PURE__ */ __name((obj, member, getter) => (__accessCheck(obj, member, "read from private field"), getter ? getter.call(obj) : member.get(obj)), "__privateGet");
+var __privateAdd = /* @__PURE__ */ __name((obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value), "__privateAdd");
+var __privateSet = /* @__PURE__ */ __name((obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value), "__privateSet");
+var __privateMethod = /* @__PURE__ */ __name((obj, member, method) => (__accessCheck(obj, member, "access private method"), method), "__privateMethod");
+
+// ../node_modules/.pnpm/@clerk+shared@4.12.0_react-_5da07b8bc2a422cf2f0a3aafa80b516b/node_modules/@clerk/shared/dist/runtime/buildAccountsBaseUrl.mjs
 function buildAccountsBaseUrl(frontendApi) {
   if (!frontendApi) return "";
   return `https://${frontendApi.replace(/clerk\.accountsstage\./, "accountsstage.").replace(/clerk\.accounts\.|clerk\./, "accounts.")}`;
 }
 __name(buildAccountsBaseUrl, "buildAccountsBaseUrl");
-__name2(buildAccountsBaseUrl, "buildAccountsBaseUrl");
+
+// ../node_modules/.pnpm/@clerk+shared@4.12.0_react-_5da07b8bc2a422cf2f0a3aafa80b516b/node_modules/@clerk/shared/dist/runtime/proxy-uGxHFpDF.mjs
 var AUTO_PROXY_HOST_SUFFIXES = [".vercel.app"];
 var AUTO_PROXY_PATH = "/__clerk";
 function shouldAutoProxy(hostname) {
   return AUTO_PROXY_HOST_SUFFIXES.some((hostSuffix) => hostname?.endsWith(hostSuffix)) ?? false;
 }
 __name(shouldAutoProxy, "shouldAutoProxy");
-__name2(shouldAutoProxy, "shouldAutoProxy");
 function getDefaultEnvironment() {
   return typeof process !== "undefined" && process.env ? process.env : {};
 }
 __name(getDefaultEnvironment, "getDefaultEnvironment");
-__name2(getDefaultEnvironment, "getDefaultEnvironment");
 function normalizeHostname(hostnameOrUrl) {
   if (hostnameOrUrl.startsWith("http://") || hostnameOrUrl.startsWith("https://")) try {
     return new URL(hostnameOrUrl).hostname;
@@ -1225,7 +1615,6 @@ function normalizeHostname(hostnameOrUrl) {
   return hostnameOrUrl.split("/")[0] || "";
 }
 __name(normalizeHostname, "normalizeHostname");
-__name2(normalizeHostname, "normalizeHostname");
 function getAutoProxyUrlFromEnvironment({ publishableKey, hasDomain = false, hasProxyUrl = false, environment = getDefaultEnvironment() }) {
   if (hasProxyUrl || hasDomain || !isProductionFromPublishableKey(publishableKey)) return "";
   if (environment.VERCEL_TARGET_ENV !== "production") return "";
@@ -1234,7 +1623,8 @@ function getAutoProxyUrlFromEnvironment({ publishableKey, hasDomain = false, has
   return AUTO_PROXY_PATH;
 }
 __name(getAutoProxyUrlFromEnvironment, "getAutoProxyUrlFromEnvironment");
-__name2(getAutoProxyUrlFromEnvironment, "getAutoProxyUrlFromEnvironment");
+
+// ../node_modules/.pnpm/@clerk+shared@4.12.0_react-_5da07b8bc2a422cf2f0a3aafa80b516b/node_modules/@clerk/shared/dist/runtime/authorization-Bayl2soX.mjs
 var TYPES_TO_OBJECTS = {
   strict_mfa: {
     afterMinutes: 10,
@@ -1270,12 +1660,12 @@ var ORG_SCOPES = /* @__PURE__ */ new Set([
   "organization"
 ]);
 var USER_SCOPES = /* @__PURE__ */ new Set(["u", "user"]);
-var isValidMaxAge = /* @__PURE__ */ __name2((maxAge) => typeof maxAge === "number" && maxAge > 0, "isValidMaxAge");
-var isValidLevel = /* @__PURE__ */ __name2((level) => ALLOWED_LEVELS.has(level), "isValidLevel");
-var isValidVerificationType = /* @__PURE__ */ __name2((type) => ALLOWED_TYPES.has(type), "isValidVerificationType");
-var isValidFactorAge = /* @__PURE__ */ __name2((x) => typeof x === "number" && Number.isFinite(x) && (x === -1 || x >= 0), "isValidFactorAge");
-var prefixWithOrg = /* @__PURE__ */ __name2((value) => value.replace(/^(org:)*/, "org:"), "prefixWithOrg");
-var checkOrgAuthorization = /* @__PURE__ */ __name2((params, options) => {
+var isValidMaxAge = /* @__PURE__ */ __name((maxAge) => typeof maxAge === "number" && maxAge > 0, "isValidMaxAge");
+var isValidLevel = /* @__PURE__ */ __name((level) => ALLOWED_LEVELS.has(level), "isValidLevel");
+var isValidVerificationType = /* @__PURE__ */ __name((type) => ALLOWED_TYPES.has(type), "isValidVerificationType");
+var isValidFactorAge = /* @__PURE__ */ __name((x) => typeof x === "number" && Number.isFinite(x) && (x === -1 || x >= 0), "isValidFactorAge");
+var prefixWithOrg = /* @__PURE__ */ __name((value) => value.replace(/^(org:)*/, "org:"), "prefixWithOrg");
+var checkOrgAuthorization = /* @__PURE__ */ __name((params, options) => {
   const { orgId, orgRole, orgPermissions } = options;
   const roleAsked = params.role !== void 0;
   const permissionAsked = params.permission !== void 0;
@@ -1293,7 +1683,7 @@ var checkOrgAuthorization = /* @__PURE__ */ __name2((params, options) => {
   }
   return "pass";
 }, "checkOrgAuthorization");
-var checkForFeatureOrPlan = /* @__PURE__ */ __name2((claim, featureOrPlan) => {
+var checkForFeatureOrPlan = /* @__PURE__ */ __name((claim, featureOrPlan) => {
   const { org: orgFeatures, user: userFeatures } = splitByScope(claim);
   const [rawScope, rawId] = featureOrPlan.split(":");
   const hasExplicitScope = rawId !== void 0;
@@ -1306,7 +1696,7 @@ var checkForFeatureOrPlan = /* @__PURE__ */ __name2((claim, featureOrPlan) => {
   }
   return [...orgFeatures, ...userFeatures].includes(id);
 }, "checkForFeatureOrPlan");
-var checkBillingAuthorization = /* @__PURE__ */ __name2((params, options) => {
+var checkBillingAuthorization = /* @__PURE__ */ __name((params, options) => {
   const { features, plans } = options;
   const featureAsked = params.feature !== void 0;
   const planAsked = params.plan !== void 0;
@@ -1331,7 +1721,7 @@ var checkBillingAuthorization = /* @__PURE__ */ __name2((params, options) => {
   }
   return "pass";
 }, "checkBillingAuthorization");
-var splitByScope = /* @__PURE__ */ __name2((fea) => {
+var splitByScope = /* @__PURE__ */ __name((fea) => {
   const org = [];
   const user = [];
   if (!fea) return {
@@ -1357,9 +1747,9 @@ var splitByScope = /* @__PURE__ */ __name2((fea) => {
     user
   };
 }, "splitByScope");
-var validateReverificationConfig = /* @__PURE__ */ __name2((config) => {
+var validateReverificationConfig = /* @__PURE__ */ __name((config) => {
   if (!config) return false;
-  const convertConfigToObject = /* @__PURE__ */ __name2((config$1) => {
+  const convertConfigToObject = /* @__PURE__ */ __name((config$1) => {
     if (typeof config$1 === "string") return TYPES_TO_OBJECTS[config$1];
     return config$1;
   }, "convertConfigToObject");
@@ -1368,7 +1758,7 @@ var validateReverificationConfig = /* @__PURE__ */ __name2((config) => {
   if (isValidStringValue || isValidObjectValue) return convertConfigToObject.bind(null, config);
   return false;
 }, "validateReverificationConfig");
-var checkReverificationAuthorization = /* @__PURE__ */ __name2((params, { factorVerificationAge }) => {
+var checkReverificationAuthorization = /* @__PURE__ */ __name((params, { factorVerificationAge }) => {
   if (params.reverification === void 0) return "skip";
   if (!factorVerificationAge) return "fail";
   if (!Array.isArray(factorVerificationAge) || factorVerificationAge.length !== 2 || !isValidFactorAge(factorVerificationAge[0]) || !isValidFactorAge(factorVerificationAge[1])) return "fail";
@@ -1392,8 +1782,8 @@ var checkReverificationAuthorization = /* @__PURE__ */ __name2((params, { factor
       return factor1FreshEnough && factor2FreshEnough ? "pass" : "fail";
   }
 }, "checkReverificationAuthorization");
-var combine = /* @__PURE__ */ __name2((results) => results.some((r) => r === "pass") && results.every((r) => r === "pass" || r === "skip"), "combine");
-var createCheckAuthorization = /* @__PURE__ */ __name2((options) => {
+var combine = /* @__PURE__ */ __name((results) => results.some((r) => r === "pass") && results.every((r) => r === "pass" || r === "skip"), "combine");
+var createCheckAuthorization = /* @__PURE__ */ __name((options) => {
   return (params) => {
     if (!options.userId) return false;
     return combine([
@@ -1403,7 +1793,9 @@ var createCheckAuthorization = /* @__PURE__ */ __name2((options) => {
     ]);
   };
 }, "createCheckAuthorization");
-var parsePermissions = /* @__PURE__ */ __name2(({ per, fpm }) => {
+
+// ../node_modules/.pnpm/@clerk+shared@4.12.0_react-_5da07b8bc2a422cf2f0a3aafa80b516b/node_modules/@clerk/shared/dist/runtime/jwtPayloadParser.mjs
+var parsePermissions = /* @__PURE__ */ __name(({ per, fpm }) => {
   if (!per || !fpm) return {
     permissions: [],
     featurePermissionMap: []
@@ -1427,8 +1819,7 @@ function buildOrgPermissions({ features, permissions, featurePermissionMap }) {
   return orgPermissions;
 }
 __name(buildOrgPermissions, "buildOrgPermissions");
-__name2(buildOrgPermissions, "buildOrgPermissions");
-var __experimental_JWTPayloadToAuthObjectProperties = /* @__PURE__ */ __name2((claims) => {
+var __experimental_JWTPayloadToAuthObjectProperties = /* @__PURE__ */ __name((claims) => {
   let orgId;
   let orgRole;
   let orgSlug;
@@ -1473,6 +1864,8 @@ var __experimental_JWTPayloadToAuthObjectProperties = /* @__PURE__ */ __name2((c
     factorVerificationAge
   };
 }, "__experimental_JWTPayloadToAuthObjectProperties");
+
+// ../node_modules/.pnpm/@clerk+shared@4.12.0_react-_5da07b8bc2a422cf2f0a3aafa80b516b/node_modules/@clerk/shared/dist/runtime/pathToRegexp-7eww5BY6.mjs
 function _(r) {
   for (var n = [], e = 0; e < r.length; ) {
     var a = r[e];
@@ -1563,7 +1956,6 @@ function _(r) {
   }), n;
 }
 __name(_, "_");
-__name2(_, "_");
 function F(r, n) {
   n === void 0 && (n = {});
   for (var e = _(r), a = n.prefixes, u = a === void 0 ? "./" : a, t = n.delimiter, c = t === void 0 ? "/#?" : t, o = [], m = 0, h = 0, p = "", f = function(l) {
@@ -1621,13 +2013,11 @@ function F(r, n) {
   return o;
 }
 __name(F, "F");
-__name2(F, "F");
 function H(r, n) {
   var e = [];
   return I(P(r, e, n), e, n);
 }
 __name(H, "H");
-__name2(H, "H");
 function I(r, n, e) {
   e === void 0 && (e = {});
   var a = e.decode, u = a === void 0 ? function(t) {
@@ -1651,17 +2041,14 @@ function I(r, n, e) {
   };
 }
 __name(I, "I");
-__name2(I, "I");
 function s(r) {
   return r.replace(/([.+*?=^!:${}()[\]|/\\])/g, "\\$1");
 }
 __name(s, "s");
-__name2(s, "s");
 function D(r) {
   return r && r.sensitive ? "" : "i";
 }
 __name(D, "D");
-__name2(D, "D");
 function $(r, n) {
   if (!n) return r;
   for (var e = /\((?:\?<(.*?)>)?(?!\?)/g, a = 0, u = e.exec(r.source); u; ) n.push({
@@ -1674,7 +2061,6 @@ function $(r, n) {
   return r;
 }
 __name($, "$");
-__name2($, "$");
 function W(r, n, e) {
   var a = r.map(function(u) {
     return P(u, n, e).source;
@@ -1682,12 +2068,10 @@ function W(r, n, e) {
   return new RegExp("(?:".concat(a.join("|"), ")"), D(e));
 }
 __name(W, "W");
-__name2(W, "W");
 function L(r, n, e) {
   return U(F(r, e), n, e);
 }
 __name(L, "L");
-__name2(L, "L");
 function U(r, n, e) {
   e === void 0 && (e = {});
   for (var a = e.strict, u = a === void 0 ? false : a, t = e.start, c = t === void 0 ? true : t, o = e.end, m = o === void 0 ? true : o, h = e.encode, p = h === void 0 ? function(v) {
@@ -1716,12 +2100,10 @@ function U(r, n, e) {
   return new RegExp(x, D(e));
 }
 __name(U, "U");
-__name2(U, "U");
 function P(r, n, e) {
   return r instanceof RegExp ? $(r, n) : Array.isArray(r) ? W(r, n, e) : L(r, n, e);
 }
 __name(P, "P");
-__name2(P, "P");
 function match(str, options) {
   try {
     return H(str, options);
@@ -1731,7 +2113,8 @@ ${e.message}`);
   }
 }
 __name(match, "match");
-__name2(match, "match");
+
+// ../node_modules/.pnpm/@clerk+backend@3.4.9_react-_b622d27dd95221a3835e08bcb14a401b/node_modules/@clerk/backend/dist/chunk-R5RQGQHM.mjs
 var require_dist = __commonJS({
   "../../node_modules/.pnpm/cookie@1.1.1/node_modules/cookie/dist/index.js"(exports) {
     "use strict";
@@ -1751,7 +2134,7 @@ var require_dist = __commonJS({
     var maxAgeRegExp = /^-?\d+$/;
     var __toString = Object.prototype.toString;
     var NullObject = /* @__PURE__ */ (() => {
-      const C = /* @__PURE__ */ __name2(function() {
+      const C = /* @__PURE__ */ __name(function() {
       }, "C");
       C.prototype = /* @__PURE__ */ Object.create(null);
       return C;
@@ -1781,7 +2164,6 @@ var require_dist = __commonJS({
       return obj;
     }
     __name(parseCookie, "parseCookie");
-    __name2(parseCookie, "parseCookie");
     function stringifyCookie(cookie, options) {
       const enc = options?.encode || encodeURIComponent;
       const cookieStrings = [];
@@ -1801,7 +2183,6 @@ var require_dist = __commonJS({
       return cookieStrings.join("; ");
     }
     __name(stringifyCookie, "stringifyCookie");
-    __name2(stringifyCookie, "stringifyCookie");
     function stringifySetCookie(_name, _val, _opts) {
       const cookie = typeof _name === "object" ? _name : { ..._opts, name: _name, value: String(_val) };
       const options = typeof _val === "object" ? _val : _opts;
@@ -1883,7 +2264,6 @@ var require_dist = __commonJS({
       return str;
     }
     __name(stringifySetCookie, "stringifySetCookie");
-    __name2(stringifySetCookie, "stringifySetCookie");
     function parseSetCookie(str, options) {
       const dec = options?.decode || decode;
       const len = str.length;
@@ -1948,19 +2328,16 @@ var require_dist = __commonJS({
       return setCookie;
     }
     __name(parseSetCookie, "parseSetCookie");
-    __name2(parseSetCookie, "parseSetCookie");
     function endIndex(str, min, len) {
       const index = str.indexOf(";", min);
       return index === -1 ? len : index;
     }
     __name(endIndex, "endIndex");
-    __name2(endIndex, "endIndex");
     function eqIndex(str, min, max) {
       const index = str.indexOf("=", min);
       return index < max ? index : -1;
     }
     __name(eqIndex, "eqIndex");
-    __name2(eqIndex, "eqIndex");
     function valueSlice(str, min, max) {
       let start = min;
       let end = max;
@@ -1978,7 +2355,6 @@ var require_dist = __commonJS({
       return str.slice(start, end);
     }
     __name(valueSlice, "valueSlice");
-    __name2(valueSlice, "valueSlice");
     function decode(str) {
       if (str.indexOf("%") === -1)
         return str;
@@ -1989,12 +2365,10 @@ var require_dist = __commonJS({
       }
     }
     __name(decode, "decode");
-    __name2(decode, "decode");
     function isDate(val) {
       return __toString.call(val) === "[object Date]";
     }
     __name(isDate, "isDate");
-    __name2(isDate, "isDate");
   }
 });
 var API_URL = "https://api.clerk.com";
@@ -2089,19 +2463,16 @@ function mergePreDefinedOptions(preDefinedOptions, options) {
   );
 }
 __name(mergePreDefinedOptions, "mergePreDefinedOptions");
-__name2(mergePreDefinedOptions, "mergePreDefinedOptions");
 function assertValidSecretKey(val) {
   if (!val || typeof val !== "string") {
     throw Error("Missing Clerk Secret Key. Go to https://dashboard.clerk.com and get your key for your instance.");
   }
 }
 __name(assertValidSecretKey, "assertValidSecretKey");
-__name2(assertValidSecretKey, "assertValidSecretKey");
 function assertValidPublishableKey(val) {
   parsePublishableKey(val, { fatal: true });
 }
 __name(assertValidPublishableKey, "assertValidPublishableKey");
-__name2(assertValidPublishableKey, "assertValidPublishableKey");
 var TokenType = {
   SessionToken: "session_token",
   ApiKey: "api_key",
@@ -2111,9 +2482,6 @@ var TokenType = {
 var AuthenticateContext = class {
   static {
     __name(this, "AuthenticateContext");
-  }
-  static {
-    __name2(this, "AuthenticateContext");
   }
   constructor(cookieSuffix, clerkRequest, options) {
     this.cookieSuffix = cookieSuffix;
@@ -2337,7 +2705,7 @@ var AuthenticateContext = class {
     return !!jwt && jwt?.payload.exp <= Date.now() / 1e3 >> 0;
   }
 };
-var createAuthenticateContext = /* @__PURE__ */ __name2(async (clerkRequest, options) => {
+var createAuthenticateContext = /* @__PURE__ */ __name(async (clerkRequest, options) => {
   const cookieSuffix = options.publishableKey ? await getCookieSuffix(options.publishableKey, runtime.crypto.subtle) : "";
   return new AuthenticateContext(cookieSuffix, clerkRequest, options);
 }, "createAuthenticateContext");
@@ -2366,7 +2734,6 @@ function isDotSegment(segment) {
   return false;
 }
 __name(isDotSegment, "isDotSegment");
-__name2(isDotSegment, "isDotSegment");
 function joinPaths(...args) {
   const result = args.filter((p) => p).join(SEPARATOR).replace(MULTIPLE_SEPARATOR_REGEX, SEPARATOR);
   for (const segment of result.split(SEPARATOR)) {
@@ -2377,13 +2744,9 @@ function joinPaths(...args) {
   return result;
 }
 __name(joinPaths, "joinPaths");
-__name2(joinPaths, "joinPaths");
 var AbstractAPI = class {
   static {
     __name(this, "AbstractAPI");
-  }
-  static {
-    __name2(this, "AbstractAPI");
   }
   constructor(request) {
     this.request = request;
@@ -2398,9 +2761,6 @@ var basePath = "/actor_tokens";
 var ActorTokenAPI = class extends AbstractAPI {
   static {
     __name(this, "ActorTokenAPI");
-  }
-  static {
-    __name2(this, "ActorTokenAPI");
   }
   async create(params) {
     return this.request({
@@ -2421,9 +2781,6 @@ var basePath2 = "/agents/tasks";
 var AgentTaskAPI = class extends AbstractAPI {
   static {
     __name(this, "AgentTaskAPI");
-  }
-  static {
-    __name2(this, "AgentTaskAPI");
   }
   async create(params) {
     return this.request({
@@ -2448,9 +2805,6 @@ var AccountlessApplicationAPI = class extends AbstractAPI {
   static {
     __name(this, "AccountlessApplicationAPI");
   }
-  static {
-    __name2(this, "AccountlessApplicationAPI");
-  }
   async createAccountlessApplication(params) {
     const headerParams = params?.requestHeaders ? Object.fromEntries(params.requestHeaders.entries()) : void 0;
     return this.request({
@@ -2472,9 +2826,6 @@ var basePath4 = "/allowlist_identifiers";
 var AllowlistIdentifierAPI = class extends AbstractAPI {
   static {
     __name(this, "AllowlistIdentifierAPI");
-  }
-  static {
-    __name2(this, "AllowlistIdentifierAPI");
   }
   async getAllowlistIdentifierList(params = {}) {
     return this.request({
@@ -2502,9 +2853,6 @@ var basePath5 = "/api_keys";
 var APIKeysAPI = class extends AbstractAPI {
   static {
     __name(this, "APIKeysAPI");
-  }
-  static {
-    __name2(this, "APIKeysAPI");
   }
   async list(queryParams) {
     return this.request({
@@ -2572,9 +2920,6 @@ var BetaFeaturesAPI = class extends AbstractAPI {
   static {
     __name(this, "BetaFeaturesAPI");
   }
-  static {
-    __name2(this, "BetaFeaturesAPI");
-  }
   /**
    * Change the domain of a production instance.
    *
@@ -2597,9 +2942,6 @@ var basePath7 = "/blocklist_identifiers";
 var BlocklistIdentifierAPI = class extends AbstractAPI {
   static {
     __name(this, "BlocklistIdentifierAPI");
-  }
-  static {
-    __name2(this, "BlocklistIdentifierAPI");
   }
   async getBlocklistIdentifierList(params = {}) {
     return this.request({
@@ -2627,9 +2969,6 @@ var basePath8 = "/clients";
 var ClientAPI = class extends AbstractAPI {
   static {
     __name(this, "ClientAPI");
-  }
-  static {
-    __name2(this, "ClientAPI");
   }
   async getClientList(params = {}) {
     return this.request({
@@ -2664,9 +3003,6 @@ var basePath9 = "/domains";
 var DomainAPI = class extends AbstractAPI {
   static {
     __name(this, "DomainAPI");
-  }
-  static {
-    __name2(this, "DomainAPI");
   }
   async list() {
     return this.request({
@@ -2713,9 +3049,6 @@ var EmailAddressAPI = class extends AbstractAPI {
   static {
     __name(this, "EmailAddressAPI");
   }
-  static {
-    __name2(this, "EmailAddressAPI");
-  }
   async getEmailAddress(emailAddressId) {
     this.requireId(emailAddressId);
     return this.request({
@@ -2750,9 +3083,6 @@ var basePath11 = "/enterprise_connections";
 var EnterpriseConnectionAPI = class extends AbstractAPI {
   static {
     __name(this, "EnterpriseConnectionAPI");
-  }
-  static {
-    __name2(this, "EnterpriseConnectionAPI");
   }
   async createEnterpriseConnection(params) {
     return this.request({
@@ -2802,9 +3132,6 @@ var IdPOAuthAccessTokenApi = class extends AbstractAPI {
   static {
     __name(this, "IdPOAuthAccessTokenApi");
   }
-  static {
-    __name2(this, "IdPOAuthAccessTokenApi");
-  }
   async verify(accessToken) {
     return this.request({
       method: "POST",
@@ -2817,9 +3144,6 @@ var basePath13 = "/instance";
 var InstanceAPI = class extends AbstractAPI {
   static {
     __name(this, "InstanceAPI");
-  }
-  static {
-    __name2(this, "InstanceAPI");
   }
   async get() {
     return this.request({
@@ -2860,9 +3184,6 @@ var InvitationAPI = class extends AbstractAPI {
   static {
     __name(this, "InvitationAPI");
   }
-  static {
-    __name2(this, "InvitationAPI");
-  }
   async getInvitationList(params = {}) {
     return this.request({
       method: "GET",
@@ -2896,9 +3217,6 @@ var basePath15 = "/machines";
 var MachineApi = class extends AbstractAPI {
   static {
     __name(this, "MachineApi");
-  }
-  static {
-    __name2(this, "MachineApi");
   }
   async get(machineId) {
     this.requireId(machineId);
@@ -2989,9 +3307,6 @@ var IdPOAuthAccessToken = class _IdPOAuthAccessToken {
   static {
     __name(this, "_IdPOAuthAccessToken");
   }
-  static {
-    __name2(this, "_IdPOAuthAccessToken");
-  }
   constructor(id, clientId, type, subject, scopes, revoked, revocationReason, expired, expiration, createdAt, updatedAt) {
     this.id = id;
     this.clientId = clientId;
@@ -3044,9 +3359,6 @@ var IdPOAuthAccessToken = class _IdPOAuthAccessToken {
 var M2MToken = class _M2MToken {
   static {
     __name(this, "_M2MToken");
-  }
-  static {
-    __name2(this, "_M2MToken");
   }
   constructor(id, subject, scopes, claims, revoked, revocationReason, expired, expiration, createdAt, updatedAt, token) {
     this.id = id;
@@ -3101,18 +3413,15 @@ function getFromCache(kid) {
   return cache[kid];
 }
 __name(getFromCache, "getFromCache");
-__name2(getFromCache, "getFromCache");
 function getCacheValues() {
   return Object.values(cache);
 }
 __name(getCacheValues, "getCacheValues");
-__name2(getCacheValues, "getCacheValues");
 function setInCache(cacheKey, jwk, shouldExpire = true) {
   cache[cacheKey] = jwk;
   lastUpdatedAt = shouldExpire ? Date.now() : -1;
 }
 __name(setInCache, "setInCache");
-__name2(setInCache, "setInCache");
 var PEM_HEADER = "-----BEGIN PUBLIC KEY-----";
 var PEM_TRAILER = "-----END PUBLIC KEY-----";
 var RSA_PREFIX = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA";
@@ -3137,7 +3446,6 @@ function loadClerkJwkFromPem(params) {
   return jwk;
 }
 __name(loadClerkJwkFromPem, "loadClerkJwkFromPem");
-__name2(loadClerkJwkFromPem, "loadClerkJwkFromPem");
 async function loadClerkJWKFromRemote(params) {
   const { secretKey, apiUrl = API_URL, apiVersion = API_VERSION, kid, skipJwksCache } = params;
   if (skipJwksCache || cacheHasExpired() || !getFromCache(kid)) {
@@ -3148,7 +3456,7 @@ async function loadClerkJWKFromRemote(params) {
         reason: TokenVerificationErrorReason.RemoteJWKFailedToLoad
       });
     }
-    const fetcher = /* @__PURE__ */ __name2(() => fetchJWKSFromBAPI(apiUrl, secretKey, apiVersion), "fetcher");
+    const fetcher = /* @__PURE__ */ __name(() => fetchJWKSFromBAPI(apiUrl, secretKey, apiVersion), "fetcher");
     const { keys } = await retry(fetcher);
     if (!keys || !keys.length) {
       throw new TokenVerificationError({
@@ -3172,7 +3480,6 @@ async function loadClerkJWKFromRemote(params) {
   return jwk;
 }
 __name(loadClerkJWKFromRemote, "loadClerkJWKFromRemote");
-__name2(loadClerkJWKFromRemote, "loadClerkJWKFromRemote");
 async function fetchJWKSFromBAPI(apiUrl, key, apiVersion) {
   if (!key) {
     throw new TokenVerificationError({
@@ -3211,7 +3518,6 @@ async function fetchJWKSFromBAPI(apiUrl, key, apiVersion) {
   return response.json();
 }
 __name(fetchJWKSFromBAPI, "fetchJWKSFromBAPI");
-__name2(fetchJWKSFromBAPI, "fetchJWKSFromBAPI");
 function cacheHasExpired() {
   if (lastUpdatedAt === -1) {
     return false;
@@ -3223,8 +3529,7 @@ function cacheHasExpired() {
   return isExpired;
 }
 __name(cacheHasExpired, "cacheHasExpired");
-__name2(cacheHasExpired, "cacheHasExpired");
-var getErrorObjectByCode = /* @__PURE__ */ __name2((errors, code) => {
+var getErrorObjectByCode = /* @__PURE__ */ __name((errors, code) => {
   if (!errors) {
     return null;
   }
@@ -3240,7 +3545,6 @@ function isJwtFormat(token) {
   return JwtFormatRegExp.test(token);
 }
 __name(isJwtFormat, "isJwtFormat");
-__name2(isJwtFormat, "isJwtFormat");
 var OAUTH_ACCESS_TOKEN_TYPES = ["at+jwt", "application/at+jwt"];
 function isOAuthJwt(token) {
   if (!isJwtFormat(token)) {
@@ -3254,7 +3558,6 @@ function isOAuthJwt(token) {
   }
 }
 __name(isOAuthJwt, "isOAuthJwt");
-__name2(isOAuthJwt, "isOAuthJwt");
 function isM2MJwt(token) {
   if (!isJwtFormat(token)) {
     return false;
@@ -3267,22 +3570,18 @@ function isM2MJwt(token) {
   }
 }
 __name(isM2MJwt, "isM2MJwt");
-__name2(isM2MJwt, "isM2MJwt");
 function isMachineJwt(token) {
   return isOAuthJwt(token) || isM2MJwt(token);
 }
 __name(isMachineJwt, "isMachineJwt");
-__name2(isMachineJwt, "isMachineJwt");
 function isMachineTokenByPrefix(token) {
   return MACHINE_TOKEN_PREFIXES.some((prefix) => token.startsWith(prefix));
 }
 __name(isMachineTokenByPrefix, "isMachineTokenByPrefix");
-__name2(isMachineTokenByPrefix, "isMachineTokenByPrefix");
 function isMachineToken(token) {
   return isMachineTokenByPrefix(token) || isOAuthJwt(token) || isM2MJwt(token);
 }
 __name(isMachineToken, "isMachineToken");
-__name2(isMachineToken, "isMachineToken");
 function getMachineTokenType(token) {
   if (token.startsWith(M2M_TOKEN_PREFIX) || isM2MJwt(token)) {
     return TokenType.M2MToken;
@@ -3296,8 +3595,7 @@ function getMachineTokenType(token) {
   throw new Error("Unknown machine token type");
 }
 __name(getMachineTokenType, "getMachineTokenType");
-__name2(getMachineTokenType, "getMachineTokenType");
-var isTokenTypeAccepted = /* @__PURE__ */ __name2((tokenType, acceptsToken) => {
+var isTokenTypeAccepted = /* @__PURE__ */ __name((tokenType, acceptsToken) => {
   if (!tokenType) {
     return false;
   }
@@ -3348,7 +3646,6 @@ async function resolveKeyAndVerifyJwt(token, kid, options, headerType) {
   }
 }
 __name(resolveKeyAndVerifyJwt, "resolveKeyAndVerifyJwt");
-__name2(resolveKeyAndVerifyJwt, "resolveKeyAndVerifyJwt");
 async function verifyM2MJwt(token, decoded, options) {
   const result = await resolveKeyAndVerifyJwt(token, decoded.header.kid, options);
   if ("error" in result) {
@@ -3361,7 +3658,6 @@ async function verifyM2MJwt(token, decoded, options) {
   };
 }
 __name(verifyM2MJwt, "verifyM2MJwt");
-__name2(verifyM2MJwt, "verifyM2MJwt");
 async function verifyOAuthJwt(token, decoded, options) {
   const result = await resolveKeyAndVerifyJwt(token, decoded.header.kid, options, OAUTH_ACCESS_TOKEN_TYPES);
   if ("error" in result) {
@@ -3374,7 +3670,6 @@ async function verifyOAuthJwt(token, decoded, options) {
   };
 }
 __name(verifyOAuthJwt, "verifyOAuthJwt");
-__name2(verifyOAuthJwt, "verifyOAuthJwt");
 var basePath16 = "/m2m_tokens";
 var _verifyOptions;
 var _M2MTokenApi_instances;
@@ -3383,9 +3678,6 @@ var verifyJwtFormat_fn;
 var M2MTokenApi = class extends AbstractAPI {
   static {
     __name(this, "M2MTokenApi");
-  }
-  static {
-    __name2(this, "M2MTokenApi");
   }
   /**
    * @param verifyOptions - JWT verification options (secretKey, apiUrl, etc.).
@@ -3454,7 +3746,7 @@ var M2MTokenApi = class extends AbstractAPI {
 };
 _verifyOptions = /* @__PURE__ */ new WeakMap();
 _M2MTokenApi_instances = /* @__PURE__ */ new WeakSet();
-createRequestOptions_fn = /* @__PURE__ */ __name2(function(options, machineSecretKey) {
+createRequestOptions_fn = /* @__PURE__ */ __name(function(options, machineSecretKey) {
   if (machineSecretKey) {
     return {
       ...options,
@@ -3466,7 +3758,7 @@ createRequestOptions_fn = /* @__PURE__ */ __name2(function(options, machineSecre
   }
   return options;
 }, "createRequestOptions_fn");
-verifyJwtFormat_fn = /* @__PURE__ */ __name2(async function(token) {
+verifyJwtFormat_fn = /* @__PURE__ */ __name(async function(token) {
   let decoded;
   try {
     const { data, errors } = decodeJwt(token);
@@ -3491,9 +3783,6 @@ var JwksAPI = class extends AbstractAPI {
   static {
     __name(this, "JwksAPI");
   }
-  static {
-    __name2(this, "JwksAPI");
-  }
   async getJwks() {
     return this.request({
       method: "GET",
@@ -3505,9 +3794,6 @@ var basePath18 = "/jwt_templates";
 var JwtTemplatesApi = class extends AbstractAPI {
   static {
     __name(this, "JwtTemplatesApi");
-  }
-  static {
-    __name2(this, "JwtTemplatesApi");
   }
   async list(params = {}) {
     return this.request({
@@ -3551,9 +3837,6 @@ var basePath19 = "/organizations";
 var OrganizationAPI = class extends AbstractAPI {
   static {
     __name(this, "OrganizationAPI");
-  }
-  static {
-    __name2(this, "OrganizationAPI");
   }
   async getOrganizationList(params) {
     return this.request({
@@ -3763,9 +4046,6 @@ var OAuthApplicationsApi = class extends AbstractAPI {
   static {
     __name(this, "OAuthApplicationsApi");
   }
-  static {
-    __name2(this, "OAuthApplicationsApi");
-  }
   async list(params = {}) {
     return this.request({
       method: "GET",
@@ -3816,9 +4096,6 @@ var PhoneNumberAPI = class extends AbstractAPI {
   static {
     __name(this, "PhoneNumberAPI");
   }
-  static {
-    __name2(this, "PhoneNumberAPI");
-  }
   async getPhoneNumber(phoneNumberId) {
     this.requireId(phoneNumberId);
     return this.request({
@@ -3854,9 +4131,6 @@ var ProxyCheckAPI = class extends AbstractAPI {
   static {
     __name(this, "ProxyCheckAPI");
   }
-  static {
-    __name2(this, "ProxyCheckAPI");
-  }
   async verify(params) {
     return this.request({
       method: "POST",
@@ -3869,9 +4143,6 @@ var basePath23 = "/redirect_urls";
 var RedirectUrlAPI = class extends AbstractAPI {
   static {
     __name(this, "RedirectUrlAPI");
-  }
-  static {
-    __name2(this, "RedirectUrlAPI");
   }
   async getRedirectUrlList() {
     return this.request({
@@ -3906,9 +4177,6 @@ var basePath24 = "/saml_connections";
 var SamlConnectionAPI = class extends AbstractAPI {
   static {
     __name(this, "SamlConnectionAPI");
-  }
-  static {
-    __name2(this, "SamlConnectionAPI");
   }
   async getSamlConnectionList(params = {}) {
     return this.request({
@@ -3957,9 +4225,6 @@ var basePath25 = "/sessions";
 var SessionAPI = class extends AbstractAPI {
   static {
     __name(this, "SessionAPI");
-  }
-  static {
-    __name2(this, "SessionAPI");
   }
   async getSessionList(params = {}) {
     return this.request({
@@ -4037,9 +4302,6 @@ var SignInTokenAPI = class extends AbstractAPI {
   static {
     __name(this, "SignInTokenAPI");
   }
-  static {
-    __name2(this, "SignInTokenAPI");
-  }
   async createSignInToken(params) {
     return this.request({
       method: "POST",
@@ -4059,9 +4321,6 @@ var basePath27 = "/sign_ups";
 var SignUpAPI = class extends AbstractAPI {
   static {
     __name(this, "SignUpAPI");
-  }
-  static {
-    __name2(this, "SignUpAPI");
   }
   async get(signUpAttemptId) {
     this.requireId(signUpAttemptId);
@@ -4084,9 +4343,6 @@ var TestingTokenAPI = class extends AbstractAPI {
   static {
     __name(this, "TestingTokenAPI");
   }
-  static {
-    __name2(this, "TestingTokenAPI");
-  }
   async createTestingToken() {
     return this.request({
       method: "POST",
@@ -4098,9 +4354,6 @@ var basePath29 = "/users";
 var UserAPI = class extends AbstractAPI {
   static {
     __name(this, "UserAPI");
-  }
-  static {
-    __name2(this, "UserAPI");
   }
   async getUserList(params = {}) {
     const { limit, offset, orderBy, ...userCountParams } = params;
@@ -4323,9 +4576,6 @@ var WaitlistEntryAPI = class extends AbstractAPI {
   static {
     __name(this, "WaitlistEntryAPI");
   }
-  static {
-    __name2(this, "WaitlistEntryAPI");
-  }
   /**
    * List waitlist entries.
    * @param params Optional parameters (e.g., `query`, `status`, `orderBy`).
@@ -4400,9 +4650,6 @@ var WebhookAPI = class extends AbstractAPI {
   static {
     __name(this, "WebhookAPI");
   }
-  static {
-    __name2(this, "WebhookAPI");
-  }
   async createSvixApp() {
     return this.request({
       method: "POST",
@@ -4428,9 +4675,6 @@ var userBasePath = "/users";
 var BillingAPI = class extends AbstractAPI {
   static {
     __name(this, "BillingAPI");
-  }
-  static {
-    __name2(this, "BillingAPI");
   }
   /**
    * @experimental This is an experimental API for the Billing feature that is available under a public beta, and the API is subject to change. It is advised to [pin](https://clerk.com/docs/pinning) the SDK version and the clerk-js version to avoid breaking changes.
@@ -4485,10 +4729,10 @@ var BillingAPI = class extends AbstractAPI {
     });
   }
 };
-var isObject = /* @__PURE__ */ __name2((value) => typeof value === "object" && value !== null, "isObject");
-var isObjectCustom = /* @__PURE__ */ __name2((value) => isObject(value) && !(value instanceof RegExp) && !(value instanceof Error) && !(value instanceof Date) && !(globalThis.Blob && value instanceof globalThis.Blob), "isObjectCustom");
+var isObject = /* @__PURE__ */ __name((value) => typeof value === "object" && value !== null, "isObject");
+var isObjectCustom = /* @__PURE__ */ __name((value) => isObject(value) && !(value instanceof RegExp) && !(value instanceof Error) && !(value instanceof Date) && !(globalThis.Blob && value instanceof globalThis.Blob), "isObjectCustom");
 var mapObjectSkip = /* @__PURE__ */ Symbol("mapObjectSkip");
-var _mapObject = /* @__PURE__ */ __name2((object, mapper, options, isSeen = /* @__PURE__ */ new WeakMap()) => {
+var _mapObject = /* @__PURE__ */ __name((object, mapper, options, isSeen = /* @__PURE__ */ new WeakMap()) => {
   options = {
     deep: false,
     target: {},
@@ -4500,7 +4744,7 @@ var _mapObject = /* @__PURE__ */ __name2((object, mapper, options, isSeen = /* @
   isSeen.set(object, options.target);
   const { target } = options;
   delete options.target;
-  const mapArray = /* @__PURE__ */ __name2((array) => array.map((element) => isObjectCustom(element) ? _mapObject(element, mapper, options, isSeen) : element), "mapArray");
+  const mapArray = /* @__PURE__ */ __name((array) => array.map((element) => isObjectCustom(element) ? _mapObject(element, mapper, options, isSeen) : element), "mapArray");
   if (Array.isArray(object)) {
     return mapArray(object);
   }
@@ -4530,7 +4774,6 @@ function mapObject(object, mapper, options) {
   return _mapObject(object, mapper, options);
 }
 __name(mapObject, "mapObject");
-__name2(mapObject, "mapObject");
 var SPLIT_LOWER_UPPER_RE = /([\p{Ll}\d])(\p{Lu})/gu;
 var SPLIT_UPPER_UPPER_RE = /(\p{Lu})([\p{Lu}][\p{Ll}])/gu;
 var SPLIT_SEPARATE_NUMBER_RE = /(\d)\p{Ll}|(\p{L})\d/u;
@@ -4552,7 +4795,6 @@ function split(value) {
   return result.slice(start, end).split(/\0/g);
 }
 __name(split, "split");
-__name2(split, "split");
 function splitSeparateNumbers(value) {
   const words = split(value);
   for (let i = 0; i < words.length; i++) {
@@ -4566,23 +4808,19 @@ function splitSeparateNumbers(value) {
   return words;
 }
 __name(splitSeparateNumbers, "splitSeparateNumbers");
-__name2(splitSeparateNumbers, "splitSeparateNumbers");
 function noCase(input, options) {
   const [prefix, words, suffix] = splitPrefixSuffix(input, options);
   return prefix + words.map(lowerFactory(options?.locale)).join(options?.delimiter ?? " ") + suffix;
 }
 __name(noCase, "noCase");
-__name2(noCase, "noCase");
 function snakeCase(input, options) {
   return noCase(input, { delimiter: "_", ...options });
 }
 __name(snakeCase, "snakeCase");
-__name2(snakeCase, "snakeCase");
 function lowerFactory(locale) {
   return locale === false ? (input) => input.toLowerCase() : (input) => input.toLocaleLowerCase(locale);
 }
 __name(lowerFactory, "lowerFactory");
-__name2(lowerFactory, "lowerFactory");
 function splitPrefixSuffix(input, options = {}) {
   const splitFn = options.split ?? (options.separateNumbers ? splitSeparateNumbers : split);
   const prefixCharacters = options.prefixCharacters ?? DEFAULT_PREFIX_SUFFIX_CHARACTERS;
@@ -4609,7 +4847,6 @@ function splitPrefixSuffix(input, options = {}) {
   ];
 }
 __name(splitPrefixSuffix, "splitPrefixSuffix");
-__name2(splitPrefixSuffix, "splitPrefixSuffix");
 var PlainObjectConstructor = {}.constructor;
 function snakecaseKeys(obj, options) {
   if (Array.isArray(obj)) {
@@ -4643,26 +4880,20 @@ function snakecaseKeys(obj, options) {
   }, options);
 }
 __name(snakecaseKeys, "snakecaseKeys");
-__name2(snakecaseKeys, "snakecaseKeys");
 function matches(patterns, value) {
   return patterns.some((pattern) => {
     return typeof pattern === "string" ? pattern === value : pattern.test(value);
   });
 }
 __name(matches, "matches");
-__name2(matches, "matches");
 function mapperOptions(key, val, options) {
   return options.shouldRecurse ? { shouldRecurse: options.shouldRecurse(key, val) } : void 0;
 }
 __name(mapperOptions, "mapperOptions");
-__name2(mapperOptions, "mapperOptions");
 var snakecase_keys_default = snakecaseKeys;
 var AccountlessApplication = class _AccountlessApplication {
   static {
     __name(this, "_AccountlessApplication");
-  }
-  static {
-    __name2(this, "_AccountlessApplication");
   }
   constructor(publishableKey, secretKey, claimUrl, apiKeysUrl) {
     this.publishableKey = publishableKey;
@@ -4677,9 +4908,6 @@ var AccountlessApplication = class _AccountlessApplication {
 var AgentTask = class _AgentTask {
   static {
     __name(this, "_AgentTask");
-  }
-  static {
-    __name2(this, "_AgentTask");
   }
   constructor(agentId, taskId, url) {
     this.agentId = agentId;
@@ -4699,9 +4927,6 @@ var AgentTask = class _AgentTask {
 var ActorToken = class _ActorToken {
   static {
     __name(this, "_ActorToken");
-  }
-  static {
-    __name2(this, "_ActorToken");
   }
   constructor(id, status, userId, actor, token, url, createdAt, updatedAt) {
     this.id = id;
@@ -4730,9 +4955,6 @@ var AllowlistIdentifier = class _AllowlistIdentifier {
   static {
     __name(this, "_AllowlistIdentifier");
   }
-  static {
-    __name2(this, "_AllowlistIdentifier");
-  }
   constructor(id, identifier, identifierType, createdAt, updatedAt, instanceId, invitationId) {
     this.id = id;
     this.identifier = identifier;
@@ -4757,9 +4979,6 @@ var AllowlistIdentifier = class _AllowlistIdentifier {
 var APIKey = class _APIKey {
   static {
     __name(this, "_APIKey");
-  }
-  static {
-    __name2(this, "_APIKey");
   }
   constructor(id, type, name, subject, scopes, claims, revoked, revocationReason, expired, expiration, createdBy, description, lastUsedAt, createdAt, updatedAt, secret) {
     this.id = id;
@@ -4804,9 +5023,6 @@ var BlocklistIdentifier = class _BlocklistIdentifier {
   static {
     __name(this, "_BlocklistIdentifier");
   }
-  static {
-    __name2(this, "_BlocklistIdentifier");
-  }
   constructor(id, identifier, identifierType, createdAt, updatedAt, instanceId) {
     this.id = id;
     this.identifier = identifier;
@@ -4829,9 +5045,6 @@ var BlocklistIdentifier = class _BlocklistIdentifier {
 var SessionActivity = class _SessionActivity {
   static {
     __name(this, "_SessionActivity");
-  }
-  static {
-    __name2(this, "_SessionActivity");
   }
   constructor(id, isMobile, ipAddress, city, country, browserVersion, browserName, deviceType) {
     this.id = id;
@@ -4859,9 +5072,6 @@ var SessionActivity = class _SessionActivity {
 var Session = class _Session {
   static {
     __name(this, "_Session");
-  }
-  static {
-    __name2(this, "_Session");
   }
   constructor(id, clientId, userId, status, lastActiveAt, expireAt, abandonAt, createdAt, updatedAt, lastActiveOrganizationId, latestActivity, actor = null) {
     this.id = id;
@@ -4898,9 +5108,6 @@ var Client = class _Client {
   static {
     __name(this, "_Client");
   }
-  static {
-    __name2(this, "_Client");
-  }
   constructor(id, sessionIds, sessions, signInId, signUpId, lastActiveSessionId, lastAuthenticationStrategy, createdAt, updatedAt) {
     this.id = id;
     this.sessionIds = sessionIds;
@@ -4930,9 +5137,6 @@ var CnameTarget = class _CnameTarget {
   static {
     __name(this, "_CnameTarget");
   }
-  static {
-    __name2(this, "_CnameTarget");
-  }
   constructor(host, value, required) {
     this.host = host;
     this.value = value;
@@ -4946,9 +5150,6 @@ var Cookies2 = class _Cookies {
   static {
     __name(this, "_Cookies");
   }
-  static {
-    __name2(this, "_Cookies");
-  }
   constructor(cookies) {
     this.cookies = cookies;
   }
@@ -4959,9 +5160,6 @@ var Cookies2 = class _Cookies {
 var DeletedObject = class _DeletedObject {
   static {
     __name(this, "_DeletedObject");
-  }
-  static {
-    __name2(this, "_DeletedObject");
   }
   constructor(object, id, slug, deleted) {
     this.object = object;
@@ -4976,9 +5174,6 @@ var DeletedObject = class _DeletedObject {
 var Domain = class _Domain {
   static {
     __name(this, "_Domain");
-  }
-  static {
-    __name2(this, "_Domain");
   }
   constructor(id, name, isSatellite, frontendApiUrl, developmentOrigin, cnameTargets, accountsPortalUrl, proxyUrl) {
     this.id = id;
@@ -5006,9 +5201,6 @@ var Domain = class _Domain {
 var Email = class _Email {
   static {
     __name(this, "_Email");
-  }
-  static {
-    __name2(this, "_Email");
   }
   constructor(id, fromEmailName, emailAddressId, toEmailAddress, subject, body, bodyPlain, status, slug, data, deliveredByClerk) {
     this.id = id;
@@ -5043,9 +5235,6 @@ var IdentificationLink = class _IdentificationLink {
   static {
     __name(this, "_IdentificationLink");
   }
-  static {
-    __name2(this, "_IdentificationLink");
-  }
   constructor(id, type) {
     this.id = id;
     this.type = type;
@@ -5057,9 +5246,6 @@ var IdentificationLink = class _IdentificationLink {
 var Verification = class _Verification {
   static {
     __name(this, "_Verification");
-  }
-  static {
-    __name2(this, "_Verification");
   }
   constructor(status, strategy, externalVerificationRedirectURL = null, attempts = null, expireAt = null, nonce = null, message = null) {
     this.status = status;
@@ -5085,9 +5271,6 @@ var EmailAddress = class _EmailAddress {
   static {
     __name(this, "_EmailAddress");
   }
-  static {
-    __name2(this, "_EmailAddress");
-  }
   constructor(id, emailAddress, verification, linkedTo) {
     this.id = id;
     this.emailAddress = emailAddress;
@@ -5107,9 +5290,6 @@ var Feature = class _Feature {
   static {
     __name(this, "_Feature");
   }
-  static {
-    __name2(this, "_Feature");
-  }
   constructor(id, name, description, slug, avatarUrl) {
     this.id = id;
     this.name = name;
@@ -5124,9 +5304,6 @@ var Feature = class _Feature {
 var BillingPlan = class _BillingPlan {
   static {
     __name(this, "_BillingPlan");
-  }
-  static {
-    __name2(this, "_BillingPlan");
   }
   constructor(id, name, slug, description, isDefault, isRecurring, hasBaseFee, publiclyVisible, fee, annualFee, annualMonthlyFee, forPayerType, features, avatarUrl, freeTrialDays, freeTrialEnabled) {
     this.id = id;
@@ -5147,7 +5324,7 @@ var BillingPlan = class _BillingPlan {
     this.freeTrialEnabled = freeTrialEnabled;
   }
   static fromJSON(data) {
-    const formatAmountJSON = /* @__PURE__ */ __name2((fee) => {
+    const formatAmountJSON = /* @__PURE__ */ __name((fee) => {
       return fee ? {
         amount: fee.amount,
         amountFormatted: fee.amount_formatted,
@@ -5178,9 +5355,6 @@ var BillingPlan = class _BillingPlan {
 var BillingSubscriptionItem = class _BillingSubscriptionItem {
   static {
     __name(this, "_BillingSubscriptionItem");
-  }
-  static {
-    __name2(this, "_BillingSubscriptionItem");
   }
   constructor(id, status, planPeriod, periodStart, nextPayment, amount, plan, planId, createdAt, updatedAt, periodEnd, canceledAt, pastDueAt, endedAt, payerId, isFreeTrial, lifetimePaid) {
     this.id = id;
@@ -5214,7 +5388,6 @@ var BillingSubscriptionItem = class _BillingSubscriptionItem {
       };
     }
     __name(formatAmountJSON, "formatAmountJSON");
-    __name2(formatAmountJSON, "formatAmountJSON");
     return new _BillingSubscriptionItem(
       data.id,
       data.status,
@@ -5239,9 +5412,6 @@ var BillingSubscriptionItem = class _BillingSubscriptionItem {
 var BillingSubscription = class _BillingSubscription {
   static {
     __name(this, "_BillingSubscription");
-  }
-  static {
-    __name2(this, "_BillingSubscription");
   }
   constructor(id, status, payerId, createdAt, updatedAt, activeAt, pastDueAt, subscriptionItems, nextPayment, eligibleForFreeTrial) {
     this.id = id;
@@ -5283,9 +5453,6 @@ var EnterpriseAccountConnection = class _EnterpriseAccountConnection {
   static {
     __name(this, "_EnterpriseAccountConnection");
   }
-  static {
-    __name2(this, "_EnterpriseAccountConnection");
-  }
   constructor(id, active, allowIdpInitiated, allowSubdomains, disableAdditionalIdentifications, domain, logoPublicUrl, name, protocol, provider, syncUserAttributes, createdAt, updatedAt) {
     this.id = id;
     this.active = active;
@@ -5322,9 +5489,6 @@ var EnterpriseAccountConnection = class _EnterpriseAccountConnection {
 var EnterpriseAccount = class _EnterpriseAccount {
   static {
     __name(this, "_EnterpriseAccount");
-  }
-  static {
-    __name2(this, "_EnterpriseAccount");
   }
   constructor(id, active, emailAddress, enterpriseConnection, firstName, lastName, protocol, provider, providerUserId, publicMetadata, verification, lastAuthenticatedAt, enterpriseConnectionId) {
     this.id = id;
@@ -5363,9 +5527,6 @@ var EnterpriseConnectionSamlConnection = class _EnterpriseConnectionSamlConnecti
   static {
     __name(this, "_EnterpriseConnectionSamlConnection");
   }
-  static {
-    __name2(this, "_EnterpriseConnectionSamlConnection");
-  }
   constructor(id, name, idpEntityId, idpSsoUrl, idpCertificate, idpMetadataUrl, idpMetadata, acsUrl, spEntityId, spMetadataUrl, syncUserAttributes, allowSubdomains, allowIdpInitiated) {
     this.id = id;
     this.name = name;
@@ -5403,9 +5564,6 @@ var EnterpriseConnectionOauthConfig = class _EnterpriseConnectionOauthConfig {
   static {
     __name(this, "_EnterpriseConnectionOauthConfig");
   }
-  static {
-    __name2(this, "_EnterpriseConnectionOauthConfig");
-  }
   constructor(id, name, clientId, discoveryUrl, logoPublicUrl, createdAt, updatedAt) {
     this.id = id;
     this.name = name;
@@ -5430,9 +5588,6 @@ var EnterpriseConnectionOauthConfig = class _EnterpriseConnectionOauthConfig {
 var EnterpriseConnection = class _EnterpriseConnection {
   static {
     __name(this, "_EnterpriseConnection");
-  }
-  static {
-    __name2(this, "_EnterpriseConnection");
   }
   constructor(id, name, domains, organizationId, active, syncUserAttributes, allowSubdomains, disableAdditionalIdentifications, createdAt, updatedAt, samlConnection, oauthConfig) {
     this.id = id;
@@ -5468,9 +5623,6 @@ var EnterpriseConnection = class _EnterpriseConnection {
 var ExternalAccount = class _ExternalAccount {
   static {
     __name(this, "_ExternalAccount");
-  }
-  static {
-    __name2(this, "_ExternalAccount");
   }
   constructor(id, provider, providerUserId, identificationId, externalId, approvedScopes, emailAddress, firstName, lastName, imageUrl, username, phoneNumber, publicMetadata = {}, label, verification) {
     this.id = id;
@@ -5513,9 +5665,6 @@ var Instance = class _Instance {
   static {
     __name(this, "_Instance");
   }
-  static {
-    __name2(this, "_Instance");
-  }
   constructor(id, environmentType, allowedOrigins) {
     this.id = id;
     this.environmentType = environmentType;
@@ -5528,9 +5677,6 @@ var Instance = class _Instance {
 var InstanceRestrictions = class _InstanceRestrictions {
   static {
     __name(this, "_InstanceRestrictions");
-  }
-  static {
-    __name2(this, "_InstanceRestrictions");
   }
   constructor(allowlist, blocklist, blockEmailSubaddresses, blockDisposableEmailDomains, ignoreDotsForGmailAddresses) {
     this.allowlist = allowlist;
@@ -5553,9 +5699,6 @@ var InstanceSettings = class _InstanceSettings {
   static {
     __name(this, "_InstanceSettings");
   }
-  static {
-    __name2(this, "_InstanceSettings");
-  }
   constructor(id, restrictedToAllowlist, fromEmailAddress, progressiveSignUp, enhancedEmailDeliverability) {
     this.id = id;
     this.restrictedToAllowlist = restrictedToAllowlist;
@@ -5576,9 +5719,6 @@ var InstanceSettings = class _InstanceSettings {
 var Invitation = class _Invitation {
   static {
     __name(this, "_Invitation");
-  }
-  static {
-    __name2(this, "_Invitation");
   }
   constructor(id, emailAddress, publicMetadata, createdAt, updatedAt, status, url, revoked) {
     this.id = id;
@@ -5674,9 +5814,6 @@ var JwtTemplate = class _JwtTemplate {
   static {
     __name(this, "_JwtTemplate");
   }
-  static {
-    __name2(this, "_JwtTemplate");
-  }
   constructor(id, name, claims, lifetime, allowedClockSkew, customSigningKey, signingAlgorithm, createdAt, updatedAt) {
     this.id = id;
     this.name = name;
@@ -5705,9 +5842,6 @@ var JwtTemplate = class _JwtTemplate {
 var Machine = class _Machine {
   static {
     __name(this, "_Machine");
-  }
-  static {
-    __name2(this, "_Machine");
   }
   constructor(id, name, instanceId, createdAt, updatedAt, scopedMachines, defaultTokenTtl, secretKey) {
     this.id = id;
@@ -5747,9 +5881,6 @@ var MachineScope = class _MachineScope {
   static {
     __name(this, "_MachineScope");
   }
-  static {
-    __name2(this, "_MachineScope");
-  }
   constructor(fromMachineId, toMachineId, createdAt, deleted) {
     this.fromMachineId = fromMachineId;
     this.toMachineId = toMachineId;
@@ -5764,9 +5895,6 @@ var MachineSecretKey = class _MachineSecretKey {
   static {
     __name(this, "_MachineSecretKey");
   }
-  static {
-    __name2(this, "_MachineSecretKey");
-  }
   constructor(secret) {
     this.secret = secret;
   }
@@ -5777,9 +5905,6 @@ var MachineSecretKey = class _MachineSecretKey {
 var OauthAccessToken = class _OauthAccessToken {
   static {
     __name(this, "_OauthAccessToken");
-  }
-  static {
-    __name2(this, "_OauthAccessToken");
   }
   constructor(externalAccountId, provider, token, publicMetadata = {}, label, scopes, tokenSecret, expiresAt, idToken) {
     this.externalAccountId = externalAccountId;
@@ -5809,9 +5934,6 @@ var OauthAccessToken = class _OauthAccessToken {
 var OAuthApplication = class _OAuthApplication {
   static {
     __name(this, "_OAuthApplication");
-  }
-  static {
-    __name2(this, "_OAuthApplication");
   }
   constructor(id, instanceId, name, clientId, clientUri, clientImageUrl, dynamicallyRegistered, consentScreenEnabled, pkceRequired, isPublic, scopes, redirectUris, authorizeUrl, tokenFetchUrl, userInfoUrl, discoveryUrl, tokenIntrospectionUrl, createdAt, updatedAt, clientSecret) {
     this.id = id;
@@ -5864,9 +5986,6 @@ var Organization = class _Organization {
   static {
     __name(this, "_Organization");
   }
-  static {
-    __name2(this, "_Organization");
-  }
   constructor(id, name, slug, imageUrl, hasImage, createdAt, updatedAt, publicMetadata = {}, privateMetadata = {}, maxAllowedMemberships, adminDeleteEnabled, membersCount, createdBy) {
     this.id = id;
     this.name = name;
@@ -5909,9 +6028,6 @@ var Organization = class _Organization {
 var OrganizationInvitation = class _OrganizationInvitation {
   static {
     __name(this, "_OrganizationInvitation");
-  }
-  static {
-    __name2(this, "_OrganizationInvitation");
   }
   constructor(id, emailAddress, role, roleName, organizationId, createdAt, updatedAt, expiresAt, url, status, publicMetadata = {}, privateMetadata = {}, publicOrganizationData) {
     this.id = id;
@@ -5956,9 +6072,6 @@ var OrganizationMembership = class _OrganizationMembership {
   static {
     __name(this, "_OrganizationMembership");
   }
-  static {
-    __name2(this, "_OrganizationMembership");
-  }
   constructor(id, role, permissions, publicMetadata = {}, privateMetadata = {}, createdAt, updatedAt, organization, publicUserData) {
     this.id = id;
     this.role = role;
@@ -5994,9 +6107,6 @@ var OrganizationMembershipPublicUserData = class _OrganizationMembershipPublicUs
   static {
     __name(this, "_OrganizationMembershipPublicUserData");
   }
-  static {
-    __name2(this, "_OrganizationMembershipPublicUserData");
-  }
   constructor(identifier, firstName, lastName, imageUrl, hasImage, userId) {
     this.identifier = identifier;
     this.firstName = firstName;
@@ -6019,9 +6129,6 @@ var OrganizationMembershipPublicUserData = class _OrganizationMembershipPublicUs
 var OrganizationSettings = class _OrganizationSettings {
   static {
     __name(this, "_OrganizationSettings");
-  }
-  static {
-    __name2(this, "_OrganizationSettings");
   }
   constructor(enabled, maxAllowedMemberships, maxAllowedRoles, maxAllowedPermissions, creatorRole, adminDeleteEnabled, domainsEnabled, slugDisabled, domainsEnrollmentModes, domainsDefaultRole) {
     this.enabled = enabled;
@@ -6054,9 +6161,6 @@ var PhoneNumber = class _PhoneNumber {
   static {
     __name(this, "_PhoneNumber");
   }
-  static {
-    __name2(this, "_PhoneNumber");
-  }
   constructor(id, phoneNumber, reservedForSecondFactor, defaultSecondFactor, verification, linkedTo) {
     this.id = id;
     this.phoneNumber = phoneNumber;
@@ -6079,9 +6183,6 @@ var PhoneNumber = class _PhoneNumber {
 var ProxyCheck = class _ProxyCheck {
   static {
     __name(this, "_ProxyCheck");
-  }
-  static {
-    __name2(this, "_ProxyCheck");
   }
   constructor(id, domainId, lastRunAt, proxyUrl, successful, createdAt, updatedAt) {
     this.id = id;
@@ -6108,9 +6209,6 @@ var RedirectUrl = class _RedirectUrl {
   static {
     __name(this, "_RedirectUrl");
   }
-  static {
-    __name2(this, "_RedirectUrl");
-  }
   constructor(id, url, createdAt, updatedAt) {
     this.id = id;
     this.url = url;
@@ -6124,9 +6222,6 @@ var RedirectUrl = class _RedirectUrl {
 var SamlConnection = class _SamlConnection {
   static {
     __name(this, "_SamlConnection");
-  }
-  static {
-    __name2(this, "_SamlConnection");
   }
   constructor(id, name, domain, organizationId, idpEntityId, idpSsoUrl, idpCertificate, idpMetadataUrl, idpMetadata, acsUrl, spEntityId, spMetadataUrl, active, provider, userCount, syncUserAttributes, allowSubdomains, allowIdpInitiated, createdAt, updatedAt, attributeMapping) {
     this.id = id;
@@ -6181,9 +6276,6 @@ var AttributeMapping = class _AttributeMapping {
   static {
     __name(this, "_AttributeMapping");
   }
-  static {
-    __name2(this, "_AttributeMapping");
-  }
   constructor(userId, emailAddress, firstName, lastName) {
     this.userId = userId;
     this.emailAddress = emailAddress;
@@ -6197,9 +6289,6 @@ var AttributeMapping = class _AttributeMapping {
 var SignInToken = class _SignInToken {
   static {
     __name(this, "_SignInToken");
-  }
-  static {
-    __name2(this, "_SignInToken");
   }
   constructor(id, userId, token, status, url, createdAt, updatedAt) {
     this.id = id;
@@ -6218,9 +6307,6 @@ var SignUpAttemptVerification = class _SignUpAttemptVerification {
   static {
     __name(this, "_SignUpAttemptVerification");
   }
-  static {
-    __name2(this, "_SignUpAttemptVerification");
-  }
   constructor(nextAction, supportedStrategies) {
     this.nextAction = nextAction;
     this.supportedStrategies = supportedStrategies;
@@ -6232,9 +6318,6 @@ var SignUpAttemptVerification = class _SignUpAttemptVerification {
 var SignUpAttemptVerifications = class _SignUpAttemptVerifications {
   static {
     __name(this, "_SignUpAttemptVerifications");
-  }
-  static {
-    __name2(this, "_SignUpAttemptVerifications");
   }
   constructor(emailAddress, phoneNumber, web3Wallet, externalAccount) {
     this.emailAddress = emailAddress;
@@ -6254,9 +6337,6 @@ var SignUpAttemptVerifications = class _SignUpAttemptVerifications {
 var SignUpAttempt = class _SignUpAttempt {
   static {
     __name(this, "_SignUpAttempt");
-  }
-  static {
-    __name2(this, "_SignUpAttempt");
   }
   constructor(id, status, requiredFields, optionalFields, missingFields, unverifiedFields, verifications, username, emailAddress, phoneNumber, web3Wallet, passwordEnabled, firstName, lastName, customAction, externalId, createdSessionId, createdUserId, abandonAt, legalAcceptedAt, publicMetadata, unsafeMetadata) {
     this.id = id;
@@ -6313,9 +6393,6 @@ var SMSMessage = class _SMSMessage {
   static {
     __name(this, "_SMSMessage");
   }
-  static {
-    __name2(this, "_SMSMessage");
-  }
   constructor(id, fromPhoneNumber, toPhoneNumber, message, status, phoneNumberId, data) {
     this.id = id;
     this.fromPhoneNumber = fromPhoneNumber;
@@ -6341,9 +6418,6 @@ var Token = class _Token {
   static {
     __name(this, "_Token");
   }
-  static {
-    __name2(this, "_Token");
-  }
   constructor(jwt) {
     this.jwt = jwt;
   }
@@ -6354,9 +6428,6 @@ var Token = class _Token {
 var Web3Wallet = class _Web3Wallet {
   static {
     __name(this, "_Web3Wallet");
-  }
-  static {
-    __name2(this, "_Web3Wallet");
   }
   constructor(id, web3Wallet, verification) {
     this.id = id;
@@ -6370,9 +6441,6 @@ var Web3Wallet = class _Web3Wallet {
 var User = class _User {
   static {
     __name(this, "_User");
-  }
-  static {
-    __name2(this, "_User");
   }
   constructor(id, passwordEnabled, totpEnabled, backupCodeEnabled, twoFactorEnabled, banned, locked, createdAt, updatedAt, imageUrl, hasImage, primaryEmailAddressId, primaryPhoneNumberId, primaryWeb3WalletId, lastSignInAt, externalId, username, firstName, lastName, publicMetadata = {}, privateMetadata = {}, unsafeMetadata = {}, emailAddresses = [], phoneNumbers = [], web3Wallets = [], externalAccounts = [], enterpriseAccounts = [], lastActiveAt, createOrganizationEnabled, createOrganizationsLimit = null, deleteSelfEnabled, legalAcceptedAt, locale) {
     this.id = id;
@@ -6481,9 +6549,6 @@ var WaitlistEntry = class _WaitlistEntry {
   static {
     __name(this, "_WaitlistEntry");
   }
-  static {
-    __name2(this, "_WaitlistEntry");
-  }
   constructor(id, emailAddress, status, invitation, createdAt, updatedAt, isLocked) {
     this.id = id;
     this.emailAddress = emailAddress;
@@ -6523,7 +6588,6 @@ function deserialize(payload) {
   }
 }
 __name(deserialize, "deserialize");
-__name2(deserialize, "deserialize");
 function isPaginated(payload) {
   if (!payload || typeof payload !== "object" || !("data" in payload)) {
     return false;
@@ -6531,7 +6595,6 @@ function isPaginated(payload) {
   return Array.isArray(payload.data) && payload.data !== void 0;
 }
 __name(isPaginated, "isPaginated");
-__name2(isPaginated, "isPaginated");
 function isM2MTokenResponse(payload) {
   if (!payload || typeof payload !== "object" || !("m2m_tokens" in payload)) {
     return false;
@@ -6539,12 +6602,10 @@ function isM2MTokenResponse(payload) {
   return Array.isArray(payload.m2m_tokens);
 }
 __name(isM2MTokenResponse, "isM2MTokenResponse");
-__name2(isM2MTokenResponse, "isM2MTokenResponse");
 function getCount(item) {
   return item.total_count;
 }
 __name(getCount, "getCount");
-__name2(getCount, "getCount");
 function jsonToObject(item) {
   if (typeof item !== "string" && "object" in item && "deleted" in item) {
     return DeletedObject.fromJSON(item);
@@ -6645,9 +6706,8 @@ function jsonToObject(item) {
   }
 }
 __name(jsonToObject, "jsonToObject");
-__name2(jsonToObject, "jsonToObject");
 function buildRequest(options) {
-  const requestFn = /* @__PURE__ */ __name2(async (requestOptions) => {
+  const requestFn = /* @__PURE__ */ __name(async (requestOptions) => {
     const {
       secretKey,
       machineSecretKey,
@@ -6696,12 +6756,12 @@ function buildRequest(options) {
         });
       } else {
         headers.set("Content-Type", "application/json");
-        const buildBody = /* @__PURE__ */ __name2(() => {
+        const buildBody = /* @__PURE__ */ __name(() => {
           const hasBody = method !== "GET" && bodyParams && Object.keys(bodyParams).length > 0;
           if (!hasBody) {
             return null;
           }
-          const formatKeys = /* @__PURE__ */ __name2((object) => snakecase_keys_default(object, { deep: deepSnakecaseBodyParamKeys }), "formatKeys");
+          const formatKeys = /* @__PURE__ */ __name((object) => snakecase_keys_default(object, { deep: deepSnakecaseBodyParamKeys }), "formatKeys");
           return {
             body: JSON.stringify(Array.isArray(bodyParams) ? bodyParams.map(formatKeys) : formatKeys(bodyParams))
           };
@@ -6754,7 +6814,6 @@ function buildRequest(options) {
   return withLegacyRequestReturn(requestFn);
 }
 __name(buildRequest, "buildRequest");
-__name2(buildRequest, "buildRequest");
 function getTraceId(data, headers) {
   if (data && typeof data === "object" && "clerk_trace_id" in data && typeof data.clerk_trace_id === "string") {
     return data.clerk_trace_id;
@@ -6763,7 +6822,6 @@ function getTraceId(data, headers) {
   return cfRay || "";
 }
 __name(getTraceId, "getTraceId");
-__name2(getTraceId, "getTraceId");
 function getRetryAfter(headers) {
   const retryAfter = headers?.get("Retry-After");
   if (!retryAfter) {
@@ -6776,7 +6834,6 @@ function getRetryAfter(headers) {
   return value;
 }
 __name(getRetryAfter, "getRetryAfter");
-__name2(getRetryAfter, "getRetryAfter");
 function parseErrors2(data) {
   if (!!data && typeof data === "object" && "errors" in data) {
     const errors = data.errors;
@@ -6784,8 +6841,7 @@ function parseErrors2(data) {
   }
   return [];
 }
-__name(parseErrors2, "parseErrors2");
-__name2(parseErrors2, "parseErrors");
+__name(parseErrors2, "parseErrors");
 function withLegacyRequestReturn(cb) {
   return async (...args) => {
     const { data, errors, totalCount, status, statusText, clerkTraceId, retryAfter } = await cb(...args);
@@ -6806,7 +6862,6 @@ function withLegacyRequestReturn(cb) {
   };
 }
 __name(withLegacyRequestReturn, "withLegacyRequestReturn");
-__name2(withLegacyRequestReturn, "withLegacyRequestReturn");
 function createBackendApiClient(options) {
   const request = buildRequest(options);
   return {
@@ -6878,8 +6933,7 @@ function createBackendApiClient(options) {
   };
 }
 __name(createBackendApiClient, "createBackendApiClient");
-__name2(createBackendApiClient, "createBackendApiClient");
-var createDebug = /* @__PURE__ */ __name2((data) => {
+var createDebug = /* @__PURE__ */ __name((data) => {
   return () => {
     const res = { ...data };
     res.secretKey = (res.secretKey || "").substring(0, 7);
@@ -6893,7 +6947,7 @@ function signedInAuthObject(authenticateContext, sessionToken, sessionClaims) {
   const getToken = createGetToken({
     sessionId,
     sessionToken,
-    fetcher: /* @__PURE__ */ __name2(async (sessionId2, template, expiresInSeconds) => (await apiClient.sessions.getToken(sessionId2, template || "", expiresInSeconds)).jwt, "fetcher")
+    fetcher: /* @__PURE__ */ __name(async (sessionId2, template, expiresInSeconds) => (await apiClient.sessions.getToken(sessionId2, template || "", expiresInSeconds)).jwt, "fetcher")
   });
   return {
     tokenType: TokenType.SessionToken,
@@ -6922,7 +6976,6 @@ function signedInAuthObject(authenticateContext, sessionToken, sessionClaims) {
   };
 }
 __name(signedInAuthObject, "signedInAuthObject");
-__name2(signedInAuthObject, "signedInAuthObject");
 function signedOutAuthObject(debugData, initialSessionStatus) {
   return {
     tokenType: TokenType.SessionToken,
@@ -6936,20 +6989,19 @@ function signedOutAuthObject(debugData, initialSessionStatus) {
     orgSlug: null,
     orgPermissions: null,
     factorVerificationAge: null,
-    getToken: /* @__PURE__ */ __name2(() => Promise.resolve(null), "getToken"),
-    has: /* @__PURE__ */ __name2(() => false, "has"),
+    getToken: /* @__PURE__ */ __name(() => Promise.resolve(null), "getToken"),
+    has: /* @__PURE__ */ __name(() => false, "has"),
     debug: createDebug(debugData),
     isAuthenticated: false
   };
 }
 __name(signedOutAuthObject, "signedOutAuthObject");
-__name2(signedOutAuthObject, "signedOutAuthObject");
 function authenticatedMachineObject(tokenType, token, verificationResult, debugData) {
   const baseObject = {
     id: verificationResult.id,
     subject: verificationResult.subject,
-    getToken: /* @__PURE__ */ __name2(() => Promise.resolve(token), "getToken"),
-    has: /* @__PURE__ */ __name2(() => false, "has"),
+    getToken: /* @__PURE__ */ __name(() => Promise.resolve(token), "getToken"),
+    has: /* @__PURE__ */ __name(() => false, "has"),
     debug: createDebug(debugData),
     isAuthenticated: true
   };
@@ -6991,14 +7043,13 @@ function authenticatedMachineObject(tokenType, token, verificationResult, debugD
   }
 }
 __name(authenticatedMachineObject, "authenticatedMachineObject");
-__name2(authenticatedMachineObject, "authenticatedMachineObject");
 function unauthenticatedMachineObject(tokenType, debugData) {
   const baseObject = {
     id: null,
     subject: null,
     scopes: null,
-    has: /* @__PURE__ */ __name2(() => false, "has"),
-    getToken: /* @__PURE__ */ __name2(() => Promise.resolve(null), "getToken"),
+    has: /* @__PURE__ */ __name(() => false, "has"),
+    getToken: /* @__PURE__ */ __name(() => Promise.resolve(null), "getToken"),
     debug: createDebug(debugData),
     isAuthenticated: false
   };
@@ -7037,19 +7088,17 @@ function unauthenticatedMachineObject(tokenType, debugData) {
   }
 }
 __name(unauthenticatedMachineObject, "unauthenticatedMachineObject");
-__name2(unauthenticatedMachineObject, "unauthenticatedMachineObject");
 function invalidTokenAuthObject() {
   return {
     isAuthenticated: false,
     tokenType: null,
-    getToken: /* @__PURE__ */ __name2(() => Promise.resolve(null), "getToken"),
-    has: /* @__PURE__ */ __name2(() => false, "has"),
-    debug: /* @__PURE__ */ __name2(() => ({}), "debug")
+    getToken: /* @__PURE__ */ __name(() => Promise.resolve(null), "getToken"),
+    has: /* @__PURE__ */ __name(() => false, "has"),
+    debug: /* @__PURE__ */ __name(() => ({}), "debug")
   };
 }
 __name(invalidTokenAuthObject, "invalidTokenAuthObject");
-__name2(invalidTokenAuthObject, "invalidTokenAuthObject");
-var createGetToken = /* @__PURE__ */ __name2((params) => {
+var createGetToken = /* @__PURE__ */ __name((params) => {
   const { fetcher, sessionToken, sessionId } = params || {};
   return async (options = {}) => {
     if (!sessionId) {
@@ -7086,7 +7135,7 @@ var AuthErrorReason = {
 };
 function signedIn(params) {
   const { authenticateContext, headers = new Headers(), token } = params;
-  const toAuth = /* @__PURE__ */ __name2((({ treatPendingAsSignedOut = true } = {}) => {
+  const toAuth = /* @__PURE__ */ __name((({ treatPendingAsSignedOut = true } = {}) => {
     if (params.tokenType === TokenType.SessionToken) {
       const { sessionClaims } = params;
       const authObject = signedInAuthObject(authenticateContext, token, sessionClaims);
@@ -7119,10 +7168,9 @@ function signedIn(params) {
   };
 }
 __name(signedIn, "signedIn");
-__name2(signedIn, "signedIn");
 function signedOut(params) {
   const { authenticateContext, headers = new Headers(), reason, message = "", tokenType } = params;
-  const toAuth = /* @__PURE__ */ __name2((() => {
+  const toAuth = /* @__PURE__ */ __name((() => {
     if (tokenType === TokenType.SessionToken) {
       return signedOutAuthObject({ ...authenticateContext, status: AuthStatus.SignedOut, reason, message });
     }
@@ -7149,7 +7197,6 @@ function signedOut(params) {
   });
 }
 __name(signedOut, "signedOut");
-__name2(signedOut, "signedOut");
 function handshake(authenticateContext, reason, message = "", headers) {
   return withDebugHeaders({
     status: AuthStatus.Handshake,
@@ -7166,13 +7213,12 @@ function handshake(authenticateContext, reason, message = "", headers) {
     isSignedIn: false,
     isAuthenticated: false,
     tokenType: TokenType.SessionToken,
-    toAuth: /* @__PURE__ */ __name2(() => null, "toAuth"),
+    toAuth: /* @__PURE__ */ __name(() => null, "toAuth"),
     headers,
     token: null
   });
 }
 __name(handshake, "handshake");
-__name2(handshake, "handshake");
 function signedOutInvalidToken() {
   const authObject = invalidTokenAuthObject();
   return withDebugHeaders({
@@ -7190,14 +7236,13 @@ function signedOutInvalidToken() {
     isSignedIn: false,
     isAuthenticated: false,
     tokenType: null,
-    toAuth: /* @__PURE__ */ __name2(() => authObject, "toAuth"),
+    toAuth: /* @__PURE__ */ __name(() => authObject, "toAuth"),
     headers: new Headers(),
     token: null
   });
 }
 __name(signedOutInvalidToken, "signedOutInvalidToken");
-__name2(signedOutInvalidToken, "signedOutInvalidToken");
-var withDebugHeaders = /* @__PURE__ */ __name2((requestState) => {
+var withDebugHeaders = /* @__PURE__ */ __name((requestState) => {
   const headers = new Headers(requestState.headers || {});
   if (requestState.message) {
     try {
@@ -7225,22 +7270,16 @@ var ClerkUrl = class extends URL {
   static {
     __name(this, "ClerkUrl");
   }
-  static {
-    __name2(this, "ClerkUrl");
-  }
   isCrossOrigin(other) {
     return this.origin !== new URL(other.toString()).origin;
   }
 };
-var createClerkUrl = /* @__PURE__ */ __name2((...args) => {
+var createClerkUrl = /* @__PURE__ */ __name((...args) => {
   return new ClerkUrl(...args);
 }, "createClerkUrl");
 var ClerkRequest = class extends Request {
   static {
     __name(this, "ClerkRequest");
-  }
-  static {
-    __name2(this, "ClerkRequest");
   }
   constructor(input, init) {
     const url = typeof input !== "string" && "url" in input ? input.url : String(input);
@@ -7303,14 +7342,14 @@ var ClerkRequest = class extends Request {
     return str ? str.replace(/(%[0-9A-Z]{2})+/g, decodeURIComponent) : str;
   }
 };
-var createClerkRequest = /* @__PURE__ */ __name2((...args) => {
+var createClerkRequest = /* @__PURE__ */ __name((...args) => {
   const isClerkRequest = args[0] && typeof args[0] === "object" && "clerkUrl" in args[0] && "cookies" in args[0];
   return isClerkRequest ? args[0] : new ClerkRequest(...args);
 }, "createClerkRequest");
-var getCookieName = /* @__PURE__ */ __name2((cookieDirective) => {
+var getCookieName = /* @__PURE__ */ __name((cookieDirective) => {
   return cookieDirective.split(";")[0]?.split("=")[0];
 }, "getCookieName");
-var getCookieValue = /* @__PURE__ */ __name2((cookieDirective) => {
+var getCookieValue = /* @__PURE__ */ __name((cookieDirective) => {
   return cookieDirective.split(";")[0]?.split("=")[1];
 }, "getCookieValue");
 async function verifyToken(token, options) {
@@ -7343,7 +7382,6 @@ async function verifyToken(token, options) {
   }
 }
 __name(verifyToken, "verifyToken");
-__name2(verifyToken, "verifyToken");
 function handleClerkAPIError(tokenType, err, notFoundMessage) {
   if (isClerkAPIResponseError(err)) {
     let code;
@@ -7386,7 +7424,6 @@ function handleClerkAPIError(tokenType, err, notFoundMessage) {
   };
 }
 __name(handleClerkAPIError, "handleClerkAPIError");
-__name2(handleClerkAPIError, "handleClerkAPIError");
 async function verifyM2MToken(token, options) {
   try {
     const client = createBackendApiClient(options);
@@ -7397,7 +7434,6 @@ async function verifyM2MToken(token, options) {
   }
 }
 __name(verifyM2MToken, "verifyM2MToken");
-__name2(verifyM2MToken, "verifyM2MToken");
 async function verifyOAuthToken(accessToken, options) {
   try {
     const client = createBackendApiClient(options);
@@ -7408,7 +7444,6 @@ async function verifyOAuthToken(accessToken, options) {
   }
 }
 __name(verifyOAuthToken, "verifyOAuthToken");
-__name2(verifyOAuthToken, "verifyOAuthToken");
 async function verifyAPIKey(secret, options) {
   try {
     const client = createBackendApiClient(options);
@@ -7419,7 +7454,6 @@ async function verifyAPIKey(secret, options) {
   }
 }
 __name(verifyAPIKey, "verifyAPIKey");
-__name2(verifyAPIKey, "verifyAPIKey");
 async function verifyMachineAuthToken(token, options) {
   if (isJwtFormat(token)) {
     let decodedResult;
@@ -7470,7 +7504,6 @@ async function verifyMachineAuthToken(token, options) {
   throw new Error("Unknown machine token type");
 }
 __name(verifyMachineAuthToken, "verifyMachineAuthToken");
-__name2(verifyMachineAuthToken, "verifyMachineAuthToken");
 async function verifyHandshakeJwt(token, { key }) {
   const { data: decoded, errors } = decodeJwt(token);
   if (errors) {
@@ -7496,7 +7529,6 @@ async function verifyHandshakeJwt(token, { key }) {
   return payload;
 }
 __name(verifyHandshakeJwt, "verifyHandshakeJwt");
-__name2(verifyHandshakeJwt, "verifyHandshakeJwt");
 async function verifyHandshakeToken(token, options) {
   const { secretKey, apiUrl, apiVersion, jwksCacheTtlInMs, jwtKey, skipJwksCache } = options;
   const { data, errors } = decodeJwt(token);
@@ -7519,13 +7551,9 @@ async function verifyHandshakeToken(token, options) {
   return verifyHandshakeJwt(token, { key });
 }
 __name(verifyHandshakeToken, "verifyHandshakeToken");
-__name2(verifyHandshakeToken, "verifyHandshakeToken");
 var HandshakeService = class {
   static {
     __name(this, "HandshakeService");
-  }
-  static {
-    __name2(this, "HandshakeService");
   }
   constructor(authenticateContext, options, organizationMatcher) {
     this.authenticateContext = authenticateContext;
@@ -7752,9 +7780,6 @@ var OrganizationMatcher = class {
   static {
     __name(this, "OrganizationMatcher");
   }
-  static {
-    __name2(this, "OrganizationMatcher");
-  }
   constructor(options) {
     this.organizationPattern = this.createMatcher(options?.organizationPatterns);
     this.personalAccountPattern = this.createMatcher(options?.personalAccountPatterns);
@@ -7830,14 +7855,12 @@ function assertSignInUrlExists(signInUrl, key) {
   }
 }
 __name(assertSignInUrlExists, "assertSignInUrlExists");
-__name2(assertSignInUrlExists, "assertSignInUrlExists");
 function assertProxyUrlOrDomain(proxyUrlOrDomain) {
   if (!proxyUrlOrDomain) {
     throw new Error(`Missing domain and proxyUrl. A satellite application needs to specify a domain or a proxyUrl`);
   }
 }
 __name(assertProxyUrlOrDomain, "assertProxyUrlOrDomain");
-__name2(assertProxyUrlOrDomain, "assertProxyUrlOrDomain");
 function assertSignInUrlFormatAndOrigin(_signInUrl, origin) {
   let signInUrl;
   try {
@@ -7850,7 +7873,6 @@ function assertSignInUrlFormatAndOrigin(_signInUrl, origin) {
   }
 }
 __name(assertSignInUrlFormatAndOrigin, "assertSignInUrlFormatAndOrigin");
-__name2(assertSignInUrlFormatAndOrigin, "assertSignInUrlFormatAndOrigin");
 function assertMachineSecretOrSecretKey(authenticateContext) {
   if (!authenticateContext.machineSecretKey && !authenticateContext.secretKey) {
     throw new Error(
@@ -7859,12 +7881,10 @@ function assertMachineSecretOrSecretKey(authenticateContext) {
   }
 }
 __name(assertMachineSecretOrSecretKey, "assertMachineSecretOrSecretKey");
-__name2(assertMachineSecretOrSecretKey, "assertMachineSecretOrSecretKey");
 function isRequestEligibleForRefresh(err, authenticateContext, request) {
   return err.reason === TokenVerificationErrorReason.TokenExpired && !!authenticateContext.refreshTokenInCookie && request.method === "GET";
 }
 __name(isRequestEligibleForRefresh, "isRequestEligibleForRefresh");
-__name2(isRequestEligibleForRefresh, "isRequestEligibleForRefresh");
 function checkTokenTypeMismatch(parsedTokenType, acceptsToken, authenticateContext) {
   const mismatch = !isTokenTypeAccepted(parsedTokenType, acceptsToken);
   if (mismatch) {
@@ -7878,7 +7898,6 @@ function checkTokenTypeMismatch(parsedTokenType, acceptsToken, authenticateConte
   return null;
 }
 __name(checkTokenTypeMismatch, "checkTokenTypeMismatch");
-__name2(checkTokenTypeMismatch, "checkTokenTypeMismatch");
 function isTokenTypeInAcceptedArray(acceptsToken, authenticateContext) {
   let parsedTokenType = null;
   const { tokenInHeader } = authenticateContext;
@@ -7893,8 +7912,7 @@ function isTokenTypeInAcceptedArray(acceptsToken, authenticateContext) {
   return isTokenTypeAccepted(typeToCheck, acceptsToken);
 }
 __name(isTokenTypeInAcceptedArray, "isTokenTypeInAcceptedArray");
-__name2(isTokenTypeInAcceptedArray, "isTokenTypeInAcceptedArray");
-var authenticateRequest = /* @__PURE__ */ __name2((async (request, options) => {
+var authenticateRequest = /* @__PURE__ */ __name((async (request, options) => {
   const authenticateContext = await createAuthenticateContext(createClerkRequest(request), options);
   const acceptsToken = options.acceptsToken ?? TokenType.SessionToken;
   if (acceptsToken !== TokenType.M2MToken) {
@@ -8005,7 +8023,6 @@ var authenticateRequest = /* @__PURE__ */ __name2((async (request, options) => {
     }
   }
   __name(refreshToken, "refreshToken");
-  __name2(refreshToken, "refreshToken");
   async function attemptRefresh(authenticateContext2) {
     const { data: cookiesToSet, error } = await refreshToken(authenticateContext2);
     if (!cookiesToSet || cookiesToSet.length === 0) {
@@ -8032,7 +8049,6 @@ var authenticateRequest = /* @__PURE__ */ __name2((async (request, options) => {
     return { data: { jwtPayload, sessionToken, headers }, error: null };
   }
   __name(attemptRefresh, "attemptRefresh");
-  __name2(attemptRefresh, "attemptRefresh");
   function handleMaybeHandshakeStatus(authenticateContext2, reason, message, headers) {
     if (!handshakeService.isRequestEligibleForHandshake()) {
       return signedOut({
@@ -8060,7 +8076,6 @@ var authenticateRequest = /* @__PURE__ */ __name2((async (request, options) => {
     return handshake(authenticateContext2, reason, message, handshakeHeaders);
   }
   __name(handleMaybeHandshakeStatus, "handleMaybeHandshakeStatus");
-  __name2(handleMaybeHandshakeStatus, "handleMaybeHandshakeStatus");
   function handleMaybeOrganizationSyncHandshake(authenticateContext2, auth) {
     const organizationSyncTarget = organizationMatcher.findTarget(authenticateContext2.clerkUrl);
     if (!organizationSyncTarget) {
@@ -8098,7 +8113,6 @@ var authenticateRequest = /* @__PURE__ */ __name2((async (request, options) => {
     return handshakeState;
   }
   __name(handleMaybeOrganizationSyncHandshake, "handleMaybeOrganizationSyncHandshake");
-  __name2(handleMaybeOrganizationSyncHandshake, "handleMaybeOrganizationSyncHandshake");
   async function authenticateRequestWithTokenInHeader() {
     const { tokenInHeader } = authenticateContext;
     if (isMachineJwt(tokenInHeader)) {
@@ -8127,7 +8141,6 @@ var authenticateRequest = /* @__PURE__ */ __name2((async (request, options) => {
     }
   }
   __name(authenticateRequestWithTokenInHeader, "authenticateRequestWithTokenInHeader");
-  __name2(authenticateRequestWithTokenInHeader, "authenticateRequestWithTokenInHeader");
   async function authenticateRequestWithTokenInCookie() {
     const hasActiveClient = authenticateContext.clientUat;
     const hasSessionToken = !!authenticateContext.sessionTokenInCookie;
@@ -8277,7 +8290,6 @@ var authenticateRequest = /* @__PURE__ */ __name2((async (request, options) => {
     });
   }
   __name(authenticateRequestWithTokenInCookie, "authenticateRequestWithTokenInCookie");
-  __name2(authenticateRequestWithTokenInCookie, "authenticateRequestWithTokenInCookie");
   async function handleSessionTokenError(err, tokenCarrier) {
     if (!(err instanceof TokenVerificationError)) {
       return signedOut({
@@ -8333,7 +8345,6 @@ var authenticateRequest = /* @__PURE__ */ __name2((async (request, options) => {
     });
   }
   __name(handleSessionTokenError, "handleSessionTokenError");
-  __name2(handleSessionTokenError, "handleSessionTokenError");
   function handleMachineError(tokenType, err) {
     if (!(err instanceof MachineTokenVerificationError)) {
       return signedOut({
@@ -8350,7 +8361,6 @@ var authenticateRequest = /* @__PURE__ */ __name2((async (request, options) => {
     });
   }
   __name(handleMachineError, "handleMachineError");
-  __name2(handleMachineError, "handleMachineError");
   async function authenticateMachineRequestWithTokenInHeader() {
     const { tokenInHeader } = authenticateContext;
     if (!tokenInHeader) {
@@ -8381,7 +8391,6 @@ var authenticateRequest = /* @__PURE__ */ __name2((async (request, options) => {
     });
   }
   __name(authenticateMachineRequestWithTokenInHeader, "authenticateMachineRequestWithTokenInHeader");
-  __name2(authenticateMachineRequestWithTokenInHeader, "authenticateMachineRequestWithTokenInHeader");
   async function authenticateAnyRequestWithTokenInHeader() {
     const { tokenInHeader } = authenticateContext;
     if (!tokenInHeader) {
@@ -8416,7 +8425,6 @@ var authenticateRequest = /* @__PURE__ */ __name2((async (request, options) => {
     });
   }
   __name(authenticateAnyRequestWithTokenInHeader, "authenticateAnyRequestWithTokenInHeader");
-  __name2(authenticateAnyRequestWithTokenInHeader, "authenticateAnyRequestWithTokenInHeader");
   if (Array.isArray(acceptsToken)) {
     if (!isTokenTypeInAcceptedArray(acceptsToken, authenticateContext)) {
       return signedOutInvalidToken();
@@ -8440,11 +8448,11 @@ var authenticateRequest = /* @__PURE__ */ __name2((async (request, options) => {
   }
   return authenticateRequestWithTokenInCookie();
 }), "authenticateRequest");
-var debugRequestState = /* @__PURE__ */ __name2((params) => {
+var debugRequestState = /* @__PURE__ */ __name((params) => {
   const { isSignedIn, isAuthenticated, proxyUrl, reason, message, publishableKey, isSatellite, domain } = params;
   return { isSignedIn, isAuthenticated, proxyUrl, reason, message, publishableKey, isSatellite, domain };
 }, "debugRequestState");
-var convertTokenVerificationErrorReasonToAuthErrorReason = /* @__PURE__ */ __name2(({
+var convertTokenVerificationErrorReasonToAuthErrorReason = /* @__PURE__ */ __name(({
   tokenError,
   refreshError
 }) => {
@@ -8474,7 +8482,7 @@ var defaultOptions2 = {
 function createAuthenticateRequest(params) {
   const buildTimeOptions = mergePreDefinedOptions(defaultOptions2, params.options);
   const apiClient = params.apiClient;
-  const authenticateRequest2 = /* @__PURE__ */ __name2((request, options = {}) => {
+  const authenticateRequest2 = /* @__PURE__ */ __name((request, options = {}) => {
     const { apiUrl, apiVersion } = buildTimeOptions;
     const runTimeOptions = mergePreDefinedOptions(buildTimeOptions, options);
     return authenticateRequest(request, {
@@ -8493,7 +8501,8 @@ function createAuthenticateRequest(params) {
   };
 }
 __name(createAuthenticateRequest, "createAuthenticateRequest");
-__name2(createAuthenticateRequest, "createAuthenticateRequest");
+
+// ../node_modules/.pnpm/@clerk+backend@3.4.9_react-_b622d27dd95221a3835e08bcb14a401b/node_modules/@clerk/backend/dist/chunk-P263NW7Z.mjs
 function withLegacyReturn(cb) {
   return async (...args) => {
     const { data, errors } = await cb(...args);
@@ -8504,19 +8513,18 @@ function withLegacyReturn(cb) {
   };
 }
 __name(withLegacyReturn, "withLegacyReturn");
-__name2(withLegacyReturn, "withLegacyReturn");
+
+// ../node_modules/.pnpm/@clerk+shared@4.12.0_react-_5da07b8bc2a422cf2f0a3aafa80b516b/node_modules/@clerk/shared/dist/runtime/underscore-ClYSgvuy.mjs
 function snakeToCamel(str) {
   return str ? str.replace(/([-_][a-z])/g, (match3) => match3.toUpperCase().replace(/-|_/, "")) : "";
 }
 __name(snakeToCamel, "snakeToCamel");
-__name2(snakeToCamel, "snakeToCamel");
 function camelToSnake(str) {
   return str ? str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`) : "";
 }
 __name(camelToSnake, "camelToSnake");
-__name2(camelToSnake, "camelToSnake");
-var createDeepObjectTransformer = /* @__PURE__ */ __name2((transform) => {
-  const deepTransform = /* @__PURE__ */ __name2((obj) => {
+var createDeepObjectTransformer = /* @__PURE__ */ __name((transform) => {
+  const deepTransform = /* @__PURE__ */ __name((obj) => {
     if (!obj) return obj;
     if (Array.isArray(obj)) return obj.map((el) => {
       if (typeof el === "object" || Array.isArray(el)) return deepTransform(el);
@@ -8551,14 +8559,12 @@ function isTruthy(value) {
   return false;
 }
 __name(isTruthy, "isTruthy");
-__name2(isTruthy, "isTruthy");
+
+// ../node_modules/.pnpm/@clerk+shared@4.12.0_react-_5da07b8bc2a422cf2f0a3aafa80b516b/node_modules/@clerk/shared/dist/runtime/telemetry-ZzMitk4y.mjs
 var DEFAULT_CACHE_TTL_MS = 864e5;
 var TelemetryEventThrottler = class {
   static {
     __name(this, "TelemetryEventThrottler");
-  }
-  static {
-    __name2(this, "TelemetryEventThrottler");
   }
   #cache;
   #cacheTtl = DEFAULT_CACHE_TTL_MS;
@@ -8599,9 +8605,6 @@ var LocalStorageThrottlerCache = class {
   static {
     __name(this, "LocalStorageThrottlerCache");
   }
-  static {
-    __name2(this, "LocalStorageThrottlerCache");
-  }
   #storageKey = "clerk_telemetry_throttler";
   getItem(key) {
     return this.#getCache()[key];
@@ -8640,9 +8643,6 @@ var InMemoryThrottlerCache = class {
   static {
     __name(this, "InMemoryThrottlerCache");
   }
-  static {
-    __name2(this, "InMemoryThrottlerCache");
-  }
   #cache = /* @__PURE__ */ new Map();
   #maxSize = 1e4;
   getItem(key) {
@@ -8663,7 +8663,6 @@ function isWindowClerkWithMetadata(clerk) {
   return typeof clerk === "object" && clerk !== null && "constructor" in clerk && typeof clerk.constructor === "function";
 }
 __name(isWindowClerkWithMetadata, "isWindowClerkWithMetadata");
-__name2(isWindowClerkWithMetadata, "isWindowClerkWithMetadata");
 var VALID_LOG_LEVELS = /* @__PURE__ */ new Set([
   "error",
   "warn",
@@ -8679,9 +8678,6 @@ var DEFAULT_CONFIG = {
 var TelemetryCollector = class {
   static {
     __name(this, "TelemetryCollector");
-  }
-  static {
-    __name2(this, "TelemetryCollector");
   }
   #config;
   #eventThrottler;
@@ -8898,6 +8894,8 @@ var TelemetryCollector = class {
     }
   }
 };
+
+// ../node_modules/.pnpm/@clerk+backend@3.4.9_react-_b622d27dd95221a3835e08bcb14a401b/node_modules/@clerk/backend/dist/index.mjs
 var verifyToken2 = withLegacyReturn(verifyToken);
 function createClerkClient(options) {
   const opts = { ...options };
@@ -8917,7 +8915,8 @@ function createClerkClient(options) {
   };
 }
 __name(createClerkClient, "createClerkClient");
-__name2(createClerkClient, "createClerkClient");
+
+// _middleware.js
 async function onRequest({ request, env, next }) {
   const url = new URL(request.url);
   if (!url.pathname.startsWith("/api/")) return next();
@@ -8949,70 +8948,239 @@ async function onRequest({ request, env, next }) {
   }
 }
 __name(onRequest, "onRequest");
-__name2(onRequest, "onRequest");
+
+// ../.wrangler/tmp/pages-3qy5yr/functionsRoutes-0.7381858872253129.mjs
 var routes = [
+  {
+    routePath: "/api/clients/:id",
+    mountPath: "/api/clients",
+    method: "PUT",
+    middlewares: [],
+    modules: [onRequestPut]
+  },
+  {
+    routePath: "/api/documents/:id",
+    mountPath: "/api/documents",
+    method: "DELETE",
+    middlewares: [],
+    modules: [onRequestDelete]
+  },
+  {
+    routePath: "/api/documents/:id",
+    mountPath: "/api/documents",
+    method: "PUT",
+    middlewares: [],
+    modules: [onRequestPut2]
+  },
+  {
+    routePath: "/api/meeting-action-items/:id",
+    mountPath: "/api/meeting-action-items",
+    method: "DELETE",
+    middlewares: [],
+    modules: [onRequestDelete2]
+  },
+  {
+    routePath: "/api/meeting-action-items/:id",
+    mountPath: "/api/meeting-action-items",
+    method: "PUT",
+    middlewares: [],
+    modules: [onRequestPut3]
+  },
+  {
+    routePath: "/api/meeting-notes/:id",
+    mountPath: "/api/meeting-notes",
+    method: "DELETE",
+    middlewares: [],
+    modules: [onRequestDelete3]
+  },
+  {
+    routePath: "/api/meeting-notes/:id",
+    mountPath: "/api/meeting-notes",
+    method: "PUT",
+    middlewares: [],
+    modules: [onRequestPut4]
+  },
+  {
+    routePath: "/api/meeting-topics/:id",
+    mountPath: "/api/meeting-topics",
+    method: "DELETE",
+    middlewares: [],
+    modules: [onRequestDelete4]
+  },
+  {
+    routePath: "/api/meeting-topics/:id",
+    mountPath: "/api/meeting-topics",
+    method: "PUT",
+    middlewares: [],
+    modules: [onRequestPut5]
+  },
+  {
+    routePath: "/api/meetings/:id",
+    mountPath: "/api/meetings",
+    method: "DELETE",
+    middlewares: [],
+    modules: [onRequestDelete5]
+  },
+  {
+    routePath: "/api/meetings/:id",
+    mountPath: "/api/meetings",
+    method: "PUT",
+    middlewares: [],
+    modules: [onRequestPut6]
+  },
+  {
+    routePath: "/api/people/:id",
+    mountPath: "/api/people",
+    method: "PUT",
+    middlewares: [],
+    modules: [onRequestPut7]
+  },
+  {
+    routePath: "/api/projects/:slug",
+    mountPath: "/api/projects",
+    method: "GET",
+    middlewares: [],
+    modules: [onRequestGet]
+  },
+  {
+    routePath: "/api/projects/:slug",
+    mountPath: "/api/projects",
+    method: "PUT",
+    middlewares: [],
+    modules: [onRequestPut8]
+  },
   {
     routePath: "/api/tasks/:id",
     mountPath: "/api/tasks",
     method: "DELETE",
     middlewares: [],
-    modules: [onRequestDelete]
+    modules: [onRequestDelete6]
   },
   {
     routePath: "/api/tasks/:id",
     mountPath: "/api/tasks",
     method: "GET",
     middlewares: [],
-    modules: [onRequestGet]
+    modules: [onRequestGet2]
   },
   {
     routePath: "/api/tasks/:id",
     mountPath: "/api/tasks",
     method: "PUT",
     middlewares: [],
-    modules: [onRequestPut]
+    modules: [onRequestPut9]
+  },
+  {
+    routePath: "/api/workflow-steps/:id",
+    mountPath: "/api/workflow-steps",
+    method: "PUT",
+    middlewares: [],
+    modules: [onRequestPut10]
   },
   {
     routePath: "/api/clients",
     mountPath: "/api",
     method: "GET",
     middlewares: [],
-    modules: [onRequestGet2]
-  },
-  {
-    routePath: "/api/meetings",
-    mountPath: "/api",
-    method: "GET",
-    middlewares: [],
     modules: [onRequestGet3]
   },
   {
-    routePath: "/api/people",
-    mountPath: "/api",
-    method: "GET",
-    middlewares: [],
-    modules: [onRequestGet4]
-  },
-  {
-    routePath: "/api/tasks",
-    mountPath: "/api",
-    method: "GET",
-    middlewares: [],
-    modules: [onRequestGet5]
-  },
-  {
-    routePath: "/api/tasks",
+    routePath: "/api/clients",
     mountPath: "/api",
     method: "POST",
     middlewares: [],
     modules: [onRequestPost]
   },
   {
-    routePath: "/api/workflows",
+    routePath: "/api/documents",
+    mountPath: "/api",
+    method: "GET",
+    middlewares: [],
+    modules: [onRequestGet4]
+  },
+  {
+    routePath: "/api/documents",
+    mountPath: "/api",
+    method: "POST",
+    middlewares: [],
+    modules: [onRequestPost2]
+  },
+  {
+    routePath: "/api/meeting-action-items",
+    mountPath: "/api",
+    method: "POST",
+    middlewares: [],
+    modules: [onRequestPost3]
+  },
+  {
+    routePath: "/api/meeting-notes",
+    mountPath: "/api",
+    method: "POST",
+    middlewares: [],
+    modules: [onRequestPost4]
+  },
+  {
+    routePath: "/api/meeting-topics",
+    mountPath: "/api",
+    method: "POST",
+    middlewares: [],
+    modules: [onRequestPost5]
+  },
+  {
+    routePath: "/api/meetings",
+    mountPath: "/api",
+    method: "GET",
+    middlewares: [],
+    modules: [onRequestGet5]
+  },
+  {
+    routePath: "/api/meetings",
+    mountPath: "/api/meetings",
+    method: "POST",
+    middlewares: [],
+    modules: [onRequestPost6]
+  },
+  {
+    routePath: "/api/people",
     mountPath: "/api",
     method: "GET",
     middlewares: [],
     modules: [onRequestGet6]
+  },
+  {
+    routePath: "/api/people",
+    mountPath: "/api",
+    method: "POST",
+    middlewares: [],
+    modules: [onRequestPost7]
+  },
+  {
+    routePath: "/api/projects",
+    mountPath: "/api",
+    method: "POST",
+    middlewares: [],
+    modules: [onRequestPost8]
+  },
+  {
+    routePath: "/api/tasks",
+    mountPath: "/api",
+    method: "GET",
+    middlewares: [],
+    modules: [onRequestGet7]
+  },
+  {
+    routePath: "/api/tasks",
+    mountPath: "/api",
+    method: "POST",
+    middlewares: [],
+    modules: [onRequestPost9]
+  },
+  {
+    routePath: "/api/workflows",
+    mountPath: "/api",
+    method: "GET",
+    middlewares: [],
+    modules: [onRequestGet8]
   },
   {
     routePath: "/",
@@ -9022,6 +9190,8 @@ var routes = [
     modules: []
   }
 ];
+
+// ../../../../AppData/Roaming/npm/node_modules/wrangler/node_modules/path-to-regexp/dist.es2015/index.js
 function lexer(str) {
   var tokens = [];
   var i = 0;
@@ -9106,7 +9276,6 @@ function lexer(str) {
   return tokens;
 }
 __name(lexer, "lexer");
-__name2(lexer, "lexer");
 function parse2(str, options) {
   if (options === void 0) {
     options = {};
@@ -9117,18 +9286,18 @@ function parse2(str, options) {
   var key = 0;
   var i = 0;
   var path = "";
-  var tryConsume = /* @__PURE__ */ __name2(function(type) {
+  var tryConsume = /* @__PURE__ */ __name(function(type) {
     if (i < tokens.length && tokens[i].type === type)
       return tokens[i++].value;
   }, "tryConsume");
-  var mustConsume = /* @__PURE__ */ __name2(function(type) {
+  var mustConsume = /* @__PURE__ */ __name(function(type) {
     var value2 = tryConsume(type);
     if (value2 !== void 0)
       return value2;
     var _a2 = tokens[i], nextType = _a2.type, index = _a2.index;
     throw new TypeError("Unexpected ".concat(nextType, " at ").concat(index, ", expected ").concat(type));
   }, "mustConsume");
-  var consumeText = /* @__PURE__ */ __name2(function() {
+  var consumeText = /* @__PURE__ */ __name(function() {
     var result2 = "";
     var value2;
     while (value2 = tryConsume("CHAR") || tryConsume("ESCAPED_CHAR")) {
@@ -9136,7 +9305,7 @@ function parse2(str, options) {
     }
     return result2;
   }, "consumeText");
-  var isSafe = /* @__PURE__ */ __name2(function(value2) {
+  var isSafe = /* @__PURE__ */ __name(function(value2) {
     for (var _i = 0, delimiter_1 = delimiter; _i < delimiter_1.length; _i++) {
       var char2 = delimiter_1[_i];
       if (value2.indexOf(char2) > -1)
@@ -9144,7 +9313,7 @@ function parse2(str, options) {
     }
     return false;
   }, "isSafe");
-  var safePattern = /* @__PURE__ */ __name2(function(prefix2) {
+  var safePattern = /* @__PURE__ */ __name(function(prefix2) {
     var prev = result[result.length - 1];
     var prevText = prefix2 || (prev && typeof prev === "string" ? prev : "");
     if (prev && !prevText) {
@@ -9206,15 +9375,13 @@ function parse2(str, options) {
   }
   return result;
 }
-__name(parse2, "parse2");
-__name2(parse2, "parse");
+__name(parse2, "parse");
 function match2(str, options) {
   var keys = [];
   var re = pathToRegexp2(str, keys, options);
   return regexpToFunction(re, keys, options);
 }
-__name(match2, "match2");
-__name2(match2, "match");
+__name(match2, "match");
 function regexpToFunction(re, keys, options) {
   if (options === void 0) {
     options = {};
@@ -9228,7 +9395,7 @@ function regexpToFunction(re, keys, options) {
       return false;
     var path = m[0], index = m.index;
     var params = /* @__PURE__ */ Object.create(null);
-    var _loop_1 = /* @__PURE__ */ __name2(function(i2) {
+    var _loop_1 = /* @__PURE__ */ __name(function(i2) {
       if (m[i2] === void 0)
         return "continue";
       var key = keys[i2 - 1];
@@ -9247,17 +9414,14 @@ function regexpToFunction(re, keys, options) {
   };
 }
 __name(regexpToFunction, "regexpToFunction");
-__name2(regexpToFunction, "regexpToFunction");
 function escapeString(str) {
   return str.replace(/([.+*?=^!:${}()[\]|/\\])/g, "\\$1");
 }
 __name(escapeString, "escapeString");
-__name2(escapeString, "escapeString");
 function flags(options) {
   return options && options.sensitive ? "" : "i";
 }
 __name(flags, "flags");
-__name2(flags, "flags");
 function regexpToRegexp(path, keys) {
   if (!keys)
     return path;
@@ -9278,7 +9442,6 @@ function regexpToRegexp(path, keys) {
   return path;
 }
 __name(regexpToRegexp, "regexpToRegexp");
-__name2(regexpToRegexp, "regexpToRegexp");
 function arrayToRegexp(paths, keys, options) {
   var parts = paths.map(function(path) {
     return pathToRegexp2(path, keys, options).source;
@@ -9286,12 +9449,10 @@ function arrayToRegexp(paths, keys, options) {
   return new RegExp("(?:".concat(parts.join("|"), ")"), flags(options));
 }
 __name(arrayToRegexp, "arrayToRegexp");
-__name2(arrayToRegexp, "arrayToRegexp");
 function stringToRegexp(path, keys, options) {
   return tokensToRegexp(parse2(path, options), keys, options);
 }
 __name(stringToRegexp, "stringToRegexp");
-__name2(stringToRegexp, "stringToRegexp");
 function tokensToRegexp(tokens, keys, options) {
   if (options === void 0) {
     options = {};
@@ -9347,7 +9508,6 @@ function tokensToRegexp(tokens, keys, options) {
   return new RegExp(route, flags(options));
 }
 __name(tokensToRegexp, "tokensToRegexp");
-__name2(tokensToRegexp, "tokensToRegexp");
 function pathToRegexp2(path, keys, options) {
   if (path instanceof RegExp)
     return regexpToRegexp(path, keys);
@@ -9355,8 +9515,9 @@ function pathToRegexp2(path, keys, options) {
     return arrayToRegexp(path, keys, options);
   return stringToRegexp(path, keys, options);
 }
-__name(pathToRegexp2, "pathToRegexp2");
-__name2(pathToRegexp2, "pathToRegexp");
+__name(pathToRegexp2, "pathToRegexp");
+
+// ../../../../AppData/Roaming/npm/node_modules/wrangler/templates/pages-template-worker.ts
 var escapeRegex = /[.+?^${}()|[\]\\]/g;
 function* executeRequest(request) {
   const requestPath = new URL(request.url).pathname;
@@ -9407,14 +9568,13 @@ function* executeRequest(request) {
   }
 }
 __name(executeRequest, "executeRequest");
-__name2(executeRequest, "executeRequest");
 var pages_template_worker_default = {
   async fetch(originalRequest, env, workerContext) {
     let request = originalRequest;
     const handlerIterator = executeRequest(request);
     let data = {};
     let isFailOpen = false;
-    const next = /* @__PURE__ */ __name2(async (input, init) => {
+    const next = /* @__PURE__ */ __name(async (input, init) => {
       if (input !== void 0) {
         let url = input;
         if (typeof input === "string") {
@@ -9441,7 +9601,7 @@ var pages_template_worker_default = {
           },
           env,
           waitUntil: workerContext.waitUntil.bind(workerContext),
-          passThroughOnException: /* @__PURE__ */ __name2(() => {
+          passThroughOnException: /* @__PURE__ */ __name(() => {
             isFailOpen = true;
           }, "passThroughOnException")
         };
@@ -9469,14 +9629,16 @@ var pages_template_worker_default = {
     }
   }
 };
-var cloneResponse = /* @__PURE__ */ __name2((response) => (
+var cloneResponse = /* @__PURE__ */ __name((response) => (
   // https://fetch.spec.whatwg.org/#null-body-status
   new Response(
     [101, 204, 205, 304].includes(response.status) ? null : response.body,
     response
   )
 ), "cloneResponse");
-var drainBody = /* @__PURE__ */ __name2(async (request, env, _ctx, middlewareCtx) => {
+
+// ../../../../AppData/Roaming/npm/node_modules/wrangler/templates/middleware/middleware-ensure-req-body-drained.ts
+var drainBody = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx) => {
   try {
     return await middlewareCtx.next(request, env);
   } finally {
@@ -9492,6 +9654,8 @@ var drainBody = /* @__PURE__ */ __name2(async (request, env, _ctx, middlewareCtx
   }
 }, "drainBody");
 var middleware_ensure_req_body_drained_default = drainBody;
+
+// ../../../../AppData/Roaming/npm/node_modules/wrangler/templates/middleware/middleware-miniflare3-json-error.ts
 function reduceError(e) {
   return {
     name: e?.name,
@@ -9501,8 +9665,7 @@ function reduceError(e) {
   };
 }
 __name(reduceError, "reduceError");
-__name2(reduceError, "reduceError");
-var jsonError = /* @__PURE__ */ __name2(async (request, env, _ctx, middlewareCtx) => {
+var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx) => {
   try {
     return await middlewareCtx.next(request, env);
   } catch (e) {
@@ -9514,17 +9677,20 @@ var jsonError = /* @__PURE__ */ __name2(async (request, env, _ctx, middlewareCtx
   }
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
+
+// ../.wrangler/tmp/bundle-g5qaSv/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
 ];
 var middleware_insertion_facade_default = pages_template_worker_default;
+
+// ../../../../AppData/Roaming/npm/node_modules/wrangler/templates/middleware/common.ts
 var __facade_middleware__ = [];
 function __facade_register__(...args) {
   __facade_middleware__.push(...args.flat());
 }
 __name(__facade_register__, "__facade_register__");
-__name2(__facade_register__, "__facade_register__");
 function __facade_invokeChain__(request, env, ctx, dispatch, middlewareChain) {
   const [head, ...tail] = middlewareChain;
   const middlewareCtx = {
@@ -9536,7 +9702,6 @@ function __facade_invokeChain__(request, env, ctx, dispatch, middlewareChain) {
   return head(request, env, ctx, middlewareCtx);
 }
 __name(__facade_invokeChain__, "__facade_invokeChain__");
-__name2(__facade_invokeChain__, "__facade_invokeChain__");
 function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
   return __facade_invokeChain__(request, env, ctx, dispatch, [
     ...__facade_middleware__,
@@ -9544,18 +9709,16 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
   ]);
 }
 __name(__facade_invoke__, "__facade_invoke__");
-__name2(__facade_invoke__, "__facade_invoke__");
+
+// ../.wrangler/tmp/bundle-g5qaSv/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
-  static {
-    __name(this, "___Facade_ScheduledController__");
-  }
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;
     this.cron = cron;
     this.#noRetry = noRetry;
   }
   static {
-    __name2(this, "__Facade_ScheduledController__");
+    __name(this, "__Facade_ScheduledController__");
   }
   #noRetry;
   noRetry() {
@@ -9572,7 +9735,7 @@ function wrapExportedHandler(worker) {
   for (const middleware of __INTERNAL_WRANGLER_MIDDLEWARE__) {
     __facade_register__(middleware);
   }
-  const fetchDispatcher = /* @__PURE__ */ __name2(function(request, env, ctx) {
+  const fetchDispatcher = /* @__PURE__ */ __name(function(request, env, ctx) {
     if (worker.fetch === void 0) {
       throw new Error("Handler does not export a fetch() function.");
     }
@@ -9581,7 +9744,7 @@ function wrapExportedHandler(worker) {
   return {
     ...worker,
     fetch(request, env, ctx) {
-      const dispatcher = /* @__PURE__ */ __name2(function(type, init) {
+      const dispatcher = /* @__PURE__ */ __name(function(type, init) {
         if (type === "scheduled" && worker.scheduled !== void 0) {
           const controller = new __Facade_ScheduledController__(
             Date.now(),
@@ -9597,7 +9760,6 @@ function wrapExportedHandler(worker) {
   };
 }
 __name(wrapExportedHandler, "wrapExportedHandler");
-__name2(wrapExportedHandler, "wrapExportedHandler");
 function wrapWorkerEntrypoint(klass) {
   if (__INTERNAL_WRANGLER_MIDDLEWARE__ === void 0 || __INTERNAL_WRANGLER_MIDDLEWARE__.length === 0) {
     return klass;
@@ -9606,7 +9768,7 @@ function wrapWorkerEntrypoint(klass) {
     __facade_register__(middleware);
   }
   return class extends klass {
-    #fetchDispatcher = /* @__PURE__ */ __name2((request, env, ctx) => {
+    #fetchDispatcher = /* @__PURE__ */ __name((request, env, ctx) => {
       this.env = env;
       this.ctx = ctx;
       if (super.fetch === void 0) {
@@ -9614,7 +9776,7 @@ function wrapWorkerEntrypoint(klass) {
       }
       return super.fetch(request);
     }, "#fetchDispatcher");
-    #dispatcher = /* @__PURE__ */ __name2((type, init) => {
+    #dispatcher = /* @__PURE__ */ __name((type, init) => {
       if (type === "scheduled" && super.scheduled !== void 0) {
         const controller = new __Facade_ScheduledController__(
           Date.now(),
@@ -9637,7 +9799,6 @@ function wrapWorkerEntrypoint(klass) {
   };
 }
 __name(wrapWorkerEntrypoint, "wrapWorkerEntrypoint");
-__name2(wrapWorkerEntrypoint, "wrapWorkerEntrypoint");
 var WRAPPED_ENTRY;
 if (typeof middleware_insertion_facade_default === "object") {
   WRAPPED_ENTRY = wrapExportedHandler(middleware_insertion_facade_default);
@@ -9645,178 +9806,8 @@ if (typeof middleware_insertion_facade_default === "object") {
   WRAPPED_ENTRY = wrapWorkerEntrypoint(middleware_insertion_facade_default);
 }
 var middleware_loader_entry_default = WRAPPED_ENTRY;
-
-// ../../../AppData/Roaming/npm/node_modules/wrangler/templates/middleware/middleware-ensure-req-body-drained.ts
-var drainBody2 = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx) => {
-  try {
-    return await middlewareCtx.next(request, env);
-  } finally {
-    try {
-      if (request.body !== null && !request.bodyUsed) {
-        const reader = request.body.getReader();
-        while (!(await reader.read()).done) {
-        }
-      }
-    } catch (e) {
-      console.error("Failed to drain the unused request body.", e);
-    }
-  }
-}, "drainBody");
-var middleware_ensure_req_body_drained_default2 = drainBody2;
-
-// ../../../AppData/Roaming/npm/node_modules/wrangler/templates/middleware/middleware-miniflare3-json-error.ts
-function reduceError2(e) {
-  return {
-    name: e?.name,
-    message: e?.message ?? String(e),
-    stack: e?.stack,
-    cause: e?.cause === void 0 ? void 0 : reduceError2(e.cause)
-  };
-}
-__name(reduceError2, "reduceError");
-var jsonError2 = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx) => {
-  try {
-    return await middlewareCtx.next(request, env);
-  } catch (e) {
-    const error = reduceError2(e);
-    return Response.json(error, {
-      status: 500,
-      headers: { "MF-Experimental-Error-Stack": "true" }
-    });
-  }
-}, "jsonError");
-var middleware_miniflare3_json_error_default2 = jsonError2;
-
-// .wrangler/tmp/bundle-cOxxHB/middleware-insertion-facade.js
-var __INTERNAL_WRANGLER_MIDDLEWARE__2 = [
-  middleware_ensure_req_body_drained_default2,
-  middleware_miniflare3_json_error_default2
-];
-var middleware_insertion_facade_default2 = middleware_loader_entry_default;
-
-// ../../../AppData/Roaming/npm/node_modules/wrangler/templates/middleware/common.ts
-var __facade_middleware__2 = [];
-function __facade_register__2(...args) {
-  __facade_middleware__2.push(...args.flat());
-}
-__name(__facade_register__2, "__facade_register__");
-function __facade_invokeChain__2(request, env, ctx, dispatch, middlewareChain) {
-  const [head, ...tail] = middlewareChain;
-  const middlewareCtx = {
-    dispatch,
-    next(newRequest, newEnv) {
-      return __facade_invokeChain__2(newRequest, newEnv, ctx, dispatch, tail);
-    }
-  };
-  return head(request, env, ctx, middlewareCtx);
-}
-__name(__facade_invokeChain__2, "__facade_invokeChain__");
-function __facade_invoke__2(request, env, ctx, dispatch, finalMiddleware) {
-  return __facade_invokeChain__2(request, env, ctx, dispatch, [
-    ...__facade_middleware__2,
-    finalMiddleware
-  ]);
-}
-__name(__facade_invoke__2, "__facade_invoke__");
-
-// .wrangler/tmp/bundle-cOxxHB/middleware-loader.entry.ts
-var __Facade_ScheduledController__2 = class ___Facade_ScheduledController__2 {
-  constructor(scheduledTime, cron, noRetry) {
-    this.scheduledTime = scheduledTime;
-    this.cron = cron;
-    this.#noRetry = noRetry;
-  }
-  static {
-    __name(this, "__Facade_ScheduledController__");
-  }
-  #noRetry;
-  noRetry() {
-    if (!(this instanceof ___Facade_ScheduledController__2)) {
-      throw new TypeError("Illegal invocation");
-    }
-    this.#noRetry();
-  }
-};
-function wrapExportedHandler2(worker) {
-  if (__INTERNAL_WRANGLER_MIDDLEWARE__2 === void 0 || __INTERNAL_WRANGLER_MIDDLEWARE__2.length === 0) {
-    return worker;
-  }
-  for (const middleware of __INTERNAL_WRANGLER_MIDDLEWARE__2) {
-    __facade_register__2(middleware);
-  }
-  const fetchDispatcher = /* @__PURE__ */ __name(function(request, env, ctx) {
-    if (worker.fetch === void 0) {
-      throw new Error("Handler does not export a fetch() function.");
-    }
-    return worker.fetch(request, env, ctx);
-  }, "fetchDispatcher");
-  return {
-    ...worker,
-    fetch(request, env, ctx) {
-      const dispatcher = /* @__PURE__ */ __name(function(type, init) {
-        if (type === "scheduled" && worker.scheduled !== void 0) {
-          const controller = new __Facade_ScheduledController__2(
-            Date.now(),
-            init.cron ?? "",
-            () => {
-            }
-          );
-          return worker.scheduled(controller, env, ctx);
-        }
-      }, "dispatcher");
-      return __facade_invoke__2(request, env, ctx, dispatcher, fetchDispatcher);
-    }
-  };
-}
-__name(wrapExportedHandler2, "wrapExportedHandler");
-function wrapWorkerEntrypoint2(klass) {
-  if (__INTERNAL_WRANGLER_MIDDLEWARE__2 === void 0 || __INTERNAL_WRANGLER_MIDDLEWARE__2.length === 0) {
-    return klass;
-  }
-  for (const middleware of __INTERNAL_WRANGLER_MIDDLEWARE__2) {
-    __facade_register__2(middleware);
-  }
-  return class extends klass {
-    #fetchDispatcher = /* @__PURE__ */ __name((request, env, ctx) => {
-      this.env = env;
-      this.ctx = ctx;
-      if (super.fetch === void 0) {
-        throw new Error("Entrypoint class does not define a fetch() function.");
-      }
-      return super.fetch(request);
-    }, "#fetchDispatcher");
-    #dispatcher = /* @__PURE__ */ __name((type, init) => {
-      if (type === "scheduled" && super.scheduled !== void 0) {
-        const controller = new __Facade_ScheduledController__2(
-          Date.now(),
-          init.cron ?? "",
-          () => {
-          }
-        );
-        return super.scheduled(controller);
-      }
-    }, "#dispatcher");
-    fetch(request) {
-      return __facade_invoke__2(
-        request,
-        this.env,
-        this.ctx,
-        this.#dispatcher,
-        this.#fetchDispatcher
-      );
-    }
-  };
-}
-__name(wrapWorkerEntrypoint2, "wrapWorkerEntrypoint");
-var WRAPPED_ENTRY2;
-if (typeof middleware_insertion_facade_default2 === "object") {
-  WRAPPED_ENTRY2 = wrapExportedHandler2(middleware_insertion_facade_default2);
-} else if (typeof middleware_insertion_facade_default2 === "function") {
-  WRAPPED_ENTRY2 = wrapWorkerEntrypoint2(middleware_insertion_facade_default2);
-}
-var middleware_loader_entry_default2 = WRAPPED_ENTRY2;
 export {
-  __INTERNAL_WRANGLER_MIDDLEWARE__2 as __INTERNAL_WRANGLER_MIDDLEWARE__,
-  middleware_loader_entry_default2 as default
+  __INTERNAL_WRANGLER_MIDDLEWARE__,
+  middleware_loader_entry_default as default
 };
-//# sourceMappingURL=functionsWorker-0.913364285362413.js.map
+//# sourceMappingURL=functionsWorker-0.5167215628593326.mjs.map
