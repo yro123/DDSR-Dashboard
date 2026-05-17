@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Layout from '../components/Layout'
 import { useProject } from '../context/ProjectContext'
+import { useTheme } from '../context/ThemeContext'
 import Avatar from '../components/Avatar'
 import { StatusPill, CategoryPill, PriorityPill } from '../components/Pill'
 import { STATUS_DOT, STATUSES, PRIORITIES } from '../data/constants'
@@ -91,21 +92,22 @@ function TaskEditForm({ task, people, workflows, onSave, onCancel, onArchive }) 
 
 export default function Tasks() {
   const { slug, authFetch } = useProject()
+  const { dark } = useTheme()
   const [tasks, setTasks]         = useState([])
   const [archived, setArchived]   = useState([])
   const [people, setPeople]       = useState([])
   const [workflows, setWorkflows] = useState([])
   const [loading, setLoading]     = useState(true)
 
-  const [groupBy, setGroupBy]               = useState('person')
-  const [filterStatus, setFilterStatus]     = useState('')
+  const [groupBy, setGroupBy]                 = useState('person')
+  const [filterStatus, setFilterStatus]       = useState('')
   const [filterSecondary, setFilterSecondary] = useState('')
-  const [filterPrimary, setFilterPrimary]   = useState('')
-  const [showArchive, setShowArchive]       = useState(false)
-  const [openTaskId, setOpenTaskId]         = useState(null)
-  const [addingNew, setAddingNew]           = useState(false)
-  const [collapsed, setCollapsed]           = useState({})
-  const [bulkSelected, setBulkSelected]     = useState(new Set())
+  const [filterPrimary, setFilterPrimary]     = useState('')
+  const [showArchive, setShowArchive]         = useState(false)
+  const [openTaskId, setOpenTaskId]           = useState(null)
+  const [addingNew, setAddingNew]             = useState(false)
+  const [collapsed, setCollapsed]             = useState({})
+  const [bulkSelected, setBulkSelected]       = useState(new Set())
 
   useEffect(() => {
     setLoading(true)
@@ -132,8 +134,8 @@ export default function Tasks() {
   const visible = tasks.filter(t => {
     if (filterStatus && t.status !== filterStatus) return false
     if (filterPrimary) {
-      if (groupBy === 'person'    && t.assignee_name !== filterPrimary) return false
-      if (groupBy === 'workflow'  && t.workflow_name !== filterPrimary) return false
+      if (groupBy === 'person'   && t.assignee_name !== filterPrimary) return false
+      if (groupBy === 'workflow' && t.workflow_name  !== filterPrimary) return false
     }
     if (filterSecondary) {
       if (groupBy === 'person'   && t.workflow_name  !== filterSecondary) return false
@@ -156,7 +158,6 @@ export default function Tasks() {
     setShowArchive(v => !v)
   }
 
-  // ── CRUD ──────────────────────────────────────────────────────────────────
   const createTask = async data => {
     const res = await authFetch('/api/tasks', {
       method: 'POST', body: JSON.stringify({ slug, ...data }),
@@ -199,7 +200,6 @@ export default function Tasks() {
     else { await updateTask(id, { ...task, status: next }) }
   }
 
-  // ── BULK ──────────────────────────────────────────────────────────────────
   const toggleBulk = (id, checked) => {
     setBulkSelected(prev => {
       const next = new Set(prev)
@@ -239,13 +239,13 @@ export default function Tasks() {
     setCollapsed(next)
   }
 
-  if (loading) return <Layout><div style={{ padding: 40, color: '#94A3B8' }}>Loading…</div></Layout>
+  if (loading) return <Layout><div style={{ padding: 40, color: 'var(--text-dim)' }}>Loading…</div></Layout>
 
   return (
     <Layout>
-      {/* ── Filter bar ── */}
-      <div className="topbar" style={{ marginBottom: 12 }}>
-        <div className="toggle" style={{ borderRadius: 8 }}>
+      {/* Filter bar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+        <div className="toggle">
           <button className={groupBy === 'person'   ? 'on' : ''} onClick={() => changeGroup('person')}>By person</button>
           <button className={groupBy === 'workflow' ? 'on' : ''} onClick={() => changeGroup('workflow')}>By workflow</button>
         </div>
@@ -266,7 +266,7 @@ export default function Tasks() {
         <button className="btn btn-blue" onClick={() => { setAddingNew(true); setOpenTaskId(null) }}>+ Add task</button>
       </div>
 
-      {/* ── Stats row ── */}
+      {/* Stats row */}
       {!showArchive && (
         <>
           <div className="stats-label">Tasks per {groupBy === 'person' ? 'assignee' : 'workflow'}</div>
@@ -274,11 +274,13 @@ export default function Tasks() {
             {groupKeys.map(key => {
               const count = visible.filter(t => groupBy === 'person' ? t.assignee_name === key : t.workflow_name === key).length
               if (!count) return null
-              const { bg, fg } = groupBy === 'person' ? personAv(key) : { bg: workflows.find(w => w.short_name === key)?.bg_color || '#F8FAFC', fg: workflows.find(w => w.short_name === key)?.color || '#64748B' }
+              const { bg, fg } = groupBy === 'person'
+                ? personAv(key)
+                : { bg: workflows.find(w => w.short_name === key)?.bg_color || 'var(--surface-2)', fg: workflows.find(w => w.short_name === key)?.color || 'var(--text-muted)' }
               const active = filterPrimary === key
               return (
                 <div key={key} className="stat-card"
-                  style={{ background: bg, borderColor: active ? fg : fg + '30' }}
+                  style={{ background: dark ? fg + '22' : bg, borderColor: active ? fg : fg + '30' }}
                   onClick={() => setFilterPrimary(filterPrimary === key ? '' : key)}>
                   <div className="stat-n" style={{ color: fg }}>{count}</div>
                   <div className="stat-l" style={{ color: fg }}>{key}</div>
@@ -287,24 +289,24 @@ export default function Tasks() {
             })}
             <div className="stat-card">
               <div className="stat-n">{visible.length}</div>
-              <div className="stat-l" style={{ color: '#94A3B8' }}>Total</div>
+              <div className="stat-l" style={{ color: 'var(--text-muted)' }}>Total</div>
             </div>
           </div>
         </>
       )}
 
-      {/* ── Archive view ── */}
+      {/* Archive view */}
       {showArchive && (
         <div>
-          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12, color: '#6B7280' }}>Archived ({archived.length})</div>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12, color: 'var(--text-muted)' }}>Archived ({archived.length})</div>
           {archived.length === 0 && <div className="empty">No archived tasks.</div>}
           {archived.map(t => {
             const { bg, fg } = personAv(t.assignee_name)
             return (
               <div key={t.id} className="arch-row">
                 <Avatar name={t.assignee_name} bg={bg} fg={fg} size={20} />
-                <span style={{ fontSize: 11, color: '#6B7280', minWidth: 80 }}>{t.assignee_name}</span>
-                <span style={{ fontSize: 11, flex: 1, color: '#6B7280' }}>{t.title}</span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', minWidth: 80 }}>{t.assignee_name}</span>
+                <span style={{ fontSize: 11, flex: 1, color: 'var(--text-muted)' }}>{t.title}</span>
                 <StatusPill status={t.status} />
                 {t.workflow_color && <CategoryPill name={t.workflow_name} color={t.workflow_color} />}
                 <button className="btn" style={{ height: 24, fontSize: 10 }} onClick={() => restoreTask(t.id)}>Restore</button>
@@ -314,7 +316,7 @@ export default function Tasks() {
         </div>
       )}
 
-      {/* ── Add form ── */}
+      {/* Add form */}
       {addingNew && !showArchive && (
         <div style={{ marginBottom: 12 }}>
           <TaskEditForm
@@ -328,7 +330,7 @@ export default function Tasks() {
         </div>
       )}
 
-      {/* ── Bulk bar ── */}
+      {/* Bulk bar */}
       {bulkSelected.size > 0 && (
         <div className="bulk-bar">
           <span style={{ fontSize: 12, fontWeight: 700, flex: 1 }}>{bulkSelected.size} task{bulkSelected.size > 1 ? 's' : ''} selected</span>
@@ -344,12 +346,12 @@ export default function Tasks() {
             <option value="">Reassign to…</option>
             {assigneeNames.map(n => <option key={n}>{n}</option>)}
           </select>
-          <button className="bulk-btn" style={{ background: '#EF4444', color: '#fff' }} onClick={bulkArchive}>Archive</button>
-          <button className="bulk-btn" style={{ background: 'rgba(255,255,255,.2)', color: '#fff' }} onClick={() => setBulkSelected(new Set())}>✕ Clear</button>
+          <button className="bulk-btn" style={{ background: 'var(--red)', color: '#fff' }} onClick={bulkArchive}>Archive</button>
+          <button className="bulk-btn" onClick={() => setBulkSelected(new Set())}>✕ Clear</button>
         </div>
       )}
 
-      {/* ── Task groups ── */}
+      {/* Task groups */}
       {!showArchive && (
         <>
           {visible.length > 0 && (
@@ -363,7 +365,9 @@ export default function Tasks() {
             const gTasks = visible.filter(t => groupBy === 'person' ? t.assignee_name === key : t.workflow_name === key)
             if (!gTasks.length) return null
             const wf = groupBy === 'workflow' ? workflows.find(w => w.short_name === key) : null
-            const { bg, fg } = groupBy === 'person' ? personAv(key) : { bg: wf?.bg_color || '#F8FAFC', fg: wf?.color || '#374151' }
+            const { bg, fg } = groupBy === 'person'
+              ? personAv(key)
+              : { bg: wf?.bg_color || 'var(--surface-2)', fg: wf?.color || 'var(--text)' }
             const ip = gTasks.filter(t => t.status === 'In Progress').length
             const dn = gTasks.filter(t => t.status === 'Done').length
             const ns = gTasks.filter(t => t.status === 'Not Started').length
@@ -371,40 +375,44 @@ export default function Tasks() {
 
             return (
               <div key={key} className="group" style={{ borderColor: fg + '50' }}>
-                <button className="group-hdr" style={{ background: bg }}
+                <button className="group-hdr" style={{ background: dark ? fg + '20' : bg }}
                   onClick={() => setCollapsed(c => ({ ...c, [key]: !c[key] }))}>
                   {groupBy === 'person'
                     ? <Avatar name={key} bg={bg} fg={fg} size={26} />
                     : <span style={{ width: 8, height: 8, borderRadius: '50%', background: fg, flexShrink: 0, display: 'inline-block' }} />
                   }
-                  <span className="group-name" style={{ color: groupBy === 'person' ? '#0F172A' : fg }}>{key}</span>
+                  <span className="group-name" style={{ color: groupBy === 'person' ? 'var(--text)' : fg }}>{key}</span>
                   <span className="group-count">{gTasks.length} tasks</span>
-                  {ip > 0 && <span className="badge" style={{ background: '#EFF6FF', color: '#1D4ED8' }}>{ip} active</span>}
-                  {dn > 0 && <span className="badge" style={{ background: '#F0FDF4', color: '#16A34A' }}>{dn} done</span>}
-                  {ns > 0 && <span className="badge" style={{ background: '#F1F5F9', color: '#64748B' }}>{ns} pending</span>}
-                  <span style={{ fontSize: 10, color: '#CBD5E1', marginLeft: 4 }}>{isCollapsed ? '▶' : '▼'}</span>
+                  {ip > 0 && <span className="badge" style={{ background: 'var(--status-ip-bg)',   color: 'var(--status-ip-col)' }}>{ip} active</span>}
+                  {dn > 0 && <span className="badge" style={{ background: 'var(--status-done-bg)', color: 'var(--status-done-col)' }}>{dn} done</span>}
+                  {ns > 0 && <span className="badge" style={{ background: 'var(--status-ns-bg)',   color: 'var(--status-ns-col)' }}>{ns} pending</span>}
+                  <span style={{ fontSize: 10, color: 'var(--text-dim)', marginLeft: 4 }}>{isCollapsed ? '▶' : '▼'}</span>
                 </button>
 
                 {!isCollapsed && gTasks.map(t => {
-                  const isOpen = openTaskId === t.id
+                  const isOpen    = openTaskId === t.id
                   const isChecked = bulkSelected.has(t.id)
                   const { bg: avBg, fg: avFg } = personAv(t.assignee_name)
 
                   return (
                     <div key={t.id}>
-                      <div style={{ display: 'flex', alignItems: 'stretch', borderBottom: '1px solid #E5E7EB', background: isChecked ? '#EFF6FF' : 'transparent' }}>
+                      <div style={{
+                        display: 'flex', alignItems: 'stretch',
+                        borderBottom: '1px solid var(--border)',
+                        background: isChecked ? 'var(--accent-dim)' : 'transparent',
+                      }}>
                         <label style={{ display: 'flex', alignItems: 'center', padding: '0 6px 0 12px', cursor: 'pointer', flexShrink: 0 }}
                           onClick={e => e.stopPropagation()}>
                           <input type="checkbox" checked={isChecked}
                             onChange={e => toggleBulk(t.id, e.target.checked)}
-                            style={{ width: 14, height: 14, cursor: 'pointer', accentColor: '#1D4ED8' }} />
+                            style={{ width: 14, height: 14, cursor: 'pointer', accentColor: 'var(--accent)' }} />
                         </label>
                         <button
                           className={`task-row${isOpen ? ' open' : ''}`}
                           style={{ opacity: t.status === 'Done' ? 0.45 : 1, flex: 1, border: 'none', borderBottom: 'none', padding: '10px 10px 10px 4px' }}
                           onClick={() => setOpenTaskId(isOpen ? null : t.id)}>
                           <span className="dot-status"
-                            style={{ background: STATUS_DOT[t.status] || '#CBD5E1' }}
+                            style={{ background: STATUS_DOT[t.status] || 'var(--border-mid)' }}
                             onClick={e => { e.stopPropagation(); cycleStatus(t.id) }}
                             title="Click to cycle status" />
                           <span className="task-text">{t.title}</span>
@@ -413,10 +421,10 @@ export default function Tasks() {
                           {groupBy === 'person'
                             ? t.workflow_color && <CategoryPill name={t.workflow_name} color={t.workflow_color} />
                             : <><Avatar name={t.assignee_name} bg={avBg} fg={avFg} size={20} />
-                               <span style={{ fontSize: 11, color: '#64748B', minWidth: 80, textAlign: 'left' }}>{t.assignee_name}</span></>
+                               <span style={{ fontSize: 11, color: 'var(--text-muted)', minWidth: 80, textAlign: 'left' }}>{t.assignee_name}</span></>
                           }
                           <PriorityPill priority={t.priority} />
-                          <span style={{ fontSize: 10, color: '#CBD5E1' }}>{isOpen ? '▲' : '▼'}</span>
+                          <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>{isOpen ? '▲' : '▼'}</span>
                         </button>
                       </div>
                       {isOpen && (

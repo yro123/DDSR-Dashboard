@@ -25,27 +25,27 @@ export default function ProjectTab({ projectSlug, authFetch }) {
 
   async function save() {
     setSaving(true)
-    await authFetch(`/api/projects/${projectSlug}`, {
-      method: 'PUT',
-      body: JSON.stringify(form),
-    })
-    setSaving(false)
-    setSaved(true)
+    await authFetch(`/api/projects/${projectSlug}`, { method: 'PUT', body: JSON.stringify(form) })
+    setSaving(false); setSaved(true)
     setTimeout(() => setSaved(false), 2500)
   }
 
   const inputStyle = {
-    border: '1px solid #E2E8F0', borderRadius: 8, padding: '8px 12px',
-    fontSize: 14, fontFamily: 'inherit', color: '#0F172A', width: '100%',
+    border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px',
+    fontSize: 14, fontFamily: 'inherit', color: 'var(--text)',
+    background: 'var(--surface)', width: '100%',
   }
-  const labelStyle = { fontSize: 11, fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '.04em', display: 'block', marginBottom: 5 }
+  const labelStyle = {
+    fontSize: 11, fontWeight: 600, color: 'var(--text-dim)',
+    textTransform: 'uppercase', letterSpacing: '.04em', display: 'block', marginBottom: 5,
+  }
 
-  if (loading) return <div style={{ color: '#94A3B8', padding: 20 }}>Loading…</div>
+  if (loading) return <div style={{ color: 'var(--text-dim)', padding: 20 }}>Loading…</div>
 
   return (
     <div>
-      <h2 style={{ margin: '0 0 24px', fontSize: 16, fontWeight: 700, color: '#0F172A' }}>Project Settings</h2>
-      <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 12, padding: 28, maxWidth: 600 }}>
+      <h2 style={{ margin: '0 0 24px', fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>Project Settings</h2>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 28, maxWidth: 600 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
           <div>
             <label style={labelStyle}>Project Name</label>
@@ -53,7 +53,7 @@ export default function ProjectTab({ projectSlug, authFetch }) {
           </div>
           <div>
             <label style={labelStyle}>Slug (read-only)</label>
-            <input value={form.slug} disabled style={{ ...inputStyle, background: '#F8FAFC', color: '#94A3B8', cursor: 'not-allowed' }} />
+            <input value={form.slug} disabled style={{ ...inputStyle, background: 'var(--surface-2)', color: 'var(--text-dim)', cursor: 'not-allowed' }} />
           </div>
           <div style={{ gridColumn: '1 / -1' }}>
             <label style={labelStyle}>Subtitle</label>
@@ -74,12 +74,12 @@ export default function ProjectTab({ projectSlug, authFetch }) {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <button onClick={save} style={{
-            background: '#1D4ED8', color: '#fff', border: 'none', borderRadius: 8,
+            background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: 8,
             padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
           }}>
             {saving ? 'Saving…' : 'Save Changes'}
           </button>
-          {saved && <span style={{ fontSize: 13, color: '#10B981', fontWeight: 600 }}>Saved!</span>}
+          {saved && <span style={{ fontSize: 13, color: 'var(--green)', fontWeight: 600 }}>Saved!</span>}
         </div>
       </div>
     </div>

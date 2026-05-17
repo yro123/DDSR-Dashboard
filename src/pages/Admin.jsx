@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useProject } from '../context/ProjectContext'
+import { useTheme } from '../context/ThemeContext'
 import MeetingsTab from './admin/MeetingsTab'
 import PeopleTab from './admin/PeopleTab'
 import DocumentsTab from './admin/DocumentsTab'
@@ -11,6 +12,7 @@ const TABS = ['Meetings', 'People', 'Documents', 'Project Settings', 'Clients']
 
 export default function Admin() {
   const { isAdmin, clientSlug, allProjects, slug: urlSlug, authFetch } = useProject()
+  const { dark, toggle } = useTheme()
   const [tab, setTab] = useState('Meetings')
   const [projectSlug, setProjectSlug] = useState('')
 
@@ -27,34 +29,41 @@ export default function Admin() {
   const currentProject = allProjects.find(p => p.slug === projectSlug) || allProjects[0]
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F8FAFC' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       {/* Top bar */}
       <div style={{
-        background: '#fff', borderBottom: '1px solid #E2E8F0',
-        padding: '0 32px', display: 'flex', alignItems: 'center', gap: 24, height: 56,
+        background: 'var(--surface)',
+        borderBottom: '1px solid var(--border)',
+        padding: '0 32px',
+        display: 'flex', alignItems: 'center', gap: 20, height: 60,
+        position: 'sticky', top: 0, zIndex: 100,
+        boxShadow: '0 1px 3px rgba(0,0,0,.08)',
       }}>
-        <span style={{ fontWeight: 800, fontSize: 15, color: '#0F172A', letterSpacing: '-.01em' }}>
+        <span style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)', letterSpacing: '-.01em', whiteSpace: 'nowrap' }}>
           Admin Panel
         </span>
-        <div style={{ display: 'flex', gap: 2, background: '#F1F5F9', borderRadius: 8, padding: 3 }}>
+
+        <div style={{ display: 'flex', gap: 2, background: 'var(--surface-2)', borderRadius: 8, padding: 3 }}>
           {TABS.map(t => (
             <button key={t} onClick={() => setTab(t)} style={{
-              padding: '5px 14px', borderRadius: 6, border: 'none', cursor: 'pointer',
-              fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
-              background: tab === t ? '#fff' : 'transparent',
-              color: tab === t ? '#0F172A' : '#64748B',
-              boxShadow: tab === t ? '0 1px 3px rgba(0,0,0,.08)' : 'none',
+              padding: '5px 13px', borderRadius: 6, border: 'none', cursor: 'pointer',
+              fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
+              background: tab === t ? 'var(--accent)' : 'transparent',
+              color: tab === t ? 'var(--accent-text)' : 'var(--text-muted)',
+              boxShadow: tab === t ? '0 1px 3px rgba(0,0,0,.15)' : 'none',
+              transition: 'background .15s, color .15s',
             }}>{t}</button>
           ))}
         </div>
+
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
           {tab !== 'Clients' && (
             <select
               value={projectSlug}
               onChange={e => setProjectSlug(e.target.value)}
               style={{
-                border: '1px solid #E2E8F0', borderRadius: 8, padding: '5px 10px',
-                fontSize: 13, color: '#0F172A', background: '#fff', cursor: 'pointer',
+                border: '1px solid var(--border)', borderRadius: 7, padding: '5px 10px',
+                fontSize: 12, color: 'var(--text)', background: 'var(--surface)', cursor: 'pointer',
               }}
             >
               {allProjects.map(p => (
@@ -62,17 +71,21 @@ export default function Admin() {
               ))}
             </select>
           )}
+          <button className="theme-toggle" onClick={toggle} title={dark ? 'Light mode' : 'Dark mode'}>
+            {dark ? '☀' : '☾'}
+          </button>
           <a href={`/${projectSlug}/tasks`} style={{
-            fontSize: 12, color: '#64748B', textDecoration: 'none',
-            padding: '5px 12px', border: '1px solid #E2E8F0', borderRadius: 7,
+            fontSize: 12, color: 'var(--text-muted)', textDecoration: 'none',
+            padding: '5px 12px', border: '1px solid var(--border)', borderRadius: 7,
+            background: 'var(--surface)',
           }}>
-            Back to Dashboard
+            ← Dashboard
           </a>
         </div>
       </div>
 
       {/* Tab content */}
-      <div style={{ padding: '28px 32px', maxWidth: 960, margin: '0 auto' }}>
+      <div style={{ padding: '28px 32px', maxWidth: 980, margin: '0 auto' }}>
         {tab === 'Meetings'          && <MeetingsTab  projectSlug={projectSlug} authFetch={authFetch} />}
         {tab === 'People'            && <PeopleTab    projectSlug={projectSlug} authFetch={authFetch} currentProject={currentProject} />}
         {tab === 'Documents'         && <DocumentsTab projectSlug={projectSlug} authFetch={authFetch} />}

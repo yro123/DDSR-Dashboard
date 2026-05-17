@@ -2,6 +2,23 @@ import { useState, useEffect } from 'react'
 
 const DOC_TYPES = ['Process Doc', 'Training', 'SOP', 'Reference', 'Template', 'Other']
 
+const inputStyle = {
+  border: '1px solid var(--border)', borderRadius: 7, padding: '7px 10px',
+  fontSize: 13, fontFamily: 'inherit', color: 'var(--text)', background: 'var(--surface)',
+}
+const labelStyle = {
+  fontSize: 11, fontWeight: 600, color: 'var(--text-dim)',
+  textTransform: 'uppercase', letterSpacing: '.04em', display: 'block', marginBottom: 4,
+}
+const btnPrimary = {
+  background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: 7,
+  padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+}
+const btnCancel = {
+  background: 'var(--surface-2)', color: 'var(--text-muted)', border: 'none', borderRadius: 7,
+  padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+}
+
 export default function DocumentsTab({ projectSlug, authFetch }) {
   const [docs, setDocs] = useState([])
   const [workflows, setWorkflows] = useState([])
@@ -32,9 +49,7 @@ export default function DocumentsTab({ projectSlug, authFetch }) {
       method: 'PUT',
       body: JSON.stringify({ ...doc, url: urlVal.trim() || null }),
     })
-    setSaving(false)
-    setEditingUrl(null)
-    reload()
+    setSaving(false); setEditingUrl(null); reload()
   }
 
   async function addDoc() {
@@ -45,18 +60,15 @@ export default function DocumentsTab({ projectSlug, authFetch }) {
       body: JSON.stringify({ ...newDoc, slug: projectSlug, workflow_id: newDoc.workflow_id || null }),
     })
     setNewDoc({ name: '', url: '', doc_type: 'Process Doc', workflow_id: '' })
-    setShowAdd(false)
-    setSaving(false)
-    reload()
+    setShowAdd(false); setSaving(false); reload()
   }
 
   async function deleteDoc(id) {
     if (!confirm('Remove this document?')) return
-    await authFetch(`/api/documents/${id}`, { method: 'DELETE' })
-    reload()
+    await authFetch(`/api/documents/${id}`, { method: 'DELETE' }); reload()
   }
 
-  if (loading) return <div style={{ color: '#94A3B8', padding: 20 }}>Loading…</div>
+  if (loading) return <div style={{ color: 'var(--text-dim)', padding: 20 }}>Loading…</div>
 
   const byWorkflow = workflows.map(w => ({
     ...w,
@@ -64,40 +76,32 @@ export default function DocumentsTab({ projectSlug, authFetch }) {
   })).filter(w => w.docs.length > 0)
   const unassigned = docs.filter(d => !d.workflow_id)
 
-  const inputStyle = {
-    border: '1px solid #E2E8F0', borderRadius: 7, padding: '7px 10px',
-    fontSize: 13, fontFamily: 'inherit', color: '#0F172A',
-  }
-
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#0F172A' }}>Documents</h2>
-        <button onClick={() => setShowAdd(!showAdd)} style={{
-          background: '#1D4ED8', color: '#fff', border: 'none', borderRadius: 7,
-          padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-        }}>+ Add Document</button>
+        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>Documents</h2>
+        <button onClick={() => setShowAdd(!showAdd)} style={btnPrimary}>+ Add Document</button>
       </div>
 
       {showAdd && (
-        <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 12, padding: 20, marginBottom: 20 }}>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 20 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
             <div>
-              <label style={{ fontSize: 11, fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '.04em', display: 'block', marginBottom: 4 }}>Document Name *</label>
+              <label style={labelStyle}>Document Name *</label>
               <input value={newDoc.name} onChange={e => setNewDoc(p => ({ ...p, name: e.target.value }))} style={{ ...inputStyle, width: '100%' }} />
             </div>
             <div>
-              <label style={{ fontSize: 11, fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '.04em', display: 'block', marginBottom: 4 }}>URL</label>
+              <label style={labelStyle}>URL</label>
               <input value={newDoc.url} onChange={e => setNewDoc(p => ({ ...p, url: e.target.value }))} placeholder="https://…" style={{ ...inputStyle, width: '100%' }} />
             </div>
             <div>
-              <label style={{ fontSize: 11, fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '.04em', display: 'block', marginBottom: 4 }}>Type</label>
+              <label style={labelStyle}>Type</label>
               <select value={newDoc.doc_type} onChange={e => setNewDoc(p => ({ ...p, doc_type: e.target.value }))} style={{ ...inputStyle, width: '100%' }}>
                 {DOC_TYPES.map(t => <option key={t}>{t}</option>)}
               </select>
             </div>
             <div>
-              <label style={{ fontSize: 11, fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '.04em', display: 'block', marginBottom: 4 }}>Workflow</label>
+              <label style={labelStyle}>Workflow</label>
               <select value={newDoc.workflow_id} onChange={e => setNewDoc(p => ({ ...p, workflow_id: e.target.value }))} style={{ ...inputStyle, width: '100%' }}>
                 <option value="">— None —</option>
                 {workflows.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
@@ -105,42 +109,36 @@ export default function DocumentsTab({ projectSlug, authFetch }) {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={addDoc} style={{ background: '#1D4ED8', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-              {saving ? 'Saving…' : 'Add Document'}
-            </button>
-            <button onClick={() => setShowAdd(false)} style={{ background: '#F1F5F9', color: '#64748B', border: 'none', borderRadius: 7, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-              Cancel
-            </button>
+            <button onClick={addDoc} style={btnPrimary}>{saving ? 'Saving…' : 'Add Document'}</button>
+            <button onClick={() => setShowAdd(false)} style={btnCancel}>Cancel</button>
           </div>
         </div>
       )}
 
       {[...byWorkflow, ...(unassigned.length ? [{ name: 'Unassigned', docs: unassigned }] : [])].map(group => (
         <div key={group.name} style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>
             {group.name}
           </div>
-          <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 12, overflow: 'hidden' }}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
             {group.docs.map((doc, i) => (
-              <div key={doc.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderBottom: i < group.docs.length - 1 ? '1px solid #F1F5F9' : 'none' }}>
+              <div key={doc.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderBottom: i < group.docs.length - 1 ? '1px solid var(--border)' : 'none' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A' }}>{doc.name}</div>
-                  <div style={{ fontSize: 11, color: '#94A3B8' }}>{doc.doc_type || '—'}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{doc.name}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{doc.doc_type || '—'}</div>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   {editingUrl === doc.id ? (
                     <div style={{ display: 'flex', gap: 6 }}>
                       <input value={urlVal} onChange={e => setUrlVal(e.target.value)} onKeyDown={e => e.key === 'Enter' && saveUrl(doc.id)}
                         placeholder="https://…" autoFocus style={{ ...inputStyle, flex: 1, padding: '5px 8px', fontSize: 12 }} />
-                      <button onClick={() => saveUrl(doc.id)} style={{ background: '#1D4ED8', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                        {saving ? '…' : 'Save'}
-                      </button>
-                      <button onClick={() => setEditingUrl(null)} style={{ background: '#F1F5F9', color: '#64748B', border: 'none', borderRadius: 6, padding: '4px 8px', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>×</button>
+                      <button onClick={() => saveUrl(doc.id)} style={{ ...btnPrimary, padding: '4px 10px', fontSize: 12 }}>{saving ? '…' : 'Save'}</button>
+                      <button onClick={() => setEditingUrl(null)} style={{ ...btnCancel, padding: '4px 8px', fontSize: 12 }}>×</button>
                     </div>
                   ) : (
                     <button onClick={() => { setEditingUrl(doc.id); setUrlVal(doc.url || '') }} style={{
-                      background: 'none', border: '1px solid #E2E8F0', borderRadius: 7, padding: '5px 10px',
-                      fontSize: 12, cursor: 'pointer', color: doc.url ? '#1D4ED8' : '#94A3B8',
+                      background: 'none', border: '1px solid var(--border)', borderRadius: 7, padding: '5px 10px',
+                      fontSize: 12, cursor: 'pointer', color: doc.url ? 'var(--accent)' : 'var(--text-dim)',
                       fontFamily: 'inherit', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       display: 'block',
                     }}>
@@ -149,7 +147,7 @@ export default function DocumentsTab({ projectSlug, authFetch }) {
                   )}
                 </div>
                 <button onClick={() => deleteDoc(doc.id)} style={{
-                  border: 'none', background: '#FEF2F2', color: '#EF4444', borderRadius: 6,
+                  border: 'none', background: 'var(--pri-high-bg)', color: 'var(--red)', borderRadius: 6,
                   padding: '4px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
                 }}>Delete</button>
               </div>
@@ -159,7 +157,7 @@ export default function DocumentsTab({ projectSlug, authFetch }) {
       ))}
 
       {docs.length === 0 && (
-        <div style={{ textAlign: 'center', color: '#94A3B8', padding: 40, fontSize: 14 }}>
+        <div style={{ textAlign: 'center', color: 'var(--text-dim)', padding: 40, fontSize: 14 }}>
           No documents yet. Click "+ Add Document" to add one.
         </div>
       )}

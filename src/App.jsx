@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth, RedirectToSignIn } from '@clerk/react'
 import { ProjectProvider } from './context/ProjectContext'
+import { ThemeProvider } from './context/ThemeContext'
 import Tasks    from './pages/Tasks'
 import Hub      from './pages/Hub'
 import Meetings from './pages/Meetings'
@@ -30,9 +31,11 @@ function AuthenticatedApp() {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/sign-in/*" element={<SignIn />} />
-      <Route path="*" element={<AuthGuard><AuthenticatedApp /></AuthGuard>} />
-    </Routes>
+    <ThemeProvider>
+      <Routes>
+        <Route path="/sign-in/*" element={<SignIn />} />
+        <Route path="*" element={<AuthGuard><AuthenticatedApp /></AuthGuard>} />
+      </Routes>
+    </ThemeProvider>
   )
 }

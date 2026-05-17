@@ -24,6 +24,23 @@ function Avatar({ name, bg, fg, size = 32 }) {
   )
 }
 
+const inputStyle = {
+  width: '100%', border: '1px solid var(--border)', borderRadius: 7,
+  padding: '7px 10px', fontSize: 13, fontFamily: 'inherit',
+  background: 'var(--surface)', color: 'var(--text)',
+}
+const labelStyle = {
+  fontSize: 11, fontWeight: 600, color: 'var(--text-dim)',
+  textTransform: 'uppercase', letterSpacing: '.04em', display: 'block', marginBottom: 4,
+}
+const btnStyle = (variant = 'primary') => ({
+  border: 'none', borderRadius: 7, padding: '6px 14px', fontSize: 12,
+  fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+  ...(variant === 'primary'
+    ? { background: 'var(--accent)', color: 'var(--accent-text)' }
+    : { background: 'var(--surface-2)', color: 'var(--text-muted)' }),
+})
+
 export default function PeopleTab({ projectSlug, authFetch, currentProject }) {
   const [people, setPeople] = useState([])
   const [loading, setLoading] = useState(true)
@@ -49,22 +66,15 @@ export default function PeopleTab({ projectSlug, authFetch, currentProject }) {
   async function addPerson() {
     if (!form.name.trim()) return
     setSaving(true)
-    await authFetch('/api/people', {
-      method: 'POST',
-      body: JSON.stringify({ ...form, slug: projectSlug }),
-    })
+    await authFetch('/api/people', { method: 'POST', body: JSON.stringify({ ...form, slug: projectSlug }) })
     setForm({ name: '', role: '', org_type: 'Client', email: '', avatar_bg: '#DBEAFE', avatar_fg: '#1E40AF' })
-    setShowAdd(false)
-    setSaving(false)
-    reload()
+    setShowAdd(false); setSaving(false); reload()
   }
 
   async function savePerson() {
     setSaving(true)
     await authFetch(`/api/people/${editingId}`, { method: 'PUT', body: JSON.stringify(editForm) })
-    setSaving(false)
-    setEditingId(null)
-    reload()
+    setSaving(false); setEditingId(null); reload()
   }
 
   async function toggleActive(person) {
@@ -75,102 +85,92 @@ export default function PeopleTab({ projectSlug, authFetch, currentProject }) {
     reload()
   }
 
-  if (loading) return <div style={{ color: '#94A3B8', padding: 20 }}>Loading…</div>
+  if (loading) return <div style={{ color: 'var(--text-dim)', padding: 20 }}>Loading…</div>
 
-  const colorForm = showAdd ? form : editForm
-  const setColorForm = showAdd ? setForm : setEditForm
+  function ColorSelector({ colorForm, setColorForm }) {
+    return (
+      <div style={{ marginBottom: 14 }}>
+        <label style={labelStyle}>Avatar Color</label>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          {PRESET_COLORS.map((c, i) => (
+            <button key={i} onClick={() => setColorForm(p => ({ ...p, avatar_bg: c.bg, avatar_fg: c.fg }))} style={{
+              width: 28, height: 28, borderRadius: '50%', background: c.bg,
+              border: colorForm.avatar_bg === c.bg ? `2px solid ${c.fg}` : '2px solid transparent',
+              cursor: 'pointer', fontSize: 10, fontWeight: 700, color: c.fg,
+            }}>Aa</button>
+          ))}
+          <Avatar name={colorForm.name || '?'} bg={colorForm.avatar_bg} fg={colorForm.avatar_fg} size={28} />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#0F172A' }}>Team Members</h2>
-        <button onClick={() => setShowAdd(!showAdd)} style={{
-          background: '#1D4ED8', color: '#fff', border: 'none', borderRadius: 7,
-          padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-        }}>+ Add Person</button>
+        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>Team Members</h2>
+        <button onClick={() => setShowAdd(!showAdd)} style={btnStyle()}>+ Add Person</button>
       </div>
 
       {showAdd && (
-        <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 12, padding: 20, marginBottom: 20 }}>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 20 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
             {[['Name *', 'name', 'text'], ['Role', 'role', 'text'], ['Email', 'email', 'email']].map(([label, key, type]) => (
               <div key={key}>
-                <label style={{ fontSize: 11, fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '.04em', display: 'block', marginBottom: 4 }}>{label}</label>
-                <input type={type} value={form[key]} onChange={e => setForm(p => ({ ...p, [key]: e.target.value }))} style={{
-                  width: '100%', border: '1px solid #E2E8F0', borderRadius: 7, padding: '7px 10px', fontSize: 13, fontFamily: 'inherit',
-                }} />
+                <label style={labelStyle}>{label}</label>
+                <input type={type} value={form[key]} onChange={e => setForm(p => ({ ...p, [key]: e.target.value }))} style={inputStyle} />
               </div>
             ))}
             <div>
-              <label style={{ fontSize: 11, fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '.04em', display: 'block', marginBottom: 4 }}>Org Type</label>
-              <select value={form.org_type} onChange={e => setForm(p => ({ ...p, org_type: e.target.value }))} style={{
-                width: '100%', border: '1px solid #E2E8F0', borderRadius: 7, padding: '7px 10px', fontSize: 13, fontFamily: 'inherit',
-              }}>
+              <label style={labelStyle}>Org Type</label>
+              <select value={form.org_type} onChange={e => setForm(p => ({ ...p, org_type: e.target.value }))} style={inputStyle}>
                 {ORG_TYPES.map(t => <option key={t}>{t}</option>)}
               </select>
             </div>
           </div>
-          <div style={{ marginBottom: 14 }}>
-            <label style={{ fontSize: 11, fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '.04em', display: 'block', marginBottom: 8 }}>Avatar Color</label>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-              {PRESET_COLORS.map((c, i) => (
-                <button key={i} onClick={() => setForm(p => ({ ...p, avatar_bg: c.bg, avatar_fg: c.fg }))} style={{
-                  width: 28, height: 28, borderRadius: '50%', background: c.bg, border: form.avatar_bg === c.bg ? `2px solid ${c.fg}` : '2px solid transparent',
-                  cursor: 'pointer', fontSize: 10, fontWeight: 700, color: c.fg,
-                }}>Aa</button>
-              ))}
-              <Avatar name={form.name || '?'} bg={form.avatar_bg} fg={form.avatar_fg} size={28} />
-            </div>
-          </div>
+          <ColorSelector colorForm={form} setColorForm={setForm} />
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={addPerson} style={{ background: '#1D4ED8', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-              {saving ? 'Saving…' : 'Add Person'}
-            </button>
-            <button onClick={() => setShowAdd(false)} style={{ background: '#F1F5F9', color: '#64748B', border: 'none', borderRadius: 7, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-              Cancel
-            </button>
+            <button onClick={addPerson} style={btnStyle()}>{saving ? 'Saving…' : 'Add Person'}</button>
+            <button onClick={() => setShowAdd(false)} style={btnStyle('cancel')}>Cancel</button>
           </div>
         </div>
       )}
 
-      <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 12, overflow: 'hidden' }}>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ background: '#F8FAFC' }}>
+            <tr style={{ background: 'var(--surface-2)' }}>
               {['', 'Name', 'Role', 'Org Type', 'Email', 'Active', ''].map((h, i) => (
-                <th key={i} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '.04em', borderBottom: '1px solid #E2E8F0' }}>{h}</th>
+                <th key={i} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 600, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '.04em', borderBottom: '1px solid var(--border)' }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {people.map(p => (
-              <tr key={p.id} style={{ borderBottom: '1px solid #F1F5F9', opacity: p.is_active ? 1 : 0.5 }}>
+              <tr key={p.id} style={{ borderBottom: '1px solid var(--border)', opacity: p.is_active ? 1 : 0.5 }}>
                 {editingId === p.id ? (
                   <td colSpan={7} style={{ padding: 14 }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 10 }}>
                       {[['Name', 'name'], ['Role', 'role'], ['Email', 'email']].map(([label, key]) => (
                         <div key={key}>
-                          <label style={{ fontSize: 11, fontWeight: 600, color: '#64748B', display: 'block', marginBottom: 3 }}>{label}</label>
-                          <input value={editForm[key] || ''} onChange={e => setEditForm(p => ({ ...p, [key]: e.target.value }))} style={{
-                            width: '100%', border: '1px solid #E2E8F0', borderRadius: 7, padding: '5px 8px', fontSize: 12, fontFamily: 'inherit',
-                          }} />
+                          <label style={labelStyle}>{label}</label>
+                          <input value={editForm[key] || ''} onChange={e => setEditForm(p => ({ ...p, [key]: e.target.value }))} style={{ ...inputStyle, padding: '5px 8px', fontSize: 12 }} />
                         </div>
                       ))}
                       <div>
-                        <label style={{ fontSize: 11, fontWeight: 600, color: '#64748B', display: 'block', marginBottom: 3 }}>Org Type</label>
-                        <select value={editForm.org_type || ''} onChange={e => setEditForm(p => ({ ...p, org_type: e.target.value }))} style={{
-                          width: '100%', border: '1px solid #E2E8F0', borderRadius: 7, padding: '5px 8px', fontSize: 12, fontFamily: 'inherit',
-                        }}>
+                        <label style={labelStyle}>Org Type</label>
+                        <select value={editForm.org_type || ''} onChange={e => setEditForm(p => ({ ...p, org_type: e.target.value }))} style={{ ...inputStyle, padding: '5px 8px', fontSize: 12 }}>
                           {ORG_TYPES.map(t => <option key={t}>{t}</option>)}
                         </select>
                       </div>
                     </div>
                     <div style={{ marginBottom: 10 }}>
-                      <label style={{ fontSize: 11, fontWeight: 600, color: '#64748B', display: 'block', marginBottom: 6 }}>Avatar Color</label>
+                      <label style={labelStyle}>Avatar Color</label>
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                         {PRESET_COLORS.map((c, i) => (
                           <button key={i} onClick={() => setEditForm(p => ({ ...p, avatar_bg: c.bg, avatar_fg: c.fg }))} style={{
-                            width: 28, height: 28, borderRadius: '50%', background: c.bg, border: editForm.avatar_bg === c.bg ? `2px solid ${c.fg}` : '2px solid transparent',
+                            width: 28, height: 28, borderRadius: '50%', background: c.bg,
+                            border: editForm.avatar_bg === c.bg ? `2px solid ${c.fg}` : '2px solid transparent',
                             cursor: 'pointer', fontSize: 10, fontWeight: 700, color: c.fg,
                           }}>Aa</button>
                         ))}
@@ -178,25 +178,21 @@ export default function PeopleTab({ projectSlug, authFetch, currentProject }) {
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <button onClick={savePerson} style={{ background: '#1D4ED8', color: '#fff', border: 'none', borderRadius: 7, padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                        {saving ? 'Saving…' : 'Save'}
-                      </button>
-                      <button onClick={() => setEditingId(null)} style={{ background: '#F1F5F9', color: '#64748B', border: 'none', borderRadius: 7, padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                        Cancel
-                      </button>
+                      <button onClick={savePerson} style={btnStyle()}>{saving ? 'Saving…' : 'Save'}</button>
+                      <button onClick={() => setEditingId(null)} style={btnStyle('cancel')}>Cancel</button>
                     </div>
                   </td>
                 ) : (
                   <>
                     <td style={{ padding: '10px 14px' }}><Avatar name={p.name} bg={p.avatar_bg} fg={p.avatar_fg} size={30} /></td>
-                    <td style={{ padding: '10px 14px', fontSize: 13, fontWeight: 600, color: '#0F172A' }}>{p.name}</td>
-                    <td style={{ padding: '10px 14px', fontSize: 12, color: '#64748B' }}>{p.role || '—'}</td>
-                    <td style={{ padding: '10px 14px', fontSize: 12, color: '#64748B' }}>{p.org_type || '—'}</td>
-                    <td style={{ padding: '10px 14px', fontSize: 12, color: '#64748B' }}>{p.email || '—'}</td>
+                    <td style={{ padding: '10px 14px', fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{p.name}</td>
+                    <td style={{ padding: '10px 14px', fontSize: 12, color: 'var(--text-muted)' }}>{p.role || '—'}</td>
+                    <td style={{ padding: '10px 14px', fontSize: 12, color: 'var(--text-muted)' }}>{p.org_type || '—'}</td>
+                    <td style={{ padding: '10px 14px', fontSize: 12, color: 'var(--text-muted)' }}>{p.email || '—'}</td>
                     <td style={{ padding: '10px 14px' }}>
                       <button onClick={() => toggleActive(p)} style={{
                         width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer',
-                        background: p.is_active ? '#1D4ED8' : '#CBD5E1', position: 'relative', padding: 0,
+                        background: p.is_active ? 'var(--accent)' : 'var(--border-mid)', position: 'relative', padding: 0,
                       }}>
                         <span style={{
                           position: 'absolute', top: 2, left: p.is_active ? 18 : 2, width: 16, height: 16,
@@ -206,7 +202,7 @@ export default function PeopleTab({ projectSlug, authFetch, currentProject }) {
                     </td>
                     <td style={{ padding: '10px 14px' }}>
                       <button onClick={() => { setEditingId(p.id); setEditForm({ ...p }) }} style={{
-                        fontSize: 11, fontWeight: 600, color: '#64748B', background: '#F1F5F9',
+                        fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', background: 'var(--surface-2)',
                         border: 'none', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontFamily: 'inherit',
                       }}>Edit</button>
                     </td>
