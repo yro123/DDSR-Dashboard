@@ -12,7 +12,7 @@ export async function onRequestGet({ env, params }) {
 
 export async function onRequestPut({ env, params, request }) {
   const body = await request.json();
-  const { workflow_id, assignee_id, assignee_name, title, notes, status, priority, due_date, is_archived } = body;
+  const { workflow_id, assignee_id, assignee_name, title, notes, status, priority, due_date, is_archived, user_feedback } = body;
 
   const now = new Date().toISOString();
   const archived_at = is_archived ? now : null;
@@ -29,12 +29,15 @@ export async function onRequestPut({ env, params, request }) {
       due_date      = ?,
       is_archived   = ?,
       archived_at   = ?,
+      user_feedback = ?,
       updated_at    = ?
     WHERE id = ?
   `).bind(
     workflow_id ?? null, assignee_id ?? null, assignee_name ?? null,
     title, notes ?? null, status, priority ?? null, due_date ?? null,
-    is_archived ? 1 : 0, archived_at, now, params.id
+    is_archived ? 1 : 0, archived_at,
+    user_feedback ?? null,
+    now, params.id
   ).run();
 
   const task = await env.ddsr_dashboard.prepare('SELECT * FROM tasks WHERE id = ?').bind(params.id).first();

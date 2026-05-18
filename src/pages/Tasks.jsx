@@ -90,6 +90,63 @@ function TaskEditForm({ task, people, workflows, onSave, onCancel, onArchive }) 
   )
 }
 
+const SOURCE_ICON = { email: '📧', fathom: '🎙️' }
+
+function ConfidenceDot({ confidence }) {
+  if (confidence == null) return null
+  const color = confidence >= 0.85 ? 'var(--status-done)' : confidence >= 0.6 ? '#f59e0b' : 'var(--red, #ef4444)'
+  return (
+    <span title={`Confidence: ${Math.round(confidence * 100)}%`}
+      style={{ width: 7, height: 7, borderRadius: '50%', background: color, display: 'inline-block', flexShrink: 0 }} />
+  )
+}
+
+function FeedbackButtons({ task, authFetch, onUpdate }) {
+  const [busy, setBusy] = useState(false)
+  const [showReasons, setShowReasons] = useState(false)
+
+  const sendFeedback = async feedback => {
+    setBusy(true)
+    const res = await authFetch(`/api/tasks/${task.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ ...task, user_feedback: feedback }),
+    }).then(r => r.json())
+    onUpdate(res)
+    setBusy(false)
+    setShowReasons(false)
+  }
+
+  const current = task.user_feedback
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
+      <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>Was this task correct?</span>
+      <button
+        disabled={busy}
+        onClick={() => sendFeedback('correct')}
+        style={{ fontSize: 13, background: current === 'correct' ? 'var(--status-done-bg)' : 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 6, padding: '2px 8px', cursor: 'pointer', color: current === 'correct' ? 'var(--status-done-col)' : 'var(--text)' }}
+        title="Thumbs up — task was extracted correctly"
+      >👍</button>
+      <button
+        disabled={busy}
+        onClick={() => setShowReasons(v => !v)}
+        style={{ fontSize: 13, background: current && current !== 'correct' ? 'var(--pri-high-bg, #fee2e2)' : 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 6, padding: '2px 8px', cursor: 'pointer', color: current && current !== 'correct' ? 'var(--pri-high-col, #b91c1c)' : 'var(--text)' }}
+        title="Thumbs down — something was wrong"
+      >👎</button>
+      {showReasons && (
+        <select autoFocus style={{ fontSize: 11, padding: '2px 6px', borderRadius: 4, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
+          defaultValue="" onChange={e => e.target.value && sendFeedback(e.target.value)}>
+          <option value="">What was wrong?</option>
+          <option value="wrong_assignee">Wrong assignee</option>
+          <option value="not_a_task">Not actually a task</option>
+          <option value="wrong_project">Wrong project</option>
+          <option value="wrong_due_date">Wrong due date</option>
+          <option value="duplicate">Duplicate task</option>
+        </select>
+      )}
+    </div>
+  )
+}
+
 export default function Tasks() {
   const { slug, authFetch } = useProject()
   const { dark } = useTheme()
@@ -101,6 +158,7 @@ export default function Tasks() {
 
   const [groupBy, setGroupBy]                 = useState('person')
   const [filterStatus, setFilterStatus]       = useState('')
+  const [filterSourceType, setFilterSourceType] = useState('')
   const [filterSecondary, setFilterSecondary] = useState('')
   const [filterPrimary, setFilterPrimary]     = useState('')
   const [showAll, setShowAll]                 = useState(false)
@@ -141,6 +199,7 @@ export default function Tasks() {
   // forCards: ignores filterPrimary so all stat tiles always show with real counts
   const forCards = tasks.filter(t => {
     if (filterStatus && t.status !== filterStatus) return false
+    if (filterSourceType && (t.source_type || 'manual') !== filterSourceType) return false
     if (filterSecondary) {
       if (groupBy === 'person'   && t.workflow_name  !== filterSecondary) return false
       if (groupBy === 'workflow' && t.assignee_name  !== filterSecondary) return false
@@ -159,7 +218,7 @@ export default function Tasks() {
   const groupKeys = groupBy === 'person' ? assigneeNames : workflowNames
 
   const changeGroup = g => {
-    setGroupBy(g); setFilterSecondary(''); setFilterPrimary(''); setShowAll(false); setOpenTaskId(null)
+    setGroupBy(g); setFilterSecondary(''); setFilterPrimary(''); setFilterSourceType(''); setShowAll(false); setOpenTaskId(null)
   }
 
   const toggleArchiveView = async () => {
@@ -272,6 +331,12 @@ export default function Tasks() {
         <select className="sel" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
           <option value="">All statuses</option>
           {STATUSES.map(s => <option key={s}>{s}</option>)}
+        </select>
+        <select className="sel" value={filterSourceType} onChange={e => setFilterSourceType(e.target.value)}>
+          <option value="">All sources</option>
+          <option value="manual">✏️ Manual</option>
+          <option value="email">📧 Email</option>
+          <option value="fathom">🎙️ Fathom</option>
         </select>
         <button className={`btn${showArchive ? ' btn-active' : ''}`} onClick={toggleArchiveView}>
           {showArchive ? '◀ Back' : `Archive (${archived.length})`}
@@ -473,18 +538,33 @@ export default function Tasks() {
                                <span style={{ fontSize: 11, color: 'var(--text-muted)', minWidth: 80, textAlign: 'left' }}>{t.assignee_name}</span></>
                           }
                           <PriorityPill priority={t.priority} />
+                          {t.source_type && t.source_type !== 'manual' && (
+                            <span title={`Source: ${t.source_type}`} style={{ fontSize: 13, lineHeight: 1 }}>
+                              {SOURCE_ICON[t.source_type] || '📄'}
+                            </span>
+                          )}
+                          <ConfidenceDot confidence={t.confidence} />
                           <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>{isOpen ? '▲' : '▼'}</span>
                         </button>
                       </div>
                       {isOpen && (
-                        <TaskEditForm
-                          task={t}
-                          people={people}
-                          workflows={workflows}
-                          onSave={data => updateTask(t.id, { ...t, ...data })}
-                          onCancel={() => setOpenTaskId(null)}
-                          onArchive={archiveTask}
-                        />
+                        <div>
+                          {t.source_type && t.source_type !== 'manual' && (
+                            <FeedbackButtons
+                              task={t}
+                              authFetch={authFetch}
+                              onUpdate={updated => setTasks(prev => prev.map(x => x.id === updated.id ? updated : x))}
+                            />
+                          )}
+                          <TaskEditForm
+                            task={t}
+                            people={people}
+                            workflows={workflows}
+                            onSave={data => updateTask(t.id, { ...t, ...data })}
+                            onCancel={() => setOpenTaskId(null)}
+                            onArchive={archiveTask}
+                          />
+                        </div>
                       )}
                     </div>
                   )

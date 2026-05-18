@@ -1,6 +1,7 @@
 import { onRequestPut as __api_clients__id__js_onRequestPut } from "C:\\Users\\allen\\Projects\\DDSR\\DDSR-Dashboard\\functions\\api\\clients\\[id].js"
 import { onRequestDelete as __api_documents__id__js_onRequestDelete } from "C:\\Users\\allen\\Projects\\DDSR\\DDSR-Dashboard\\functions\\api\\documents\\[id].js"
 import { onRequestPut as __api_documents__id__js_onRequestPut } from "C:\\Users\\allen\\Projects\\DDSR\\DDSR-Dashboard\\functions\\api\\documents\\[id].js"
+import { onRequestGet as __api_email_snapshots__messageId__js_onRequestGet } from "C:\\Users\\allen\\Projects\\DDSR\\DDSR-Dashboard\\functions\\api\\email-snapshots\\[messageId].js"
 import { onRequestDelete as __api_meeting_action_items__id__js_onRequestDelete } from "C:\\Users\\allen\\Projects\\DDSR\\DDSR-Dashboard\\functions\\api\\meeting-action-items\\[id].js"
 import { onRequestPut as __api_meeting_action_items__id__js_onRequestPut } from "C:\\Users\\allen\\Projects\\DDSR\\DDSR-Dashboard\\functions\\api\\meeting-action-items\\[id].js"
 import { onRequestDelete as __api_meeting_notes__id__js_onRequestDelete } from "C:\\Users\\allen\\Projects\\DDSR\\DDSR-Dashboard\\functions\\api\\meeting-notes\\[id].js"
@@ -54,6 +55,13 @@ export const routes = [
       method: "PUT",
       middlewares: [],
       modules: [__api_documents__id__js_onRequestPut],
+    },
+  {
+      routePath: "/api/email-snapshots/:messageId",
+      mountPath: "/api/email-snapshots",
+      method: "GET",
+      middlewares: [],
+      modules: [__api_email_snapshots__messageId__js_onRequestGet],
     },
   {
       routePath: "/api/meeting-action-items/:id",

@@ -12,10 +12,31 @@ export async function onRequestGet({ env, request }) {
   const url = new URL(request.url);
   const projectId = await resolveProjectId(env, url);
   if (projectId === null) return Response.json({ error: 'Project not found' }, { status: 404 });
-  const workflowId = url.searchParams.get('workflow_id');
-  const assigneeId = url.searchParams.get('assignee_id');
-  const status = url.searchParams.get('status');
-  const archived = url.searchParams.get('archived') || '0';
+  const workflowId  = url.searchParams.get('workflow_id');
+  const assigneeId  = url.searchParams.get('assignee_id');
+  const status      = url.searchParams.get('status');
+  const archived    = url.searchParams.get('archived') || '0';
+  const review      = url.searchParams.get('review') === '1';
+
+  if (review) {
+    // Needs Review queue: low-confidence or unmatched-assignee tasks from automation
+    const { results } = await env.ddsr_dashboard.prepare(`
+      SELECT t.*,
+             w.short_name as workflow_name, w.color as workflow_color, w.bg_color as workflow_bg,
+             e.subject as email_subject, e.from_name as email_from_name,
+             e.from_email as email_from_email, e.received_at as email_received_at,
+             e.body_preview as email_body_preview
+      FROM tasks t
+      LEFT JOIN workflows w ON t.workflow_id = w.id
+      LEFT JOIN email_snapshots e ON t.source_email_id = e.message_id
+      WHERE t.project_id = ?
+        AND t.is_archived = 0
+        AND t.source_type != 'manual'
+        AND (t.confidence < 0.7 OR t.assignee_id IS NULL)
+      ORDER BY t.created_at DESC
+    `).bind(projectId).all();
+    return Response.json(results);
+  }
 
   let query = `
     SELECT t.*, w.short_name as workflow_name, w.color as workflow_color, w.bg_color as workflow_bg

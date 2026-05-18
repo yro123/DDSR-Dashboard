@@ -5,6 +5,7 @@ import { ThemeProvider } from './context/ThemeContext'
 import Tasks    from './pages/Tasks'
 import Hub      from './pages/Hub'
 import Meetings from './pages/Meetings'
+import Review   from './pages/Review'
 import SignIn   from './pages/SignIn'
 import Admin    from './pages/Admin'
 
@@ -24,6 +25,7 @@ function AuthenticatedApp() {
         <Route path="/:slug/tasks"    element={<Tasks />} />
         <Route path="/:slug/hub"      element={<Hub />} />
         <Route path="/:slug/meetings" element={<Meetings />} />
+        <Route path="/:slug/review"   element={<Review />} />
       </Routes>
     </ProjectProvider>
   )

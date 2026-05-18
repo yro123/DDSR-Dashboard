@@ -43,6 +43,13 @@ async function onRequestDelete({ env, params }) {
 }
 __name(onRequestDelete, "onRequestDelete");
 __name2(onRequestDelete, "onRequestDelete");
+async function onRequestGet({ env, params }) {
+  const snapshot = await env.ddsr_dashboard.prepare("SELECT * FROM email_snapshots WHERE message_id = ?").bind(params.messageId).first();
+  if (!snapshot) return Response.json({ error: "Not found" }, { status: 404 });
+  return Response.json(snapshot);
+}
+__name(onRequestGet, "onRequestGet");
+__name2(onRequestGet, "onRequestGet");
 async function onRequestPut3({ env, params, request }) {
   const { action_text, assignee_name, assignee_id, status } = await request.json();
   const now = (/* @__PURE__ */ new Date()).toISOString();
@@ -155,7 +162,7 @@ async function onRequestPut7({ env, params, request }) {
 }
 __name(onRequestPut7, "onRequestPut7");
 __name2(onRequestPut7, "onRequestPut");
-async function onRequestGet({ env, params }) {
+async function onRequestGet2({ env, params }) {
   const project = await env.ddsr_dashboard.prepare(`
     SELECT id, name, client_display_name, subtitle, slug, go_live_date, project_start_date, project_end_date, is_active, client_id
     FROM projects WHERE slug = ?
@@ -163,8 +170,8 @@ async function onRequestGet({ env, params }) {
   if (!project) return Response.json({ error: "Not found" }, { status: 404 });
   return Response.json(project);
 }
-__name(onRequestGet, "onRequestGet");
-__name2(onRequestGet, "onRequestGet");
+__name(onRequestGet2, "onRequestGet2");
+__name2(onRequestGet2, "onRequestGet");
 async function onRequestPut8({ env, params, request }) {
   const { name, subtitle, go_live_date, project_start_date, project_end_date } = await request.json();
   const now = (/* @__PURE__ */ new Date()).toISOString();
@@ -186,7 +193,7 @@ async function onRequestPut8({ env, params, request }) {
 }
 __name(onRequestPut8, "onRequestPut8");
 __name2(onRequestPut8, "onRequestPut");
-async function onRequestGet2({ env, params }) {
+async function onRequestGet3({ env, params }) {
   const task = await env.ddsr_dashboard.prepare(`
     SELECT t.*, w.short_name as workflow_name, w.color as workflow_color
     FROM tasks t
@@ -196,11 +203,11 @@ async function onRequestGet2({ env, params }) {
   if (!task) return Response.json({ error: "Not found" }, { status: 404 });
   return Response.json(task);
 }
-__name(onRequestGet2, "onRequestGet2");
-__name2(onRequestGet2, "onRequestGet");
+__name(onRequestGet3, "onRequestGet3");
+__name2(onRequestGet3, "onRequestGet");
 async function onRequestPut9({ env, params, request }) {
   const body = await request.json();
-  const { workflow_id, assignee_id, assignee_name, title, notes, status, priority, due_date, is_archived } = body;
+  const { workflow_id, assignee_id, assignee_name, title, notes, status, priority, due_date, is_archived, user_feedback } = body;
   const now = (/* @__PURE__ */ new Date()).toISOString();
   const archived_at = is_archived ? now : null;
   await env.ddsr_dashboard.prepare(`
@@ -215,6 +222,7 @@ async function onRequestPut9({ env, params, request }) {
       due_date      = ?,
       is_archived   = ?,
       archived_at   = ?,
+      user_feedback = ?,
       updated_at    = ?
     WHERE id = ?
   `).bind(
@@ -228,6 +236,7 @@ async function onRequestPut9({ env, params, request }) {
     due_date ?? null,
     is_archived ? 1 : 0,
     archived_at,
+    user_feedback ?? null,
     now,
     params.id
   ).run();
@@ -273,7 +282,7 @@ async function onRequestPost({ env, request }) {
 }
 __name(onRequestPost, "onRequestPost");
 __name2(onRequestPost, "onRequestPost");
-async function onRequestGet3({ env }) {
+async function onRequestGet4({ env }) {
   const db = env.ddsr_dashboard;
   const clients = await db.prepare(
     `SELECT id, slug, display_name, name, is_active FROM clients WHERE is_active = 1 ORDER BY name`
@@ -287,9 +296,9 @@ async function onRequestGet3({ env }) {
   }));
   return Response.json(result);
 }
-__name(onRequestGet3, "onRequestGet3");
-__name2(onRequestGet3, "onRequestGet");
-async function onRequestGet4({ env, request }) {
+__name(onRequestGet4, "onRequestGet4");
+__name2(onRequestGet4, "onRequestGet");
+async function onRequestGet5({ env, request }) {
   const url = new URL(request.url);
   const slug = url.searchParams.get("slug");
   let projectId = url.searchParams.get("project_id") || 1;
@@ -306,8 +315,8 @@ async function onRequestGet4({ env, request }) {
   `).bind(projectId).all();
   return Response.json(results);
 }
-__name(onRequestGet4, "onRequestGet4");
-__name2(onRequestGet4, "onRequestGet");
+__name(onRequestGet5, "onRequestGet5");
+__name2(onRequestGet5, "onRequestGet");
 async function onRequestPost2({ env, request }) {
   const body = await request.json();
   let { project_id, slug, workflow_id, name, url, doc_type } = body;
@@ -373,7 +382,7 @@ async function onRequestPost5({ env, request }) {
 }
 __name(onRequestPost5, "onRequestPost5");
 __name2(onRequestPost5, "onRequestPost");
-async function onRequestGet5({ env, request }) {
+async function onRequestGet6({ env, request }) {
   const url = new URL(request.url);
   const slug = url.searchParams.get("slug");
   const showAll = url.searchParams.get("all") === "1";
@@ -425,8 +434,8 @@ async function onRequestGet5({ env, request }) {
   }));
   return Response.json(data);
 }
-__name(onRequestGet5, "onRequestGet5");
-__name2(onRequestGet5, "onRequestGet");
+__name(onRequestGet6, "onRequestGet6");
+__name2(onRequestGet6, "onRequestGet");
 async function onRequestPost6({ env, request }) {
   const body = await request.json();
   const { project_id, slug, meeting_date, display_date, title, meeting_type, location, next_meeting } = body;
@@ -491,7 +500,7 @@ async function onRequestPost7({ env, request }) {
 }
 __name(onRequestPost7, "onRequestPost7");
 __name2(onRequestPost7, "onRequestPost");
-async function onRequestGet6({ env, request }) {
+async function onRequestGet7({ env, request }) {
   const url = new URL(request.url);
   const slug = url.searchParams.get("slug");
   let projectId = url.searchParams.get("project_id") || 1;
@@ -505,8 +514,8 @@ async function onRequestGet6({ env, request }) {
   `).bind(projectId).all();
   return Response.json(results);
 }
-__name(onRequestGet6, "onRequestGet6");
-__name2(onRequestGet6, "onRequestGet");
+__name(onRequestGet7, "onRequestGet7");
+__name2(onRequestGet7, "onRequestGet");
 async function onRequestPost8({ env, request }) {
   const body = await request.json();
   const { client_id, name, subtitle, slug, go_live_date, project_start_date } = body;
@@ -550,7 +559,7 @@ async function resolveProjectId(env, url) {
 }
 __name(resolveProjectId, "resolveProjectId");
 __name2(resolveProjectId, "resolveProjectId");
-async function onRequestGet7({ env, request }) {
+async function onRequestGet8({ env, request }) {
   const url = new URL(request.url);
   const projectId = await resolveProjectId(env, url);
   if (projectId === null) return Response.json({ error: "Project not found" }, { status: 404 });
@@ -558,6 +567,25 @@ async function onRequestGet7({ env, request }) {
   const assigneeId = url.searchParams.get("assignee_id");
   const status = url.searchParams.get("status");
   const archived = url.searchParams.get("archived") || "0";
+  const review = url.searchParams.get("review") === "1";
+  if (review) {
+    const { results: results2 } = await env.ddsr_dashboard.prepare(`
+      SELECT t.*,
+             w.short_name as workflow_name, w.color as workflow_color, w.bg_color as workflow_bg,
+             e.subject as email_subject, e.from_name as email_from_name,
+             e.from_email as email_from_email, e.received_at as email_received_at,
+             e.body_preview as email_body_preview
+      FROM tasks t
+      LEFT JOIN workflows w ON t.workflow_id = w.id
+      LEFT JOIN email_snapshots e ON t.source_email_id = e.message_id
+      WHERE t.project_id = ?
+        AND t.is_archived = 0
+        AND t.source_type != 'manual'
+        AND (t.confidence < 0.7 OR t.assignee_id IS NULL)
+      ORDER BY t.created_at DESC
+    `).bind(projectId).all();
+    return Response.json(results2);
+  }
   let query = `
     SELECT t.*, w.short_name as workflow_name, w.color as workflow_color, w.bg_color as workflow_bg
     FROM tasks t
@@ -582,8 +610,8 @@ async function onRequestGet7({ env, request }) {
   const { results } = await env.ddsr_dashboard.prepare(query).bind(...params).all();
   return Response.json(results);
 }
-__name(onRequestGet7, "onRequestGet7");
-__name2(onRequestGet7, "onRequestGet");
+__name(onRequestGet8, "onRequestGet8");
+__name2(onRequestGet8, "onRequestGet");
 async function onRequestPost9({ env, request }) {
   const body = await request.json();
   let { project_id, slug, workflow_id, assignee_id, assignee_name, title, notes, status, priority, due_date } = body;
@@ -616,7 +644,7 @@ async function onRequestPost9({ env, request }) {
 }
 __name(onRequestPost9, "onRequestPost9");
 __name2(onRequestPost9, "onRequestPost");
-async function onRequestGet8({ env, request }) {
+async function onRequestGet9({ env, request }) {
   const url = new URL(request.url);
   const slug = url.searchParams.get("slug");
   let projectId = url.searchParams.get("project_id") || 1;
@@ -671,8 +699,8 @@ async function onRequestGet8({ env, request }) {
   }));
   return Response.json(data);
 }
-__name(onRequestGet8, "onRequestGet8");
-__name2(onRequestGet8, "onRequestGet");
+__name(onRequestGet9, "onRequestGet9");
+__name2(onRequestGet9, "onRequestGet");
 var isTestEnvironment = /* @__PURE__ */ __name2(() => {
   try {
     return false;
@@ -9368,6 +9396,13 @@ var routes = [
     modules: [onRequestPut2]
   },
   {
+    routePath: "/api/email-snapshots/:messageId",
+    mountPath: "/api/email-snapshots",
+    method: "GET",
+    middlewares: [],
+    modules: [onRequestGet]
+  },
+  {
     routePath: "/api/meeting-action-items/:id",
     mountPath: "/api/meeting-action-items",
     method: "DELETE",
@@ -9435,7 +9470,7 @@ var routes = [
     mountPath: "/api/projects",
     method: "GET",
     middlewares: [],
-    modules: [onRequestGet]
+    modules: [onRequestGet2]
   },
   {
     routePath: "/api/projects/:slug",
@@ -9456,7 +9491,7 @@ var routes = [
     mountPath: "/api/tasks",
     method: "GET",
     middlewares: [],
-    modules: [onRequestGet2]
+    modules: [onRequestGet3]
   },
   {
     routePath: "/api/tasks/:id",
@@ -9477,7 +9512,7 @@ var routes = [
     mountPath: "/api",
     method: "GET",
     middlewares: [],
-    modules: [onRequestGet3]
+    modules: [onRequestGet4]
   },
   {
     routePath: "/api/clients",
@@ -9491,7 +9526,7 @@ var routes = [
     mountPath: "/api",
     method: "GET",
     middlewares: [],
-    modules: [onRequestGet4]
+    modules: [onRequestGet5]
   },
   {
     routePath: "/api/documents",
@@ -9526,7 +9561,7 @@ var routes = [
     mountPath: "/api",
     method: "GET",
     middlewares: [],
-    modules: [onRequestGet5]
+    modules: [onRequestGet6]
   },
   {
     routePath: "/api/meetings",
@@ -9540,7 +9575,7 @@ var routes = [
     mountPath: "/api",
     method: "GET",
     middlewares: [],
-    modules: [onRequestGet6]
+    modules: [onRequestGet7]
   },
   {
     routePath: "/api/people",
@@ -9561,7 +9596,7 @@ var routes = [
     mountPath: "/api",
     method: "GET",
     middlewares: [],
-    modules: [onRequestGet7]
+    modules: [onRequestGet8]
   },
   {
     routePath: "/api/tasks",
@@ -9575,7 +9610,7 @@ var routes = [
     mountPath: "/api",
     method: "GET",
     middlewares: [],
-    modules: [onRequestGet8]
+    modules: [onRequestGet9]
   },
   {
     routePath: "/",
