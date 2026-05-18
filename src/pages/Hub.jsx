@@ -18,6 +18,31 @@ const GRAD_DARK = {
   '#A855F7': '#110B1E', '#14B8A6': '#061514', '#64748B': '#0E1015',
 }
 
+const btnEdit = {
+  fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 5,
+  border: '1px solid var(--border)', background: 'var(--surface-2)',
+  color: 'var(--text-dim)', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
+}
+const btnSave = {
+  fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 6,
+  border: 'none', background: 'var(--accent)', color: 'var(--accent-text)',
+  cursor: 'pointer', fontFamily: 'inherit',
+}
+const btnCancel = {
+  fontSize: 11, fontWeight: 600, padding: '4px 12px', borderRadius: 6,
+  border: '1px solid var(--border)', background: 'var(--surface)',
+  color: 'var(--text-muted)', cursor: 'pointer', fontFamily: 'inherit',
+}
+const inputStyle = {
+  width: '100%', border: '1px solid var(--border)', borderRadius: 7,
+  padding: '6px 10px', fontSize: 12, fontFamily: 'inherit',
+  color: 'var(--text)', background: 'var(--surface)', resize: 'vertical',
+}
+const labelStyle = {
+  fontSize: 10, fontWeight: 700, color: 'var(--text-dim)',
+  textTransform: 'uppercase', letterSpacing: '.04em', display: 'block', marginBottom: 4,
+}
+
 export default function Hub() {
   const { slug, authFetch, isAdmin } = useProject()
   const { dark } = useTheme()
@@ -28,6 +53,11 @@ export default function Hub() {
   const [openStep, setOpenStep]   = useState(null)
   const [docOpen, setDocOpen]     = useState(false)
 
+  // Edit state
+  const [editingWfId, setEditingWfId]     = useState(null)
+  const [editingStepId, setEditingStepId] = useState(null)
+  const [editForm, setEditForm]           = useState({})
+
   useEffect(() => {
     setLoading(true)
     Promise.all([
@@ -35,6 +65,9 @@ export default function Hub() {
       authFetch(`/api/tasks?slug=${slug}`).then(r => r.json()),
     ]).then(([w, t]) => { setWorkflows(w); setTasks(t); setLoading(false) })
   }, [slug, authFetch])
+
+  const reloadWorkflows = () =>
+    authFetch(`/api/workflows?slug=${slug}`).then(r => r.json()).then(setWorkflows)
 
   const STEP_CYCLE = { 'Not Started': 'In Progress', 'In Progress': 'Done', 'Done': 'Not Started' }
 
@@ -47,7 +80,25 @@ export default function Hub() {
       : w
     ))
     authFetch(`/api/workflow-steps/${stepId}`, { method: 'PUT', body: JSON.stringify({ status: next }) })
-      .then(r => { if (!r.ok) authFetch(`/api/workflows?slug=${slug}`).then(r2 => r2.json()).then(setWorkflows) })
+      .then(r => { if (!r.ok) reloadWorkflows() })
+  }
+
+  async function saveWorkflowDesc(id) {
+    await authFetch(`/api/workflows/${id}`, {
+      method: 'PUT', body: JSON.stringify({ description: editForm.description }),
+    })
+    setWorkflows(prev => prev.map(w => w.id === id ? { ...w, description: editForm.description } : w))
+    setEditingWfId(null)
+  }
+
+  async function saveStep(stepId) {
+    const points = (editForm.points || '').split('\n').filter(p => p.trim())
+    await authFetch(`/api/workflow-steps/${stepId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ label: editForm.label, summary: editForm.summary, points }),
+    })
+    setEditingStepId(null)
+    reloadWorkflows()
   }
 
   if (loading) return <Layout><div style={{ padding: 40, color: 'var(--text-muted)' }}>Loading…</div></Layout>
@@ -56,6 +107,7 @@ export default function Hub() {
 
   return (
     <Layout>
+      <div className="tasks-scroll-area" style={{ paddingBottom: 40 }}>
       <div style={{ maxWidth: 900 }}>
         <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 20 }}>
           Click any workflow to expand — cheat sheet notes from project documents
@@ -105,7 +157,34 @@ export default function Hub() {
               {/* Expanded body */}
               {isOpen && (
                 <div style={{ background: 'var(--surface)', padding: 24 }}>
-                  <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16, lineHeight: 1.6 }}>{w.description}</p>
+
+                  {/* Description */}
+                  {editingWfId === w.id ? (
+                    <div style={{ marginBottom: 16 }}>
+                      <label style={labelStyle}>Description</label>
+                      <textarea
+                        value={editForm.description || ''}
+                        onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
+                        rows={4}
+                        style={inputStyle}
+                        autoFocus
+                      />
+                      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                        <button onClick={() => saveWorkflowDesc(w.id)} style={btnSave}>Save</button>
+                        <button onClick={() => setEditingWfId(null)} style={btnCancel}>Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 16 }}>
+                      <p style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6, flex: 1 }}>{w.description}</p>
+                      {isAdmin && (
+                        <button
+                          onClick={() => { setEditingWfId(w.id); setEditForm({ description: w.description || '' }) }}
+                          style={btnEdit}
+                        >Edit</button>
+                      )}
+                    </div>
+                  )}
 
                   {(w.owners || []).length > 0 && (
                     <div style={{ marginBottom: 16 }}>
@@ -125,31 +204,80 @@ export default function Hub() {
                     const isStepOpen = openStep === s.id
                     return (
                       <div key={s.id}>
-                        <div className="step-row" onClick={() => setOpenStep(isStepOpen ? null : s.id)}>
-                          <span style={{ width: 10, height: 10, borderRadius: '50%', background: STATUS_DOT[s.status] || 'var(--border-mid)', flexShrink: 0, display: 'inline-block' }} />
-                          <span className="step-label">{s.label}</span>
-                          <span
-                            onClick={isAdmin ? e => cycleStepStatus(e, w.id, s.id, s.status) : undefined}
-                            title={isAdmin ? 'Click to cycle status' : undefined}
-                            style={{
-                              fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
-                              background: s.status === 'Done' ? 'var(--status-done-bg)' : s.status === 'In Progress' ? 'var(--status-ip-bg)' : 'var(--status-ns-bg)',
-                              color: s.status === 'Done' ? 'var(--status-done-col)' : s.status === 'In Progress' ? 'var(--status-ip-col)' : 'var(--status-ns-col)',
-                              cursor: isAdmin ? 'pointer' : 'default',
-                            }}>{s.status}</span>
-                          <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>{isStepOpen ? '▲' : '▼'}</span>
-                        </div>
-                        {isStepOpen && s.summary && (
-                          <div style={{ padding: '10px 16px 10px 26px', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
-                            <p style={{ fontSize: 11, color: 'var(--text)', marginBottom: 8, lineHeight: 1.6 }}>{s.summary}</p>
-                            {(s.points || []).length > 0 && (
-                              <ul style={{ paddingLeft: 16 }}>
-                                {s.points.map((p, i) => (
-                                  <li key={i} style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4, lineHeight: 1.5 }}>{p}</li>
-                                ))}
-                              </ul>
-                            )}
+                        {/* Step edit form */}
+                        {editingStepId === s.id ? (
+                          <div style={{ padding: '12px 16px', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
+                            <div style={{ marginBottom: 8 }}>
+                              <label style={labelStyle}>Label</label>
+                              <input
+                                value={editForm.label || ''}
+                                onChange={e => setEditForm(f => ({ ...f, label: e.target.value }))}
+                                style={{ ...inputStyle, resize: 'none' }}
+                                autoFocus
+                              />
+                            </div>
+                            <div style={{ marginBottom: 8 }}>
+                              <label style={labelStyle}>Summary</label>
+                              <textarea
+                                value={editForm.summary || ''}
+                                onChange={e => setEditForm(f => ({ ...f, summary: e.target.value }))}
+                                rows={3}
+                                style={inputStyle}
+                              />
+                            </div>
+                            <div style={{ marginBottom: 10 }}>
+                              <label style={labelStyle}>Bullet points (one per line)</label>
+                              <textarea
+                                value={editForm.points || ''}
+                                onChange={e => setEditForm(f => ({ ...f, points: e.target.value }))}
+                                rows={4}
+                                style={inputStyle}
+                              />
+                            </div>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                              <button onClick={() => saveStep(s.id)} style={btnSave}>Save</button>
+                              <button onClick={() => setEditingStepId(null)} style={btnCancel}>Cancel</button>
+                            </div>
                           </div>
+                        ) : (
+                          <>
+                            <div className="step-row" onClick={() => setOpenStep(isStepOpen ? null : s.id)}>
+                              <span style={{ width: 10, height: 10, borderRadius: '50%', background: STATUS_DOT[s.status] || 'var(--border-mid)', flexShrink: 0, display: 'inline-block' }} />
+                              <span className="step-label">{s.label}</span>
+                              <span
+                                onClick={isAdmin ? e => cycleStepStatus(e, w.id, s.id, s.status) : undefined}
+                                title={isAdmin ? 'Click to cycle status' : undefined}
+                                style={{
+                                  fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
+                                  background: s.status === 'Done' ? 'var(--status-done-bg)' : s.status === 'In Progress' ? 'var(--status-ip-bg)' : 'var(--status-ns-bg)',
+                                  color: s.status === 'Done' ? 'var(--status-done-col)' : s.status === 'In Progress' ? 'var(--status-ip-col)' : 'var(--status-ns-col)',
+                                  cursor: isAdmin ? 'pointer' : 'default',
+                                }}>{s.status}</span>
+                              {isAdmin && (
+                                <button
+                                  onClick={e => {
+                                    e.stopPropagation()
+                                    setEditingStepId(s.id)
+                                    setEditForm({ label: s.label, summary: s.summary || '', points: (s.points || []).join('\n') })
+                                  }}
+                                  style={btnEdit}
+                                >Edit</button>
+                              )}
+                              <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>{isStepOpen ? '▲' : '▼'}</span>
+                            </div>
+                            {isStepOpen && s.summary && (
+                              <div style={{ padding: '10px 16px 10px 26px', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
+                                <p style={{ fontSize: 11, color: 'var(--text)', marginBottom: 8, lineHeight: 1.6 }}>{s.summary}</p>
+                                {(s.points || []).length > 0 && (
+                                  <ul style={{ paddingLeft: 16 }}>
+                                    {s.points.map((p, i) => (
+                                      <li key={i} style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4, lineHeight: 1.5 }}>{p}</li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     )
@@ -194,6 +322,7 @@ export default function Hub() {
             </div>
           )}
         </div>
+      </div>
       </div>
     </Layout>
   )
