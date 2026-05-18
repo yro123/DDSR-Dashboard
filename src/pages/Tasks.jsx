@@ -103,9 +103,11 @@ export default function Tasks() {
   const [filterStatus, setFilterStatus]       = useState('')
   const [filterSecondary, setFilterSecondary] = useState('')
   const [filterPrimary, setFilterPrimary]     = useState('')
+  const [showAll, setShowAll]                 = useState(false)
   const [showArchive, setShowArchive]         = useState(false)
   const [openTaskId, setOpenTaskId]           = useState(null)
   const [addingNew, setAddingNew]             = useState(false)
+  const [addingInGroup, setAddingInGroup]     = useState(null)
   const [collapsed, setCollapsed]             = useState({})
   const [bulkSelected, setBulkSelected]       = useState(new Set())
 
@@ -118,6 +120,11 @@ export default function Tasks() {
       authFetch(`/api/workflows?slug=${slug}`).then(r => r.json()),
     ]).then(([t, p, w]) => {
       setTasks(t); setPeople(p); setWorkflows(w); setLoading(false)
+      // auto-select first group on initial load
+      setFilterPrimary(prev => prev || (groupBy === 'person'
+        ? [...new Set(t.map(task => task.assignee_name).filter(Boolean))].sort()[0] || ''
+        : (w[0]?.short_name || '')
+      ))
     })
   }, [slug, authFetch])
 
@@ -131,12 +138,9 @@ export default function Tasks() {
   const assigneeNames = [...new Set(tasks.map(t => t.assignee_name).filter(Boolean))].sort()
   const workflowNames = workflows.map(w => w.short_name)
 
-  const visible = tasks.filter(t => {
+  // forCards: ignores filterPrimary so all stat tiles always show with real counts
+  const forCards = tasks.filter(t => {
     if (filterStatus && t.status !== filterStatus) return false
-    if (filterPrimary) {
-      if (groupBy === 'person'   && t.assignee_name !== filterPrimary) return false
-      if (groupBy === 'workflow' && t.workflow_name  !== filterPrimary) return false
-    }
     if (filterSecondary) {
       if (groupBy === 'person'   && t.workflow_name  !== filterSecondary) return false
       if (groupBy === 'workflow' && t.assignee_name  !== filterSecondary) return false
@@ -144,10 +148,18 @@ export default function Tasks() {
     return true
   })
 
+  const visible = forCards.filter(t => {
+    if (filterPrimary && !showAll) {
+      if (groupBy === 'person'   && t.assignee_name !== filterPrimary) return false
+      if (groupBy === 'workflow' && t.workflow_name  !== filterPrimary) return false
+    }
+    return true
+  })
+
   const groupKeys = groupBy === 'person' ? assigneeNames : workflowNames
 
   const changeGroup = g => {
-    setGroupBy(g); setFilterSecondary(''); setFilterPrimary(''); setOpenTaskId(null)
+    setGroupBy(g); setFilterSecondary(''); setFilterPrimary(''); setShowAll(false); setOpenTaskId(null)
   }
 
   const toggleArchiveView = async () => {
@@ -243,8 +255,9 @@ export default function Tasks() {
 
   return (
     <Layout>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
       {/* Filter bar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 16, flexShrink: 0 }}>
         <div className="toggle">
           <button className={groupBy === 'person'   ? 'on' : ''} onClick={() => changeGroup('person')}>By person</button>
           <button className={groupBy === 'workflow' ? 'on' : ''} onClick={() => changeGroup('workflow')}>By workflow</button>
@@ -263,16 +276,18 @@ export default function Tasks() {
         <button className={`btn${showArchive ? ' btn-active' : ''}`} onClick={toggleArchiveView}>
           {showArchive ? '◀ Back' : `Archive (${archived.length})`}
         </button>
-        <button className="btn btn-blue" onClick={() => { setAddingNew(true); setOpenTaskId(null) }}>+ Add task</button>
+        <button className={`btn${showAll ? ' btn-active' : ''}`} onClick={() => setShowAll(v => !v)}>
+          {showAll ? 'Collapse' : 'View All'}
+        </button>
       </div>
 
       {/* Stats row */}
       {!showArchive && (
-        <>
+        <div style={{ flexShrink: 0 }}>
           <div className="stats-label">Tasks per {groupBy === 'person' ? 'assignee' : 'workflow'}</div>
           <div className="stats">
             {groupKeys.map(key => {
-              const count = visible.filter(t => groupBy === 'person' ? t.assignee_name === key : t.workflow_name === key).length
+              const count = forCards.filter(t => groupBy === 'person' ? t.assignee_name === key : t.workflow_name === key).length
               if (!count) return null
               const { bg, fg } = groupBy === 'person'
                 ? personAv(key)
@@ -280,19 +295,19 @@ export default function Tasks() {
               const active = filterPrimary === key
               return (
                 <div key={key} className="stat-card"
-                  style={{ background: dark ? fg + '22' : bg, borderColor: active ? fg : fg + '30' }}
-                  onClick={() => setFilterPrimary(filterPrimary === key ? '' : key)}>
+                  style={{ borderLeft: `3px solid ${fg}`, background: dark ? fg + '18' : bg }}
+                  onClick={() => { setFilterPrimary(key); setShowAll(false) }}>
                   <div className="stat-n" style={{ color: fg }}>{count}</div>
                   <div className="stat-l" style={{ color: fg }}>{key}</div>
                 </div>
               )
             })}
             <div className="stat-card">
-              <div className="stat-n">{visible.length}</div>
+              <div className="stat-n">{forCards.length}</div>
               <div className="stat-l" style={{ color: 'var(--text-muted)' }}>Total</div>
             </div>
           </div>
-        </>
+        </div>
       )}
 
       {/* Archive view */}
@@ -332,7 +347,7 @@ export default function Tasks() {
 
       {/* Bulk bar */}
       {bulkSelected.size > 0 && (
-        <div className="bulk-bar">
+        <div className="bulk-bar" style={{ flexShrink: 0 }}>
           <span style={{ fontSize: 12, fontWeight: 700, flex: 1 }}>{bulkSelected.size} task{bulkSelected.size > 1 ? 's' : ''} selected</span>
           <select className="bulk-sel" onChange={e => { applyBulk('status', e.target.value); e.target.value = '' }} defaultValue="">
             <option value="">Change status…</option>
@@ -355,15 +370,19 @@ export default function Tasks() {
       {!showArchive && (
         <>
           {visible.length > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8, flexShrink: 0 }}>
               <button className="btn" style={{ height: 26, fontSize: 11 }} onClick={toggleAllGroups}>
                 {groupKeys.every(k => collapsed[k]) ? '⊞ Expand all' : '⊟ Collapse all'}
               </button>
             </div>
           )}
+          <div className="tasks-scroll-area">
           {groupKeys.map(key => {
             const gTasks = visible.filter(t => groupBy === 'person' ? t.assignee_name === key : t.workflow_name === key)
             if (!gTasks.length) return null
+            // In single-person view, only render the selected group
+            const activeKey = showAll ? null : (filterPrimary || groupKeys[0])
+            if (activeKey && key !== activeKey) return null
             const wf = groupBy === 'workflow' ? workflows.find(w => w.short_name === key) : null
             const { bg, fg } = groupBy === 'person'
               ? personAv(key)
@@ -371,23 +390,53 @@ export default function Tasks() {
             const ip = gTasks.filter(t => t.status === 'In Progress').length
             const dn = gTasks.filter(t => t.status === 'Done').length
             const ns = gTasks.filter(t => t.status === 'Not Started').length
+            const pct = gTasks.length ? Math.round((dn / gTasks.length) * 100) : 0
             const isCollapsed = collapsed[key]
 
             return (
               <div key={key} className="group" style={{ borderColor: fg + '50' }}>
-                <button className="group-hdr" style={{ background: dark ? fg + '20' : bg }}
-                  onClick={() => setCollapsed(c => ({ ...c, [key]: !c[key] }))}>
-                  {groupBy === 'person'
-                    ? <Avatar name={key} bg={bg} fg={fg} size={26} />
-                    : <span style={{ width: 8, height: 8, borderRadius: '50%', background: fg, flexShrink: 0, display: 'inline-block' }} />
-                  }
-                  <span className="group-name" style={{ color: groupBy === 'person' ? 'var(--text)' : fg }}>{key}</span>
-                  <span className="group-count">{gTasks.length} tasks</span>
-                  {ip > 0 && <span className="badge" style={{ background: 'var(--status-ip-bg)',   color: 'var(--status-ip-col)' }}>{ip} active</span>}
-                  {dn > 0 && <span className="badge" style={{ background: 'var(--status-done-bg)', color: 'var(--status-done-col)' }}>{dn} done</span>}
-                  {ns > 0 && <span className="badge" style={{ background: 'var(--status-ns-bg)',   color: 'var(--status-ns-col)' }}>{ns} pending</span>}
-                  <span style={{ fontSize: 10, color: 'var(--text-dim)', marginLeft: 4 }}>{isCollapsed ? '▶' : '▼'}</span>
-                </button>
+                <div className="group-hdr" style={{ background: dark ? 'var(--surface-2)' : bg }}>
+                  <button
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
+                    onClick={() => setCollapsed(c => ({ ...c, [key]: !c[key] }))}
+                  >
+                    {groupBy === 'person'
+                      ? <Avatar name={key} bg={bg} fg={fg} size={26} />
+                      : <span style={{ width: 8, height: 8, borderRadius: '50%', background: fg, flexShrink: 0, display: 'inline-block' }} />
+                    }
+                    <span className="group-name" style={{ color: groupBy === 'person' ? 'var(--text)' : fg }}>{key}</span>
+                    <span className="group-count">{gTasks.length} tasks</span>
+                    {ip > 0 && <span className="badge" style={{ background: 'var(--status-ip-bg)',   color: 'var(--status-ip-col)' }}>{ip} active</span>}
+                    {dn > 0 && <span className="badge" style={{ background: 'var(--status-done-bg)', color: 'var(--status-done-col)' }}>{dn} done</span>}
+                    {ns > 0 && <span className="badge" style={{ background: 'var(--status-ns-bg)',   color: 'var(--status-ns-col)' }}>{ns} pending</span>}
+                    <div className="group-progress" title={`${pct}% complete`}>
+                      <div className="group-progress-fill" style={{ width: `${pct}%` }} />
+                    </div>
+                    <span style={{ fontSize: 10, color: 'var(--text-dim)', marginLeft: 4 }}>{isCollapsed ? '▶' : '▼'}</span>
+                  </button>
+                  <button
+                    className="group-add-btn"
+                    onClick={e => { e.stopPropagation(); setAddingInGroup(key); setOpenTaskId(null) }}
+                  >+ Add</button>
+                </div>
+
+                {/* In-group add form */}
+                {!isCollapsed && addingInGroup === key && (
+                  <TaskEditForm
+                    task={null}
+                    people={people}
+                    workflows={workflows}
+                    onSave={data => {
+                      const prefill = groupBy === 'person'
+                        ? { assignee_name: key }
+                        : { workflow_id: workflows.find(w => w.short_name === key)?.id || '' }
+                      createTask({ ...prefill, ...data })
+                      setAddingInGroup(null)
+                    }}
+                    onCancel={() => setAddingInGroup(null)}
+                    onArchive={() => {}}
+                  />
+                )}
 
                 {!isCollapsed && gTasks.map(t => {
                   const isOpen    = openTaskId === t.id
@@ -443,11 +492,13 @@ export default function Tasks() {
               </div>
             )
           })}
+          </div>{/* end tasks-scroll-area */}
           {visible.length === 0 && !addingNew && (
             <div className="empty">No tasks match current filters.</div>
           )}
         </>
       )}
+    </div>
     </Layout>
   )
 }
