@@ -2,8 +2,6 @@ name = "ddsr-dashboard"
 compatibility_date = "2025-01-01"
 pages_build_output_dir = "dist"
 
-[vars]
-CLERK_PUBLISHABLE_KEY = "pk_test_c2FmZS1tYXJ0ZW4tOS5jbGVyay5hY2NvdW50cy5kZXYk"
 
 [[d1_databases]]
 binding = "ddsr_dashboard"

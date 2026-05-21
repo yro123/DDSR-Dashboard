@@ -7,8 +7,10 @@ import PeopleTab from './admin/PeopleTab'
 import DocumentsTab from './admin/DocumentsTab'
 import ProjectTab from './admin/ProjectTab'
 import ClientsTab from './admin/ClientsTab'
+import ConfigTab from './admin/ConfigTab'
+import UsersTab from './admin/UsersTab'
 
-const TABS = ['Meetings', 'People', 'Documents', 'Project Settings', 'Clients']
+const TABS = ['Meetings', 'People', 'Documents', 'Project Settings', 'Config', 'Clients', 'Users']
 
 export default function Admin() {
   const { isAdmin, clientSlug, allProjects, slug: urlSlug, authFetch } = useProject()
@@ -57,7 +59,7 @@ export default function Admin() {
         </div>
 
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
-          {tab !== 'Clients' && (
+          {tab !== 'Clients' && tab !== 'Users' && (
             <select
               value={projectSlug}
               onChange={e => setProjectSlug(e.target.value)}
@@ -90,7 +92,9 @@ export default function Admin() {
         {tab === 'People'            && <PeopleTab    projectSlug={projectSlug} authFetch={authFetch} currentProject={currentProject} />}
         {tab === 'Documents'         && <DocumentsTab projectSlug={projectSlug} authFetch={authFetch} />}
         {tab === 'Project Settings'  && <ProjectTab   projectSlug={projectSlug} authFetch={authFetch} />}
+        {tab === 'Config'            && <ConfigTab     projectSlug={projectSlug} authFetch={authFetch} />}
         {tab === 'Clients'           && <ClientsTab   authFetch={authFetch} />}
+        {tab === 'Users'             && <UsersTab     authFetch={authFetch} />}
       </div>
     </div>
   )

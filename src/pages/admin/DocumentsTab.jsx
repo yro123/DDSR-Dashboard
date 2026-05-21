@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
-
-const DOC_TYPES = ['Process Doc', 'Training', 'SOP', 'Reference', 'Template', 'Other']
+import { useConfig } from '../../context/ConfigContext'
 
 const inputStyle = {
   border: '1px solid var(--border)', borderRadius: 7, padding: '7px 10px',
@@ -20,6 +19,8 @@ const btnCancel = {
 }
 
 export default function DocumentsTab({ projectSlug, authFetch }) {
+  const { getOptions } = useConfig()
+  const docTypes = getOptions('doc_type')
   const [docs, setDocs] = useState([])
   const [workflows, setWorkflows] = useState([])
   const [loading, setLoading] = useState(true)
@@ -97,7 +98,7 @@ export default function DocumentsTab({ projectSlug, authFetch }) {
             <div>
               <label style={labelStyle}>Type</label>
               <select value={newDoc.doc_type} onChange={e => setNewDoc(p => ({ ...p, doc_type: e.target.value }))} style={{ ...inputStyle, width: '100%' }}>
-                {DOC_TYPES.map(t => <option key={t}>{t}</option>)}
+                {docTypes.map(t => <option key={t}>{t}</option>)}
               </select>
             </div>
             <div>

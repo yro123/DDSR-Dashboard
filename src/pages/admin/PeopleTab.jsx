@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useConfig } from '../../context/ConfigContext'
 
 const PRESET_COLORS = [
   { bg: '#DBEAFE', fg: '#1E40AF' },
@@ -10,8 +11,6 @@ const PRESET_COLORS = [
   { bg: '#FFE4E6', fg: '#9F1239' },
   { bg: '#F1F5F9', fg: '#475569' },
 ]
-
-const ORG_TYPES = ['Partner', 'Client', 'Vendor', 'Internal']
 
 function Avatar({ name, bg, fg, size = 32 }) {
   const initials = (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
@@ -42,6 +41,8 @@ const btnStyle = (variant = 'primary') => ({
 })
 
 export default function PeopleTab({ projectSlug, authFetch, currentProject }) {
+  const { getOptions } = useConfig()
+  const orgTypes = getOptions('org_type')
   const [people, setPeople] = useState([])
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
@@ -124,7 +125,7 @@ export default function PeopleTab({ projectSlug, authFetch, currentProject }) {
             <div>
               <label style={labelStyle}>Org Type</label>
               <select value={form.org_type} onChange={e => setForm(p => ({ ...p, org_type: e.target.value }))} style={inputStyle}>
-                {ORG_TYPES.map(t => <option key={t}>{t}</option>)}
+                {orgTypes.map(t => <option key={t}>{t}</option>)}
               </select>
             </div>
           </div>
@@ -160,7 +161,7 @@ export default function PeopleTab({ projectSlug, authFetch, currentProject }) {
                       <div>
                         <label style={labelStyle}>Org Type</label>
                         <select value={editForm.org_type || ''} onChange={e => setEditForm(p => ({ ...p, org_type: e.target.value }))} style={{ ...inputStyle, padding: '5px 8px', fontSize: 12 }}>
-                          {ORG_TYPES.map(t => <option key={t}>{t}</option>)}
+                          {orgTypes.map(t => <option key={t}>{t}</option>)}
                         </select>
                       </div>
                     </div>

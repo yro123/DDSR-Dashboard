@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import Layout from '../components/Layout'
 import { useProject } from '../context/ProjectContext'
-
-const TOPIC_COLORS = ['#3B82F6', '#22C55E', '#F59E0B', '#A855F7', '#14B8A6', '#EF4444', '#6366F1', '#64748B']
+import { useConfig } from '../context/ConfigContext'
 
 const btnSave = {
   fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 6,
@@ -80,8 +79,10 @@ function MeetingForm({ initial, onSave, onCancel }) {
 }
 
 function TopicForm({ initial, onSave, onCancel }) {
+  const { getOptions } = useConfig()
+  const topicColors = getOptions('topic_color')
   const [area, setArea]   = useState(initial?.area || '')
-  const [color, setColor] = useState(initial?.color || TOPIC_COLORS[0])
+  const [color, setColor] = useState(initial?.color || topicColors[0] || '#3B82F6')
   return (
     <div style={{ border: '1px dashed var(--border-mid)', borderRadius: 10, padding: 12, marginTop: 8 }}>
       <div style={{ marginBottom: 8 }}>
@@ -91,7 +92,7 @@ function TopicForm({ initial, onSave, onCancel }) {
       <div style={{ marginBottom: 10 }}>
         <label style={labelStyle}>Color</label>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {TOPIC_COLORS.map(c => (
+          {topicColors.map(c => (
             <button key={c} onClick={() => setColor(c)} style={{
               width: 22, height: 22, borderRadius: '50%', background: c, border: 'none',
               cursor: 'pointer', boxShadow: color === c ? `0 0 0 2px var(--surface), 0 0 0 4px ${c}` : 'none',

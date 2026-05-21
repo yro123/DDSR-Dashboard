@@ -4,7 +4,8 @@ import { useProject } from '../context/ProjectContext'
 import { useTheme } from '../context/ThemeContext'
 import Avatar from '../components/Avatar'
 import { StatusPill, CategoryPill, PriorityPill } from '../components/Pill'
-import { STATUS_DOT, STATUSES, PRIORITIES } from '../data/constants'
+import { STATUS_DOT } from '../data/constants'
+import { useConfig } from '../context/ConfigContext'
 
 function fmtDate(d) {
   if (!d) return ''
@@ -14,7 +15,7 @@ function fmtDate(d) {
   } catch { return '' }
 }
 
-function TaskEditForm({ task, people, workflows, onSave, onCancel, onArchive }) {
+function TaskEditForm({ task, people, workflows, statuses, priorities, onSave, onCancel, onArchive }) {
   const [form, setForm] = useState({
     title: task?.title || '',
     assignee_name: task?.assignee_name || '',
@@ -58,14 +59,14 @@ function TaskEditForm({ task, people, workflows, onSave, onCancel, onArchive }) 
           <div className="field">
             <label>Status</label>
             <select value={form.status} onChange={e => set('status', e.target.value)}>
-              {STATUSES.map(s => <option key={s}>{s}</option>)}
+              {statuses.map(s => <option key={s}>{s}</option>)}
             </select>
           </div>
           <div className="field">
             <label>Priority</label>
             <select value={form.priority} onChange={e => set('priority', e.target.value)}>
               <option value="">— not set —</option>
-              {PRIORITIES.map(p => <option key={p}>{p}</option>)}
+              {priorities.map(p => <option key={p}>{p}</option>)}
             </select>
           </div>
           <div className="field">
@@ -150,6 +151,9 @@ function FeedbackButtons({ task, authFetch, onUpdate }) {
 export default function Tasks() {
   const { slug, authFetch } = useProject()
   const { dark } = useTheme()
+  const { getOptions, getColor } = useConfig()
+  const statuses   = getOptions('task_status')
+  const priorities = getOptions('task_priority')
   const [tasks, setTasks]         = useState([])
   const [archived, setArchived]   = useState([])
   const [people, setPeople]       = useState([])
@@ -266,7 +270,7 @@ export default function Tasks() {
 
   const cycleStatus = async id => {
     const task = tasks.find(t => t.id === id)
-    const next = STATUSES[(STATUSES.indexOf(task.status) + 1) % STATUSES.length]
+    const next = statuses[(statuses.indexOf(task.status) + 1) % statuses.length]
     if (next === 'Done') { await archiveTask(id) }
     else { await updateTask(id, { ...task, status: next }) }
   }
@@ -330,7 +334,7 @@ export default function Tasks() {
         </select>
         <select className="sel" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
           <option value="">All statuses</option>
-          {STATUSES.map(s => <option key={s}>{s}</option>)}
+          {statuses.map(s => <option key={s}>{s}</option>)}
         </select>
         <select className="sel" value={filterSourceType} onChange={e => setFilterSourceType(e.target.value)}>
           <option value="">All sources</option>
@@ -403,6 +407,8 @@ export default function Tasks() {
             task={null}
             people={people}
             workflows={workflows}
+            statuses={statuses}
+            priorities={priorities}
             onSave={createTask}
             onCancel={() => setAddingNew(false)}
             onArchive={() => {}}
@@ -416,11 +422,11 @@ export default function Tasks() {
           <span style={{ fontSize: 12, fontWeight: 700, flex: 1 }}>{bulkSelected.size} task{bulkSelected.size > 1 ? 's' : ''} selected</span>
           <select className="bulk-sel" onChange={e => { applyBulk('status', e.target.value); e.target.value = '' }} defaultValue="">
             <option value="">Change status…</option>
-            {STATUSES.map(s => <option key={s}>{s}</option>)}
+            {statuses.map(s => <option key={s}>{s}</option>)}
           </select>
           <select className="bulk-sel" onChange={e => { applyBulk('priority', e.target.value); e.target.value = '' }} defaultValue="">
             <option value="">Change priority…</option>
-            {PRIORITIES.map(p => <option key={p}>{p}</option>)}
+            {priorities.map(p => <option key={p}>{p}</option>)}
           </select>
           <select className="bulk-sel" onChange={e => { applyBulk('assignee_name', e.target.value); e.target.value = '' }} defaultValue="">
             <option value="">Reassign to…</option>
@@ -491,6 +497,8 @@ export default function Tasks() {
                     task={null}
                     people={people}
                     workflows={workflows}
+                    statuses={statuses}
+                    priorities={priorities}
                     onSave={data => {
                       const prefill = groupBy === 'person'
                         ? { assignee_name: key }
@@ -526,18 +534,18 @@ export default function Tasks() {
                           style={{ opacity: t.status === 'Done' ? 0.45 : 1, flex: 1, border: 'none', borderBottom: 'none', padding: '10px 10px 10px 4px' }}
                           onClick={() => setOpenTaskId(isOpen ? null : t.id)}>
                           <span className="dot-status"
-                            style={{ background: STATUS_DOT[t.status] || 'var(--border-mid)' }}
+                            style={{ background: getColor('task_status', t.status) || STATUS_DOT[t.status] || 'var(--border-mid)' }}
                             onClick={e => { e.stopPropagation(); cycleStatus(t.id) }}
                             title="Click to cycle status" />
                           <span className="task-text">{t.title}</span>
                           <span className="task-date">{fmtDate(t.due_date)}</span>
-                          <StatusPill status={t.status} />
+                          <StatusPill status={t.status} color={getColor('task_status', t.status)} />
                           {groupBy === 'person'
                             ? t.workflow_color && <CategoryPill name={t.workflow_name} color={t.workflow_color} />
                             : <><Avatar name={t.assignee_name} bg={avBg} fg={avFg} size={20} />
                                <span style={{ fontSize: 11, color: 'var(--text-muted)', minWidth: 80, textAlign: 'left' }}>{t.assignee_name}</span></>
                           }
-                          <PriorityPill priority={t.priority} />
+                          <PriorityPill priority={t.priority} color={getColor('task_priority', t.priority)} />
                           {t.source_type && t.source_type !== 'manual' && (
                             <span title={`Source: ${t.source_type}`} style={{ fontSize: 13, lineHeight: 1 }}>
                               {SOURCE_ICON[t.source_type] || '📄'}
@@ -560,6 +568,8 @@ export default function Tasks() {
                             task={t}
                             people={people}
                             workflows={workflows}
+                            statuses={statuses}
+                            priorities={priorities}
                             onSave={data => updateTask(t.id, { ...t, ...data })}
                             onCancel={() => setOpenTaskId(null)}
                             onArchive={archiveTask}

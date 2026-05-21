@@ -1,35 +1,17 @@
-import { createClerkClient } from '@clerk/backend'
+import { createAuth } from './lib/auth'
 
 export async function onRequest({ request, env, next }) {
   const url = new URL(request.url)
 
   if (!url.pathname.startsWith('/api/')) return next()
+  if (url.pathname.startsWith('/api/auth/'))  return next()
 
-  if (!env.CLERK_SECRET_KEY) {
-    return new Response(JSON.stringify({ error: 'Server misconfigured' }), {
-      status: 500, headers: { 'Content-Type': 'application/json' },
-    })
-  }
+  // Allow unauthenticated GET for invite token preview
+  if (/^\/api\/invitations\/[^/]+$/.test(url.pathname) && request.method === 'GET') return next()
 
-  const clerk = createClerkClient({ secretKey: env.CLERK_SECRET_KEY })
+  const auth = createAuth(env)
+  const session = await auth.api.getSession({ headers: request.headers })
+  if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  try {
-    const requestState = await clerk.authenticateRequest(request, {
-      secretKey: env.CLERK_SECRET_KEY,
-      publishableKey: env.CLERK_PUBLISHABLE_KEY,
-      authorizedParties: ['http://localhost:5173', 'https://ddsr-dashboard.pages.dev', 'https://dashboards.datadrivensr.com'],
-    })
-
-    if (!requestState.isSignedIn) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { 'Content-Type': 'application/json' },
-      })
-    }
-
-    return next()
-  } catch (err) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401, headers: { 'Content-Type': 'application/json' },
-    })
-  }
+  return next()
 }

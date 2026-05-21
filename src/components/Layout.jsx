@@ -1,8 +1,60 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { UserButton } from '@clerk/react'
+import { authClient } from '../lib/auth-client'
 import { useProject } from '../context/ProjectContext'
 import { useTheme } from '../context/ThemeContext'
+
+function UserMenu() {
+  const { data: session } = authClient.useSession()
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  const user = session?.user
+
+  useEffect(() => {
+    const handler = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const initials = (user?.name || user?.email || '?')
+    .split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+
+  const signOut = async () => {
+    await authClient.signOut()
+    window.location.href = '/sign-in'
+  }
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button onClick={() => setOpen(v => !v)} style={{
+        width: 30, height: 30, borderRadius: '50%',
+        background: '#00D4C8', color: '#0A0A0A',
+        border: 'none', cursor: 'pointer',
+        fontSize: 11, fontWeight: 800, fontFamily: 'inherit',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>{initials}</button>
+      {open && (
+        <div style={{
+          position: 'absolute', right: 0, top: 38, width: 210,
+          background: 'var(--surface)', border: '1px solid var(--border)',
+          borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,.2)',
+          padding: 8, zIndex: 200,
+        }}>
+          <div style={{ padding: '6px 10px 10px', borderBottom: '1px solid var(--border)', marginBottom: 6 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{user?.name}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{user?.email}</div>
+          </div>
+          <button onClick={signOut} style={{
+            width: '100%', textAlign: 'left', padding: '7px 10px',
+            background: 'none', border: 'none', cursor: 'pointer',
+            fontSize: 12, color: 'var(--text-muted)', fontFamily: 'inherit',
+            borderRadius: 6,
+          }}>Sign out</button>
+        </div>
+      )}
+    </div>
+  )
+}
 
 const IconTasks = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -181,7 +233,7 @@ export default function Layout({ children }) {
             >
               {dark ? '☀' : '☾'}
             </button>
-            <UserButton afterSignOutUrl="/sign-in" />
+            <UserMenu />
           </div>
         </div>
 

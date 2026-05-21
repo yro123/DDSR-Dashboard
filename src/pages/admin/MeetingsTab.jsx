@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
-
-const COLORS = ['#6366F1','#14B8A6','#F59E0B','#EF4444','#10B981','#3B82F6','#8B5CF6','#EC4899']
+import { useConfig } from '../../context/ConfigContext'
 
 const btn = (extra = {}) => ({
   border: 'none', cursor: 'pointer', fontFamily: 'inherit',
@@ -28,10 +27,10 @@ function Field({ label, value, onChange, type = 'text', placeholder = '' }) {
   )
 }
 
-function ColorPicker({ value, onChange }) {
+function ColorPicker({ value, onChange, colors }) {
   return (
     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-      {COLORS.map(c => (
+      {colors.map(c => (
         <button key={c} onClick={() => onChange(c)} style={{
           width: 20, height: 20, borderRadius: '50%', background: c, border: 'none', cursor: 'pointer',
           outline: value === c ? `2px solid ${c}` : 'none', outlineOffset: 2,
@@ -42,13 +41,15 @@ function ColorPicker({ value, onChange }) {
 }
 
 export default function MeetingsTab({ projectSlug, authFetch }) {
+  const { getOptions } = useConfig()
+  const topicColors = getOptions('topic_color')
   const [meetings, setMeetings] = useState([])
   const [loading, setLoading] = useState(true)
   const [openId, setOpenId] = useState(null)
   const [showNewMeeting, setShowNewMeeting] = useState(false)
   const [newMeeting, setNewMeeting] = useState({ meeting_date: '', title: '', meeting_type: 'Weekly Sync', next_meeting: '', display_date: '' })
   const [addingTopicFor, setAddingTopicFor] = useState(null)
-  const [newTopic, setNewTopic] = useState({ area: '', color: COLORS[0] })
+  const [newTopic, setNewTopic] = useState({ area: '', color: '' })
   const [addingNoteFor, setAddingNoteFor] = useState(null)
   const [newNote, setNewNote] = useState('')
   const [addingActionFor, setAddingActionFor] = useState(null)
@@ -91,7 +92,7 @@ export default function MeetingsTab({ projectSlug, authFetch }) {
     if (!newTopic.area) return
     setSaving(true)
     await authFetch('/api/meeting-topics', { method: 'POST', body: JSON.stringify({ meeting_id: meetingId, ...newTopic }) })
-    setNewTopic({ area: '', color: COLORS[0] }); setAddingTopicFor(null); setSaving(false); load()
+    setNewTopic({ area: '', color: topicColors[0] || '' }); setAddingTopicFor(null); setSaving(false); load()
   }
 
   async function deleteTopic(id) {
@@ -245,11 +246,11 @@ export default function MeetingsTab({ projectSlug, authFetch }) {
                     </div>
                     <div style={{ marginBottom: 12 }}>
                       <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '.04em', display: 'block', marginBottom: 6 }}>Color</label>
-                      <ColorPicker value={newTopic.color} onChange={v => setNewTopic(p => ({ ...p, color: v }))} />
+                      <ColorPicker value={newTopic.color} onChange={v => setNewTopic(p => ({ ...p, color: v }))} colors={topicColors} />
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <Btn onClick={() => addTopic(m.id)} style={primary}>{saving ? 'Saving…' : 'Add Topic'}</Btn>
-                      <Btn onClick={() => { setAddingTopicFor(null); setNewTopic({ area: '', color: COLORS[0] }) }} style={cancel}>Cancel</Btn>
+                      <Btn onClick={() => { setAddingTopicFor(null); setNewTopic({ area: '', color: topicColors[0] || '' }) }} style={cancel}>Cancel</Btn>
                     </div>
                   </div>
                 ) : (
