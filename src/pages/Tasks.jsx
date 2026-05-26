@@ -149,7 +149,7 @@ function FeedbackButtons({ task, authFetch, onUpdate }) {
 }
 
 export default function Tasks() {
-  const { slug, authFetch } = useProject()
+  const { slug, authFetch, isAdmin } = useProject()
   const { dark } = useTheme()
   const { getOptions, getColor } = useConfig()
   const statuses   = getOptions('task_status')
@@ -348,6 +348,16 @@ export default function Tasks() {
         <button className={`btn${showAll ? ' btn-active' : ''}`} onClick={() => setShowAll(v => !v)}>
           {showAll ? 'Collapse' : 'View All'}
         </button>
+        {isAdmin && !showArchive && (
+          <button
+            onClick={() => { setAddingNew(true); setAddingInGroup(null) }}
+            style={{
+              marginLeft: 'auto', padding: '6px 16px', borderRadius: 8, border: 'none',
+              background: '#00D4C8', color: '#0A0A0A', fontWeight: 700, fontSize: 13,
+              fontFamily: 'inherit', cursor: 'pointer', flexShrink: 0,
+            }}
+          >+ Task</button>
+        )}
       </div>
 
       {/* Stats row */}
@@ -485,10 +495,12 @@ export default function Tasks() {
                     </div>
                     <span style={{ fontSize: 10, color: 'var(--text-dim)', marginLeft: 4 }}>{isCollapsed ? '▶' : '▼'}</span>
                   </button>
-                  <button
-                    className="group-add-btn"
-                    onClick={e => { e.stopPropagation(); setAddingInGroup(key); setOpenTaskId(null) }}
-                  >+ Add</button>
+                  {isAdmin && (
+                    <button
+                      className="group-add-btn"
+                      onClick={e => { e.stopPropagation(); setAddingInGroup(key); setOpenTaskId(null) }}
+                    >+ Add</button>
+                  )}
                 </div>
 
                 {/* In-group add form */}

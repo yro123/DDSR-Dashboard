@@ -46,10 +46,20 @@ function MeetingForm({ initial, onSave, onCancel }) {
   const [form, setForm] = useState({
     title: initial?.title || '',
     meeting_date: initial?.meeting_date || '',
+    display_date: initial?.display_date || '',
     location: initial?.location || '',
+    meeting_type: initial?.meeting_type || 'Weekly Sync',
     next_meeting: initial?.next_meeting || '',
   })
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  const handleDateChange = v => {
+    const display = v
+      ? new Date(v + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+      : ''
+    setForm(f => ({ ...f, meeting_date: v, display_date: display }))
+  }
+
   return (
     <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 16, marginBottom: 12 }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
@@ -59,7 +69,15 @@ function MeetingForm({ initial, onSave, onCancel }) {
         </div>
         <div>
           <label style={labelStyle}>Date *</label>
-          <input type="date" value={form.meeting_date} onChange={e => set('meeting_date', e.target.value)} style={inputStyle} />
+          <input type="date" value={form.meeting_date} onChange={e => handleDateChange(e.target.value)} style={inputStyle} />
+        </div>
+        <div>
+          <label style={labelStyle}>Display Date</label>
+          <input value={form.display_date} onChange={e => set('display_date', e.target.value)} placeholder="e.g. May 26, 2026" style={inputStyle} />
+        </div>
+        <div>
+          <label style={labelStyle}>Meeting Type</label>
+          <input value={form.meeting_type} onChange={e => set('meeting_type', e.target.value)} placeholder="Weekly Sync" style={inputStyle} />
         </div>
         <div>
           <label style={labelStyle}>Location</label>
@@ -67,11 +85,11 @@ function MeetingForm({ initial, onSave, onCancel }) {
         </div>
         <div style={{ gridColumn: '1 / -1' }}>
           <label style={labelStyle}>Next Meeting</label>
-          <input value={form.next_meeting} onChange={e => set('next_meeting', e.target.value)} placeholder="e.g. April 5, 2025" style={inputStyle} />
+          <input value={form.next_meeting} onChange={e => set('next_meeting', e.target.value)} placeholder="e.g. June 2, 2026" style={inputStyle} />
         </div>
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
-        <button onClick={() => onSave({ ...form, display_date: fmtDisplayDate(form.meeting_date) })} style={btnSave}>Save</button>
+        <button onClick={() => { if (form.title && form.meeting_date) onSave(form) }} style={btnSave}>Save</button>
         <button onClick={onCancel} style={btnCancel}>Cancel</button>
       </div>
     </div>
@@ -219,8 +237,12 @@ export default function Meetings() {
             {addingNew ? (
               <MeetingForm onSave={createMeeting} onCancel={() => setAddingNew(false)} />
             ) : (
-              <button onClick={() => setAddingNew(true)} style={{ ...btnSave, fontSize: 12, padding: '6px 14px' }}>
-                + New Meeting
+              <button onClick={() => setAddingNew(true)} style={{
+                padding: '7px 18px', borderRadius: 8, border: 'none',
+                background: '#00D4C8', color: '#0A0A0A', fontWeight: 700, fontSize: 13,
+                fontFamily: 'inherit', cursor: 'pointer',
+              }}>
+                + Meeting
               </button>
             )}
           </div>

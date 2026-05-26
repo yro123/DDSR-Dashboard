@@ -1,5 +1,7 @@
 import { createAuth } from '../../lib/auth'
 
+const isAdminUser = u => !!(u?.isAdmin) || u?.email?.endsWith('@datadrivensr.com')
+
 export async function onRequestGet({ env, params }) {
   const invite = await env.ddsr_dashboard.prepare(
     'SELECT * FROM invitations WHERE token = ?'
@@ -40,7 +42,7 @@ export async function onRequestPost({ env, params, request }) {
 export async function onRequestDelete({ env, params, request }) {
   const auth = createAuth(env)
   const session = await auth.api.getSession({ headers: request.headers })
-  if (!session?.user?.isAdmin) return Response.json({ error: 'Forbidden' }, { status: 403 })
+  if (!isAdminUser(session?.user)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   await env.ddsr_dashboard.prepare(
     'DELETE FROM invitations WHERE token = ?'

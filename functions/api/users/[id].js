@@ -1,9 +1,11 @@
 import { createAuth } from '../../lib/auth'
 
+const isAdminUser = u => !!(u?.isAdmin) || u?.email?.endsWith('@datadrivensr.com')
+
 export async function onRequestPut({ env, params, request }) {
   const auth = createAuth(env)
   const session = await auth.api.getSession({ headers: request.headers })
-  if (!session?.user?.isAdmin) return Response.json({ error: 'Forbidden' }, { status: 403 })
+  if (!isAdminUser(session?.user)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const { clientSlug, isAdmin } = await request.json()
   const now = Date.now()
@@ -20,7 +22,7 @@ export async function onRequestPut({ env, params, request }) {
 export async function onRequestDelete({ env, params, request }) {
   const auth = createAuth(env)
   const session = await auth.api.getSession({ headers: request.headers })
-  if (!session?.user?.isAdmin) return Response.json({ error: 'Forbidden' }, { status: 403 })
+  if (!isAdminUser(session?.user)) return Response.json({ error: 'Forbidden' }, { status: 403 })
   if (params.id === session.user.id) return Response.json({ error: 'Cannot delete your own account' }, { status: 400 })
 
   await env.ddsr_dashboard.prepare('DELETE FROM user WHERE id = ?').bind(params.id).run()

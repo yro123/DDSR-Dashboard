@@ -1,5 +1,7 @@
 import { createAuth } from '../lib/auth'
 
+const isAdminUser = u => !!(u?.isAdmin) || u?.email?.endsWith('@datadrivensr.com')
+
 function nanoid(len = 21) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
   let id = ''
@@ -12,7 +14,7 @@ function nanoid(len = 21) {
 export async function onRequestGet({ env, request }) {
   const auth = createAuth(env)
   const session = await auth.api.getSession({ headers: request.headers })
-  if (!session?.user?.isAdmin) return Response.json({ error: 'Forbidden' }, { status: 403 })
+  if (!isAdminUser(session?.user)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const { results } = await env.ddsr_dashboard.prepare(
     `SELECT i.*, u.email as createdByEmail FROM invitations i
@@ -25,7 +27,7 @@ export async function onRequestGet({ env, request }) {
 export async function onRequestPost({ env, request }) {
   const auth = createAuth(env)
   const session = await auth.api.getSession({ headers: request.headers })
-  if (!session?.user?.isAdmin) return Response.json({ error: 'Forbidden' }, { status: 403 })
+  if (!isAdminUser(session?.user)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const { clientSlug, email } = await request.json()
   if (!clientSlug) return Response.json({ error: 'clientSlug required' }, { status: 400 })
@@ -40,8 +42,6 @@ export async function onRequestPost({ env, request }) {
      VALUES (?, ?, ?, ?, ?, ?)`
   ).bind(id, token, clientSlug, session.user.id, email || null, expires).run()
 
-  const invite = await env.ddsr_dashboard.prepare(
-    'SELECT * FROM invitations WHERE id = ?'
-  ).bind(id).first()
-  return Response.json(invite, { status: 201 })
+  const origin = new URL(request.url).origin
+  return Response.json({ token, url: `${origin}/invite?token=${token}` }, { status: 201 })
 }
