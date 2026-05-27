@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { DndContext, DragOverlay, useDroppable, useDraggable, PointerSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core'
 import Layout from '../components/Layout'
 import { useProject } from '../context/ProjectContext'
 import { useTheme } from '../context/ThemeContext'
@@ -135,6 +136,109 @@ function FeedbackButtons({ task, authFetch, onUpdate }) {
   )
 }
 
+// ── Kanban Board ──────────────────────────────────────────────────────────────
+
+function KanbanCard({ task, isActive }) {
+  const { setNodeRef, attributes, listeners } = useDraggable({ id: task.id })
+  return (
+    <div ref={setNodeRef} {...attributes} {...listeners} style={{
+      background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8,
+      padding: '10px 12px', marginBottom: 8, cursor: 'grab', userSelect: 'none',
+      opacity: isActive ? 0.3 : 1,
+    }}>
+      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 5, lineHeight: 1.3 }}>{task.title}</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        {task.due_date && <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{fmtDate(task.due_date)}</span>}
+        {task.workflow_name && (
+          <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: task.workflow_bg || '#eee', color: task.workflow_color || '#333' }}>
+            {task.workflow_name}
+          </span>
+        )}
+        {task.assignee_name && (
+          <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 'auto', fontWeight: 600 }}>
+            {task.assignee_name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function KanbanColumn({ status, color, tasks, activeId }) {
+  const { setNodeRef, isOver } = useDroppable({ id: status })
+  const borderColor = isOver ? (color || 'var(--accent)') : 'var(--border)'
+  return (
+    <div ref={setNodeRef} style={{
+      minWidth: 240, flex: '0 0 240px',
+      background: isOver ? (color ? color + '12' : 'var(--surface-2)') : 'var(--surface)',
+      border: `1px solid ${borderColor}`, borderTop: `3px solid ${color || 'var(--accent)'}`,
+      borderRadius: 10, padding: '10px 10px 4px',
+      transition: 'background .12s, border-color .12s',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{status}</span>
+        <span style={{ fontSize: 11, padding: '1px 8px', borderRadius: 99, background: 'var(--surface-2)', color: 'var(--text-muted)' }}>
+          {tasks.length}
+        </span>
+      </div>
+      <div style={{ minHeight: 40 }}>
+        {tasks.map(task => <KanbanCard key={task.id} task={task} isActive={activeId === task.id} />)}
+        {tasks.length === 0 && (
+          <div style={{ fontSize: 11, color: 'var(--text-dim)', textAlign: 'center', padding: '16px 0' }}>
+            {isOver ? 'Drop here' : '—'}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function KanbanBoard({ tasks, statuses, getColor, onStatusChange, onArchive }) {
+  const [activeTask, setActiveTask] = useState(null)
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
+
+  const handleDragStart = ({ active }) => setActiveTask(tasks.find(t => t.id === active.id) || null)
+
+  const handleDragEnd = ({ active, over }) => {
+    setActiveTask(null)
+    if (!over) return
+    const newStatus = over.id
+    const task = tasks.find(t => t.id === active.id)
+    if (!task || task.status === newStatus) return
+    if (newStatus === 'Done') onArchive(task.id)
+    else onStatusChange(task.id, { ...task, status: newStatus })
+  }
+
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 16, alignItems: 'flex-start' }}>
+        {statuses.map(status => (
+          <KanbanColumn
+            key={status} status={status}
+            color={getColor('task_status', status)}
+            tasks={tasks.filter(t => t.status === status)}
+            activeId={activeTask?.id}
+          />
+        ))}
+      </div>
+      <DragOverlay>
+        {activeTask ? (
+          <div style={{
+            background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8,
+            padding: '10px 12px', cursor: 'grabbing', boxShadow: '0 8px 24px rgba(0,0,0,.2)',
+            transform: 'rotate(2deg)', minWidth: 220,
+          }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', lineHeight: 1.3, marginBottom: 4 }}>{activeTask.title}</div>
+            {activeTask.assignee_name && (
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{activeTask.assignee_name}</span>
+            )}
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
+  )
+}
+
 export default function Tasks() {
   const { slug, authFetch, isAdmin } = useProject()
   const { dark } = useTheme()
@@ -146,6 +250,7 @@ export default function Tasks() {
   const [workflows, setWorkflows] = useState([])
   const [loading, setLoading]     = useState(true)
 
+  const [searchQuery, setSearchQuery]          = useState('')
   const [groupBy, setGroupBy]                 = useState('person')
   const [filterStatus, setFilterStatus]       = useState('')
   const [filterSourceType, setFilterSourceType] = useState('')
@@ -158,6 +263,9 @@ export default function Tasks() {
   const [addingInGroup, setAddingInGroup]     = useState(null)
   const [collapsed, setCollapsed]             = useState({})
   const [bulkSelected, setBulkSelected]       = useState(new Set())
+  const [viewMode, setViewMode]               = useState(() => localStorage.getItem('tasks-view') || 'list')
+
+  const setView = mode => { setViewMode(mode); localStorage.setItem('tasks-view', mode) }
 
   useEffect(() => {
     setLoading(true)
@@ -188,6 +296,13 @@ export default function Tasks() {
 
   // forCards: ignores filterPrimary so all stat tiles always show with real counts
   const forCards = tasks.filter(t => {
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase()
+      if (!(t.title?.toLowerCase().includes(q)
+         || t.notes?.toLowerCase().includes(q)
+         || t.assignee_name?.toLowerCase().includes(q)
+         || t.workflow_name?.toLowerCase().includes(q))) return false
+    }
     if (filterStatus && t.status !== filterStatus) return false
     if (filterSourceType && (t.source_type || 'manual') !== filterSourceType) return false
     if (filterSecondary) {
@@ -307,21 +422,37 @@ export default function Tasks() {
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
       {/* Filter bar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 16, flexShrink: 0 }}>
+        <input
+          type="search"
+          placeholder="Search tasks…"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          className="sel"
+          style={{ width: 180 }}
+        />
         <div className="toggle">
-          <button className={groupBy === 'person'   ? 'on' : ''} onClick={() => changeGroup('person')}>By person</button>
-          <button className={groupBy === 'workflow' ? 'on' : ''} onClick={() => changeGroup('workflow')}>By workflow</button>
+          <button className={viewMode === 'list' ? 'on' : ''} onClick={() => setView('list')}>List</button>
+          <button className={viewMode === 'board' ? 'on' : ''} onClick={() => setView('board')}>Board</button>
         </div>
-        <select className="sel" value={filterSecondary} onChange={e => { setFilterSecondary(e.target.value); setFilterPrimary('') }}>
-          <option value="">{groupBy === 'person' ? 'All workflows' : 'All people'}</option>
-          {groupBy === 'person'
-            ? workflowNames.map(n => <option key={n}>{n}</option>)
-            : assigneeNames.map(n => <option key={n}>{n}</option>)
-          }
-        </select>
-        <select className="sel" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
-          <option value="">All statuses</option>
-          {statuses.map(s => <option key={s}>{s}</option>)}
-        </select>
+        {viewMode === 'list' && (
+          <>
+            <div className="toggle">
+              <button className={groupBy === 'person'   ? 'on' : ''} onClick={() => changeGroup('person')}>By person</button>
+              <button className={groupBy === 'workflow' ? 'on' : ''} onClick={() => changeGroup('workflow')}>By workflow</button>
+            </div>
+            <select className="sel" value={filterSecondary} onChange={e => { setFilterSecondary(e.target.value); setFilterPrimary('') }}>
+              <option value="">{groupBy === 'person' ? 'All workflows' : 'All people'}</option>
+              {groupBy === 'person'
+                ? workflowNames.map(n => <option key={n}>{n}</option>)
+                : assigneeNames.map(n => <option key={n}>{n}</option>)
+              }
+            </select>
+            <select className="sel" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+              <option value="">All statuses</option>
+              {statuses.map(s => <option key={s}>{s}</option>)}
+            </select>
+          </>
+        )}
         <select className="sel" value={filterSourceType} onChange={e => setFilterSourceType(e.target.value)}>
           <option value="">All sources</option>
           <option value="manual">✏️ Manual</option>
@@ -331,9 +462,11 @@ export default function Tasks() {
         <button className={`btn${showArchive ? ' btn-active' : ''}`} onClick={toggleArchiveView}>
           {showArchive ? '◀ Back' : `Archive (${archived.length})`}
         </button>
-        <button className={`btn${showAll ? ' btn-active' : ''}`} onClick={() => setShowAll(v => !v)}>
-          {showAll ? 'Collapse' : 'View All'}
-        </button>
+        {viewMode === 'list' && (
+          <button className={`btn${showAll ? ' btn-active' : ''}`} onClick={() => setShowAll(v => !v)}>
+            {showAll ? 'Collapse' : 'View All'}
+          </button>
+        )}
         {isAdmin && !showArchive && (
           <button
             onClick={() => { setAddingNew(true); setAddingInGroup(null) }}
@@ -347,7 +480,7 @@ export default function Tasks() {
       </div>
 
       {/* Stats row */}
-      {!showArchive && (
+      {!showArchive && viewMode === 'list' && (
         <div style={{ flexShrink: 0 }}>
           <div className="stats-label">Tasks per {groupBy === 'person' ? 'assignee' : 'workflow'}</div>
           <div className="stats">
@@ -428,8 +561,21 @@ export default function Tasks() {
         </div>
       )}
 
+      {/* Board view */}
+      {!showArchive && viewMode === 'board' && (
+        <div className="tasks-scroll-area">
+          <KanbanBoard
+            tasks={filterSourceType ? tasks.filter(t => (t.source_type || 'manual') === filterSourceType) : tasks}
+            statuses={statuses}
+            getColor={getColor}
+            onStatusChange={updateTask}
+            onArchive={archiveTask}
+          />
+        </div>
+      )}
+
       {/* Task groups */}
-      {!showArchive && (
+      {!showArchive && viewMode === 'list' && (
         <>
           {visible.length > 0 && (
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8, flexShrink: 0 }}>

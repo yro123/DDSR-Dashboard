@@ -1,4 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
+import { DndContext, PointerSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core'
+import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 const CATEGORY_META = [
   { key: 'task_status',   label: 'Task Statuses',         hasColor: true  },
@@ -29,7 +32,8 @@ function ColorSwatch({ color }) {
   )
 }
 
-function ItemRow({ item, hasColor, isColorPalette, authFetch, onReload, onMoveUp, onMoveDown, isFirst, isLast }) {
+function SortableItemRow({ item, hasColor, isColorPalette, authFetch, onReload }) {
+  const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({ id: item.id })
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState({ value: item.value, color: item.color || '' })
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
@@ -59,12 +63,15 @@ function ItemRow({ item, hasColor, isColorPalette, authFetch, onReload, onMoveUp
     display: 'flex', alignItems: 'center', gap: 8,
     padding: '6px 10px',
     borderBottom: '1px solid var(--border)',
-    background: 'var(--surface)',
+    background: isDragging ? 'var(--surface-2)' : 'var(--surface)',
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
   }
 
   if (editing) {
     return (
-      <div style={rowStyle}>
+      <div ref={setNodeRef} style={rowStyle}>
         {isColorPalette ? (
           <>
             <input type="color" value={form.color || '#000000'} onChange={e => set('color', e.target.value)}
@@ -93,7 +100,8 @@ function ItemRow({ item, hasColor, isColorPalette, authFetch, onReload, onMoveUp
   }
 
   return (
-    <div style={rowStyle}>
+    <div ref={setNodeRef} style={rowStyle}>
+      <span {...attributes} {...listeners} title="Drag to reorder" style={{ cursor: 'grab', color: 'var(--text-dim)', fontSize: 15, lineHeight: 1, flexShrink: 0, padding: '0 2px' }}>⠿</span>
       {isColorPalette ? (
         <>
           <ColorSwatch color={item.color || item.value} />
@@ -109,8 +117,6 @@ function ItemRow({ item, hasColor, isColorPalette, authFetch, onReload, onMoveUp
         </>
       )}
       <div style={{ display: 'flex', gap: 3, marginLeft: 'auto' }}>
-        <Btn style={{ ...btn.base, ...btn.ghost, fontSize: 14, padding: '1px 5px' }} onClick={onMoveUp}  disabled={isFirst} title="Move up">↑</Btn>
-        <Btn style={{ ...btn.base, ...btn.ghost, fontSize: 14, padding: '1px 5px' }} onClick={onMoveDown} disabled={isLast}  title="Move down">↓</Btn>
         <Btn style={{ ...btn.base, background: 'var(--surface-2)', color: 'var(--text)', fontSize: 11 }} onClick={() => setEditing(true)}>Edit</Btn>
         {!item.is_system && (
           <Btn style={{ ...btn.base, ...btn.danger, fontSize: 11 }} onClick={remove}>×</Btn>
@@ -172,17 +178,22 @@ function AddItemForm({ category, projectId, hasColor, isColorPalette, authFetch,
 
 function CategorySection({ meta, items, globalItems, projectId, isOverride, authFetch, onReload }) {
   const { key, label, hasColor, isColorPalette } = meta
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
-  const reorderItems = async (a, b) => {
-    await Promise.all([
-      authFetch(`/api/config/${a.id}`, { method: 'PUT', body: JSON.stringify({ sort_order: b.sort_order }) }),
-      authFetch(`/api/config/${b.id}`, { method: 'PUT', body: JSON.stringify({ sort_order: a.sort_order }) }),
-    ])
+  const handleDragEnd = async ({ active, over }) => {
+    if (!over || active.id === over.id) return
+    const sorted = [...items].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    const oldIdx = sorted.findIndex(i => i.id === active.id)
+    const newIdx = sorted.findIndex(i => i.id === over.id)
+    const reordered = arrayMove(sorted, oldIdx, newIdx)
+    const updates = reordered
+      .map((item, idx) => ({ item, newOrder: idx }))
+      .filter(({ item, newOrder }) => item.sort_order !== newOrder)
+    await Promise.all(updates.map(({ item, newOrder }) =>
+      authFetch(`/api/config/${item.id}`, { method: 'PUT', body: JSON.stringify({ sort_order: newOrder }) })
+    ))
     onReload()
   }
-
-  const moveUp = (idx) => { if (idx > 0) reorderItems(items[idx], items[idx - 1]) }
-  const moveDown = (idx) => { if (idx < items.length - 1) reorderItems(items[idx], items[idx + 1]) }
 
   const overrideProject = async () => {
     const base = globalItems.length > 0 ? globalItems : items
@@ -251,20 +262,20 @@ function CategorySection({ meta, items, globalItems, projectId, isOverride, auth
         </div>
       ) : (
         <>
-          {items.map((item, idx) => (
-            <ItemRow
-              key={item.id}
-              item={item}
-              hasColor={hasColor}
-              isColorPalette={isColorPalette}
-              authFetch={authFetch}
-              onReload={onReload}
-              onMoveUp={() => moveUp(idx)}
-              onMoveDown={() => moveDown(idx)}
-              isFirst={idx === 0}
-              isLast={idx === items.length - 1}
-            />
-          ))}
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
+              {items.map(item => (
+                <SortableItemRow
+                  key={item.id}
+                  item={item}
+                  hasColor={hasColor}
+                  isColorPalette={isColorPalette}
+                  authFetch={authFetch}
+                  onReload={onReload}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
           <AddItemForm
             category={key}
             projectId={isOverride ? projectId : null}

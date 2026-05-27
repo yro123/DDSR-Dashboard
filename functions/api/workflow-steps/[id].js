@@ -1,12 +1,12 @@
 export async function onRequestPut({ env, params, request }) {
-  const { status, label, summary, points } = await request.json()
+  const { status, label, summary, points, sort_order } = await request.json()
   const now = new Date().toISOString()
   const step = await env.ddsr_dashboard.prepare('SELECT * FROM workflow_steps WHERE id = ?').bind(params.id).first()
   if (!step) return Response.json({ error: 'Not found' }, { status: 404 })
 
   await env.ddsr_dashboard.prepare(
-    `UPDATE workflow_steps SET label = ?, status = ?, updated_at = ? WHERE id = ?`
-  ).bind(label ?? step.label, status ?? step.status, now, params.id).run()
+    `UPDATE workflow_steps SET label = ?, status = ?, sort_order = COALESCE(?, sort_order), updated_at = ? WHERE id = ?`
+  ).bind(label ?? step.label, status ?? step.status, sort_order ?? null, now, params.id).run()
 
   if (summary !== undefined || points !== undefined) {
     let detail = await env.ddsr_dashboard.prepare(

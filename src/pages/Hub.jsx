@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react'
+import { DndContext, PointerSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core'
+import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import Layout from '../components/Layout'
 import Avatar from '../components/Avatar'
 import { STATUS_DOT } from '../data/constants'
@@ -41,6 +44,96 @@ const inputStyle = {
 const labelStyle = {
   fontSize: 10, fontWeight: 700, color: 'var(--text-dim)',
   textTransform: 'uppercase', letterSpacing: '.04em', display: 'block', marginBottom: 4,
+}
+
+// ── Step drag-to-reorder ──────────────────────────────────────────────────────
+
+function SortableStep({ s, isAdmin, openStep, setOpenStep, editingStepId, setEditingStepId, editForm, setEditForm, saveStep, cycleStepStatus, wfId }) {
+  const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({ id: s.id })
+  const isStepOpen = openStep === s.id
+
+  return (
+    <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}>
+      {editingStepId === s.id ? (
+        <div style={{ padding: '12px 16px', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ marginBottom: 8 }}>
+            <label style={labelStyle}>Label</label>
+            <input value={editForm.label || ''} onChange={e => setEditForm(f => ({ ...f, label: e.target.value }))}
+              style={{ ...inputStyle, resize: 'none' }} autoFocus />
+          </div>
+          <div style={{ marginBottom: 8 }}>
+            <label style={labelStyle}>Summary</label>
+            <textarea value={editForm.summary || ''} onChange={e => setEditForm(f => ({ ...f, summary: e.target.value }))}
+              rows={3} style={inputStyle} />
+          </div>
+          <div style={{ marginBottom: 10 }}>
+            <label style={labelStyle}>Bullet points (one per line)</label>
+            <textarea value={editForm.points || ''} onChange={e => setEditForm(f => ({ ...f, points: e.target.value }))}
+              rows={4} style={inputStyle} />
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => saveStep(s.id)} style={btnSave}>Save</button>
+            <button onClick={() => setEditingStepId(null)} style={btnCancel}>Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="step-row" onClick={() => setOpenStep(isStepOpen ? null : s.id)}>
+            {isAdmin && (
+              <span {...attributes} {...listeners} onClick={e => e.stopPropagation()}
+                title="Drag to reorder"
+                style={{ cursor: 'grab', color: 'var(--text-dim)', fontSize: 13, lineHeight: 1, flexShrink: 0, marginRight: 2 }}>⠿</span>
+            )}
+            <span style={{ width: 10, height: 10, borderRadius: '50%', background: STATUS_DOT[s.status] || 'var(--border-mid)', flexShrink: 0, display: 'inline-block' }} />
+            <span className="step-label">{s.label}</span>
+            <span
+              onClick={isAdmin ? e => cycleStepStatus(e, wfId, s.id, s.status) : undefined}
+              title={isAdmin ? 'Click to cycle status' : undefined}
+              style={{
+                fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
+                background: s.status === 'Done' ? 'var(--status-done-bg)' : s.status === 'In Progress' ? 'var(--status-ip-bg)' : 'var(--status-ns-bg)',
+                color: s.status === 'Done' ? 'var(--status-done-col)' : s.status === 'In Progress' ? 'var(--status-ip-col)' : 'var(--status-ns-col)',
+                cursor: isAdmin ? 'pointer' : 'default',
+              }}>{s.status}</span>
+            {isAdmin && (
+              <button onClick={e => { e.stopPropagation(); setEditingStepId(s.id); setEditForm({ label: s.label, summary: s.summary || '', points: (s.points || []).join('\n') }) }}
+                style={btnEdit}>Edit</button>
+            )}
+            <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>{isStepOpen ? '▲' : '▼'}</span>
+          </div>
+          {isStepOpen && s.summary && (
+            <div style={{ padding: '10px 16px 10px 26px', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
+              <p style={{ fontSize: 11, color: 'var(--text)', marginBottom: 8, lineHeight: 1.6 }}>{s.summary}</p>
+              {(s.points || []).length > 0 && (
+                <ul style={{ paddingLeft: 16 }}>
+                  {s.points.map((p, i) => (
+                    <li key={i} style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4, lineHeight: 1.5 }}>{p}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+function StepList({ wfId, steps, isAdmin, openStep, setOpenStep, editingStepId, setEditingStepId, editForm, setEditForm, saveStep, cycleStepStatus, onDragEnd }) {
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
+  const shared = { isAdmin, openStep, setOpenStep, editingStepId, setEditingStepId, editForm, setEditForm, saveStep, cycleStepStatus, wfId }
+
+  if (!isAdmin) {
+    return steps.map(s => <SortableStep key={s.id} s={s} {...shared} />)
+  }
+
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+      <SortableContext items={steps.map(s => s.id)} strategy={verticalListSortingStrategy}>
+        {steps.map(s => <SortableStep key={s.id} s={s} {...shared} />)}
+      </SortableContext>
+    </DndContext>
+  )
 }
 
 export default function Hub() {
@@ -99,6 +192,23 @@ export default function Hub() {
     })
     setEditingStepId(null)
     reloadWorkflows()
+  }
+
+  function makeStepDragEnd(wfId, steps) {
+    return async ({ active, over }) => {
+      if (!over || active.id === over.id) return
+      const oldIdx = steps.findIndex(s => s.id === active.id)
+      const newIdx = steps.findIndex(s => s.id === over.id)
+      const reordered = arrayMove(steps, oldIdx, newIdx)
+      setWorkflows(prev => prev.map(w => w.id === wfId ? { ...w, steps: reordered } : w))
+      const updates = reordered
+        .map((s, idx) => ({ s, newOrder: idx }))
+        .filter(({ s, newOrder }) => s.sort_order !== newOrder)
+      await Promise.all(updates.map(({ s, newOrder }) =>
+        authFetch(`/api/workflow-steps/${s.id}`, { method: 'PUT', body: JSON.stringify({ sort_order: newOrder }) })
+      ))
+      reloadWorkflows()
+    }
   }
 
   if (loading) return <Layout><div style={{ padding: 40, color: 'var(--text-muted)' }}>Loading…</div></Layout>
@@ -200,88 +310,20 @@ export default function Hub() {
                   )}
 
                   <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 10 }}>Milestones</div>
-                  {steps.map(s => {
-                    const isStepOpen = openStep === s.id
-                    return (
-                      <div key={s.id}>
-                        {/* Step edit form */}
-                        {editingStepId === s.id ? (
-                          <div style={{ padding: '12px 16px', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
-                            <div style={{ marginBottom: 8 }}>
-                              <label style={labelStyle}>Label</label>
-                              <input
-                                value={editForm.label || ''}
-                                onChange={e => setEditForm(f => ({ ...f, label: e.target.value }))}
-                                style={{ ...inputStyle, resize: 'none' }}
-                                autoFocus
-                              />
-                            </div>
-                            <div style={{ marginBottom: 8 }}>
-                              <label style={labelStyle}>Summary</label>
-                              <textarea
-                                value={editForm.summary || ''}
-                                onChange={e => setEditForm(f => ({ ...f, summary: e.target.value }))}
-                                rows={3}
-                                style={inputStyle}
-                              />
-                            </div>
-                            <div style={{ marginBottom: 10 }}>
-                              <label style={labelStyle}>Bullet points (one per line)</label>
-                              <textarea
-                                value={editForm.points || ''}
-                                onChange={e => setEditForm(f => ({ ...f, points: e.target.value }))}
-                                rows={4}
-                                style={inputStyle}
-                              />
-                            </div>
-                            <div style={{ display: 'flex', gap: 8 }}>
-                              <button onClick={() => saveStep(s.id)} style={btnSave}>Save</button>
-                              <button onClick={() => setEditingStepId(null)} style={btnCancel}>Cancel</button>
-                            </div>
-                          </div>
-                        ) : (
-                          <>
-                            <div className="step-row" onClick={() => setOpenStep(isStepOpen ? null : s.id)}>
-                              <span style={{ width: 10, height: 10, borderRadius: '50%', background: STATUS_DOT[s.status] || 'var(--border-mid)', flexShrink: 0, display: 'inline-block' }} />
-                              <span className="step-label">{s.label}</span>
-                              <span
-                                onClick={isAdmin ? e => cycleStepStatus(e, w.id, s.id, s.status) : undefined}
-                                title={isAdmin ? 'Click to cycle status' : undefined}
-                                style={{
-                                  fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
-                                  background: s.status === 'Done' ? 'var(--status-done-bg)' : s.status === 'In Progress' ? 'var(--status-ip-bg)' : 'var(--status-ns-bg)',
-                                  color: s.status === 'Done' ? 'var(--status-done-col)' : s.status === 'In Progress' ? 'var(--status-ip-col)' : 'var(--status-ns-col)',
-                                  cursor: isAdmin ? 'pointer' : 'default',
-                                }}>{s.status}</span>
-                              {isAdmin && (
-                                <button
-                                  onClick={e => {
-                                    e.stopPropagation()
-                                    setEditingStepId(s.id)
-                                    setEditForm({ label: s.label, summary: s.summary || '', points: (s.points || []).join('\n') })
-                                  }}
-                                  style={btnEdit}
-                                >Edit</button>
-                              )}
-                              <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>{isStepOpen ? '▲' : '▼'}</span>
-                            </div>
-                            {isStepOpen && s.summary && (
-                              <div style={{ padding: '10px 16px 10px 26px', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
-                                <p style={{ fontSize: 11, color: 'var(--text)', marginBottom: 8, lineHeight: 1.6 }}>{s.summary}</p>
-                                {(s.points || []).length > 0 && (
-                                  <ul style={{ paddingLeft: 16 }}>
-                                    {s.points.map((p, i) => (
-                                      <li key={i} style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4, lineHeight: 1.5 }}>{p}</li>
-                                    ))}
-                                  </ul>
-                                )}
-                              </div>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    )
-                  })}
+                  <StepList
+                    wfId={w.id}
+                    steps={steps}
+                    isAdmin={isAdmin}
+                    openStep={openStep}
+                    setOpenStep={setOpenStep}
+                    editingStepId={editingStepId}
+                    setEditingStepId={setEditingStepId}
+                    editForm={editForm}
+                    setEditForm={setEditForm}
+                    saveStep={saveStep}
+                    cycleStepStatus={cycleStepStatus}
+                    onDragEnd={makeStepDragEnd(w.id, steps)}
+                  />
 
                   {(w.docs || []).length > 0 && (
                     <div style={{ marginTop: 16 }}>

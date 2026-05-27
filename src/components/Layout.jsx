@@ -110,6 +110,7 @@ const PAGE_TITLES = {
   review:   'Needs Review',
   requests: 'Requests',
   admin:    'Admin',
+  search:   'Search',
 }
 
 export default function Layout({ children }) {
@@ -121,13 +122,22 @@ export default function Layout({ children }) {
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem('sidebar-collapsed') === 'true'
   )
+  const [searchVal, setSearchVal] = useState('')
 
-  const screen = pathname.includes('hub') ? 'hub'
+  const screen = pathname === '/search' ? 'search'
+    : pathname.includes('hub') ? 'hub'
     : pathname.includes('meetings') ? 'meetings'
     : pathname.includes('admin') ? 'admin'
     : pathname.includes('review') ? 'review'
     : pathname.includes('requests') ? 'requests'
     : 'tasks'
+
+  useEffect(() => {
+    if (screen === 'search') {
+      const q = new URLSearchParams(window.location.search).get('q') || ''
+      setSearchVal(q)
+    }
+  }, [screen])
 
   useEffect(() => {
     localStorage.setItem('sidebar-collapsed', collapsed)
@@ -213,6 +223,29 @@ export default function Layout({ children }) {
           <span className="main-topbar-title">
             {PAGE_TITLES[screen] || current?.name || 'Dashboard'}
           </span>
+
+          {/* Admin global search — flex item between title and center */}
+          {isAdmin && (
+            <form
+              onSubmit={e => {
+                e.preventDefault()
+                if (searchVal.trim().length >= 3) navigate(`/search?q=${encodeURIComponent(searchVal.trim())}`)
+              }}
+              style={{ display: 'flex', alignItems: 'center', marginLeft: 16 }}
+            >
+              <input
+                type="search"
+                placeholder="Search all tasks…"
+                value={searchVal}
+                onChange={e => setSearchVal(e.target.value)}
+                style={{
+                  width: 200, padding: '5px 10px', borderRadius: 7,
+                  border: '1px solid var(--border)', background: 'var(--surface)',
+                  color: 'var(--text)', fontSize: 12, fontFamily: 'inherit', outline: 'none',
+                }}
+              />
+            </form>
+          )}
 
           {/* Project name + subtitle — absolute center of topbar */}
           <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', textAlign: 'center', pointerEvents: 'none' }}>

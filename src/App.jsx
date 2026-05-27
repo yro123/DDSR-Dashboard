@@ -8,6 +8,7 @@ import Hub      from './pages/Hub'
 import Meetings from './pages/Meetings'
 import Review   from './pages/Review'
 import Requests from './pages/Requests'
+import Search   from './pages/Search'
 import SignIn   from './pages/SignIn'
 import Invite   from './pages/Invite'
 import Admin    from './pages/Admin'
@@ -26,6 +27,7 @@ function AuthenticatedApp() {
         <Routes>
           <Route path="/" element={<Navigate to="/hinckley/tasks" replace />} />
           <Route path="/admin"           element={<Admin />} />
+          <Route path="/search"          element={<Search />} />
           <Route path="/:slug/tasks"    element={<Tasks />} />
           <Route path="/:slug/hub"      element={<Hub />} />
           <Route path="/:slug/meetings" element={<Meetings />} />
