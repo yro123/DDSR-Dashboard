@@ -11,6 +11,41 @@ export function createAuth(env) {
         isAdmin:    { type: 'boolean', required: false, defaultValue: false },
       },
     },
+    databaseHooks: {
+      session: {
+        create: {
+          async after(session) {
+            try {
+              const user = await env.ddsr_dashboard
+                .prepare('SELECT id, email, clientSlug FROM "user" WHERE id = ? LIMIT 1')
+                .bind(session.userId)
+                .first()
+
+              if (!user?.email || !user?.clientSlug) return
+
+              const person = await env.ddsr_dashboard
+                .prepare(`
+                  SELECT pe.id, pe.user_id FROM people pe
+                  JOIN projects pr ON pr.id = pe.project_id
+                  WHERE LOWER(pe.email) = LOWER(?) AND pr.slug = ?
+                  LIMIT 1
+                `)
+                .bind(user.email, user.clientSlug)
+                .first()
+
+              if (!person || person.user_id === user.id) return
+
+              await env.ddsr_dashboard
+                .prepare('UPDATE people SET user_id = ?, updated_at = ? WHERE id = ?')
+                .bind(user.id, new Date().toISOString(), person.id)
+                .run()
+            } catch (err) {
+              console.error('[auth hook] people link failed:', err)
+            }
+          },
+        },
+      },
+    },
     plugins: [
       magicLink({
         sendMagicLink: async ({ email, url }) => {

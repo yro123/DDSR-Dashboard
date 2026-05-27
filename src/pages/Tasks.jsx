@@ -419,9 +419,9 @@ export default function Tasks() {
             <option value="">Change status…</option>
             {statuses.map(s => <option key={s}>{s}</option>)}
           </select>
-          <select className="bulk-sel" onChange={e => { applyBulk('assignee_name', e.target.value); e.target.value = '' }} defaultValue="">
+          <select className="bulk-sel" onChange={e => { if (e.target.value) applyBulk('assignee_id', e.target.value); e.target.value = '' }} defaultValue="">
             <option value="">Reassign to…</option>
-            {assigneeNames.map(n => <option key={n}>{n}</option>)}
+            {people.filter(p => p.is_active).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
           <button className="bulk-btn" style={{ background: 'var(--red)', color: '#fff' }} onClick={bulkArchive}>Archive</button>
           <button className="bulk-btn" onClick={() => setBulkSelected(new Set())}>✕ Clear</button>

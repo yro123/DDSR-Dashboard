@@ -30,6 +30,9 @@ function UserRow({ user, allProjects, authFetch, onRefresh, currentUserId }) {
   const [isAdmin, setIsAdmin] = useState(!!user.isAdmin)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [settingPwd, setSettingPwd] = useState(false)
+  const [newPwd, setNewPwd] = useState('')
+  const [pwdStatus, setPwdStatus] = useState('idle')
   const isDirty = editSlug !== (user.clientSlug || '') || isAdmin !== !!user.isAdmin
 
   const save = async () => {
@@ -48,6 +51,23 @@ function UserRow({ user, allProjects, authFetch, onRefresh, currentUserId }) {
     await authFetch(`/api/users/${user.id}`, { method: 'DELETE' })
     setDeleting(false)
     onRefresh()
+  }
+
+  const savePassword = async () => {
+    setPwdStatus('saving')
+    const res = await authFetch(`/api/users/${user.id}/set-password`, {
+      method: 'POST',
+      body: JSON.stringify({ password: newPwd }),
+    })
+    const data = await res.json()
+    if (data.ok) {
+      setPwdStatus('ok')
+      setNewPwd('')
+      setTimeout(() => { setPwdStatus('idle'); setSettingPwd(false) }, 1500)
+    } else {
+      setPwdStatus(data.error || 'error')
+      setTimeout(() => setPwdStatus('idle'), 3000)
+    }
   }
 
   return (
@@ -77,20 +97,55 @@ function UserRow({ user, allProjects, authFetch, onRefresh, currentUserId }) {
         />
       </td>
       <td style={{ padding: '11px 12px' }}>
-        <div style={{ display: 'flex', gap: 6 }}>
-          {isDirty && (
-            <button onClick={save} disabled={saving} style={{
-              ...btnStyle, background: '#00D4C8', color: '#0A0A0A',
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {isDirty && (
+              <button onClick={save} disabled={saving} style={{
+                ...btnStyle, background: '#00D4C8', color: '#0A0A0A',
+              }}>
+                {saving ? '…' : 'Save'}
+              </button>
+            )}
+            <button onClick={() => { setSettingPwd(v => !v); setNewPwd(''); setPwdStatus('idle') }} style={{
+              ...btnStyle, background: 'var(--surface-2)', color: 'var(--text-muted)',
+              border: '1px solid var(--border-mid)',
             }}>
-              {saving ? '…' : 'Save'}
+              {settingPwd ? 'Cancel' : 'Set Password'}
             </button>
-          )}
-          {user.id !== currentUserId && (
-            <button onClick={del} disabled={deleting} style={{
-              ...btnStyle, background: 'var(--surface-2)', color: '#EF4444', border: '1px solid #EF4444',
-            }}>
-              {deleting ? '…' : 'Delete'}
-            </button>
+            {user.id !== currentUserId && (
+              <button onClick={del} disabled={deleting} style={{
+                ...btnStyle, background: 'var(--surface-2)', color: '#EF4444', border: '1px solid #EF4444',
+              }}>
+                {deleting ? '…' : 'Delete'}
+              </button>
+            )}
+          </div>
+          {settingPwd && (
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <input
+                type="password"
+                value={newPwd}
+                onChange={e => setNewPwd(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && newPwd.length >= 8 && savePassword()}
+                placeholder="New password (min 8 chars)"
+                style={{ ...inputStyle, fontSize: 12, width: 200 }}
+              />
+              <button
+                onClick={savePassword}
+                disabled={pwdStatus === 'saving' || newPwd.length < 8}
+                style={{
+                  ...btnStyle,
+                  background: pwdStatus === 'ok' ? '#16A34A' : '#00D4C8',
+                  color: pwdStatus === 'ok' ? '#fff' : '#0A0A0A',
+                  opacity: newPwd.length < 8 ? 0.5 : 1,
+                }}
+              >
+                {pwdStatus === 'saving' ? '…' : pwdStatus === 'ok' ? '✓ Saved' : 'Save'}
+              </button>
+              {pwdStatus !== 'idle' && pwdStatus !== 'saving' && pwdStatus !== 'ok' && (
+                <span style={{ fontSize: 11, color: '#EF4444' }}>{pwdStatus}</span>
+              )}
+            </div>
           )}
         </div>
       </td>

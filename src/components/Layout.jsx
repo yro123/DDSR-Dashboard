@@ -96,11 +96,19 @@ const IconReview = () => (
   </svg>
 )
 
+const IconTicket = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/>
+    <line x1="9" y1="12" x2="15" y2="12"/>
+  </svg>
+)
+
 const PAGE_TITLES = {
   tasks:    'Tasks',
   hub:      'Process Hub',
   meetings: 'Meeting Notes',
   review:   'Needs Review',
+  requests: 'Requests',
   admin:    'Admin',
 }
 
@@ -118,6 +126,7 @@ export default function Layout({ children }) {
     : pathname.includes('meetings') ? 'meetings'
     : pathname.includes('admin') ? 'admin'
     : pathname.includes('review') ? 'review'
+    : pathname.includes('requests') ? 'requests'
     : 'tasks'
 
   useEffect(() => {
@@ -134,8 +143,11 @@ export default function Layout({ children }) {
     { key: 'tasks',    label: 'Tasks',          Icon: IconTasks,    path: `/${slug}/tasks` },
     { key: 'hub',      label: 'Process Hub',    Icon: IconHub,      path: `/${slug}/hub` },
     { key: 'meetings', label: 'Meeting Notes',  Icon: IconMeetings, path: `/${slug}/meetings` },
-    { key: 'review',   label: 'Needs Review',   Icon: IconReview,   path: `/${slug}/review` },
-    ...(isAdmin ? [{ key: 'admin', label: 'Admin', Icon: IconAdmin, path: '/admin' }] : []),
+    { key: 'requests', label: 'Requests',       Icon: IconTicket,   path: `/${slug}/requests` },
+    ...(isAdmin ? [
+      { key: 'review', label: 'Needs Review',   Icon: IconReview,   path: `/${slug}/review` },
+      { key: 'admin',  label: 'Admin',          Icon: IconAdmin,    path: '/admin' },
+    ] : []),
   ]
 
   return (

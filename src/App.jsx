@@ -7,6 +7,7 @@ import Tasks    from './pages/Tasks'
 import Hub      from './pages/Hub'
 import Meetings from './pages/Meetings'
 import Review   from './pages/Review'
+import Requests from './pages/Requests'
 import SignIn   from './pages/SignIn'
 import Invite   from './pages/Invite'
 import Admin    from './pages/Admin'
@@ -29,6 +30,7 @@ function AuthenticatedApp() {
           <Route path="/:slug/hub"      element={<Hub />} />
           <Route path="/:slug/meetings" element={<Meetings />} />
           <Route path="/:slug/review"   element={<Review />} />
+          <Route path="/:slug/requests" element={<Requests />} />
         </Routes>
       </ConfigProvider>
     </ProjectProvider>

@@ -50,6 +50,8 @@ export default function PeopleTab({ projectSlug, authFetch, currentProject }) {
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState({})
   const [saving, setSaving] = useState(false)
+  const [users, setUsers] = useState([])
+  const [backfilling, setBackfilling] = useState(false)
 
   function reload() {
     authFetch(`/api/people?slug=${projectSlug}`)
@@ -62,6 +64,10 @@ export default function PeopleTab({ projectSlug, authFetch, currentProject }) {
     authFetch(`/api/people?slug=${projectSlug}`)
       .then(r => r.json())
       .then(data => { setPeople(Array.isArray(data) ? data : []); setLoading(false) })
+    authFetch('/api/users')
+      .then(r => r.json())
+      .then(data => setUsers(Array.isArray(data) ? data.filter(u => u.clientSlug === projectSlug) : []))
+      .catch(() => {})
   }, [projectSlug])
 
   async function addPerson() {
@@ -76,6 +82,19 @@ export default function PeopleTab({ projectSlug, authFetch, currentProject }) {
     setSaving(true)
     await authFetch(`/api/people/${editingId}`, { method: 'PUT', body: JSON.stringify(editForm) })
     setSaving(false); setEditingId(null); reload()
+  }
+
+  async function runBackfill() {
+    setBackfilling(true)
+    try {
+      const res = await authFetch('/api/admin/backfill-people-links', { method: 'POST' })
+      const data = await res.json()
+      alert(`Auto-link complete: ${data.linked} linked, ${data.skipped} skipped (no matching user email).`)
+      reload()
+    } catch {
+      alert('Backfill failed.')
+    }
+    setBackfilling(false)
   }
 
   async function toggleActive(person) {
@@ -110,7 +129,12 @@ export default function PeopleTab({ projectSlug, authFetch, currentProject }) {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>Team Members</h2>
-        <button onClick={() => setShowAdd(!showAdd)} style={btnStyle()}>+ Add Person</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={runBackfill} style={btnStyle('cancel')} title="Match people to users by email address">
+            {backfilling ? 'Linking…' : '⚡ Auto-link by email'}
+          </button>
+          <button onClick={() => setShowAdd(!showAdd)} style={btnStyle()}>+ Add Person</button>
+        </div>
       </div>
 
       {showAdd && (
@@ -141,7 +165,7 @@ export default function PeopleTab({ projectSlug, authFetch, currentProject }) {
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: 'var(--surface-2)' }}>
-              {['', 'Name', 'Role', 'Org Type', 'Email', 'Active', ''].map((h, i) => (
+              {['', 'Name', 'Role', 'Org Type', 'Email', 'User', 'Active', ''].map((h, i) => (
                 <th key={i} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 600, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '.04em', borderBottom: '1px solid var(--border)' }}>{h}</th>
               ))}
             </tr>
@@ -150,7 +174,7 @@ export default function PeopleTab({ projectSlug, authFetch, currentProject }) {
             {people.map(p => (
               <tr key={p.id} style={{ borderBottom: '1px solid var(--border)', opacity: p.is_active ? 1 : 0.5 }}>
                 {editingId === p.id ? (
-                  <td colSpan={7} style={{ padding: 14 }}>
+                  <td colSpan={8} style={{ padding: 14 }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 10 }}>
                       {[['Name', 'name'], ['Role', 'role'], ['Email', 'email']].map(([label, key]) => (
                         <div key={key}>
@@ -164,6 +188,15 @@ export default function PeopleTab({ projectSlug, authFetch, currentProject }) {
                           {orgTypes.map(t => <option key={t}>{t}</option>)}
                         </select>
                       </div>
+                      {users.length > 0 && (
+                        <div>
+                          <label style={labelStyle}>Linked User</label>
+                          <select value={editForm.user_id || ''} onChange={e => setEditForm(p => ({ ...p, user_id: e.target.value || null }))} style={{ ...inputStyle, padding: '5px 8px', fontSize: 12 }}>
+                            <option value="">— Not linked —</option>
+                            {users.map(u => <option key={u.id} value={u.id}>{u.name} ({u.email})</option>)}
+                          </select>
+                        </div>
+                      )}
                     </div>
                     <div style={{ marginBottom: 10 }}>
                       <label style={labelStyle}>Avatar Color</label>
@@ -190,6 +223,12 @@ export default function PeopleTab({ projectSlug, authFetch, currentProject }) {
                     <td style={{ padding: '10px 14px', fontSize: 12, color: 'var(--text-muted)' }}>{p.role || '—'}</td>
                     <td style={{ padding: '10px 14px', fontSize: 12, color: 'var(--text-muted)' }}>{p.org_type || '—'}</td>
                     <td style={{ padding: '10px 14px', fontSize: 12, color: 'var(--text-muted)' }}>{p.email || '—'}</td>
+                    <td style={{ padding: '10px 14px' }}>
+                      {p.user_id
+                        ? <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: '#D1FAE5', color: '#065F46' }}>Linked</span>
+                        : <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>—</span>
+                      }
+                    </td>
                     <td style={{ padding: '10px 14px' }}>
                       <button onClick={() => toggleActive(p)} style={{
                         width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer',
