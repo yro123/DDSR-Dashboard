@@ -948,6 +948,9 @@ input, textarea, select {
 
 input::placeholder, textarea::placeholder { color: var(--text-dim); }
 
+option { background: #FFFFFF; color: #0F172A; }
+html.dark option { background: #1E1E22; color: #EDEDEF; }
+
 input:focus, textarea:focus, select:focus {
   outline: none;
   border-color: var(--accent);
