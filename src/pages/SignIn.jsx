@@ -75,7 +75,7 @@ export default function SignIn() {
       }
       await afterAuth()
     } catch (err) {
-      setError(err?.message || 'Something went wrong. Please try again.')
+      setError(err?.message || err?.error?.message || 'Something went wrong. Please try again.')
     }
     setBusy(false)
   }
@@ -88,7 +88,7 @@ export default function SignIn() {
       if (err) throw err
       setSent(true)
     } catch (err) {
-      setError(err?.message || 'Failed to send link. Try again.')
+      setError(err?.message || err?.error?.message || 'Failed to send link. Try again.')
     }
     setBusy(false)
   }

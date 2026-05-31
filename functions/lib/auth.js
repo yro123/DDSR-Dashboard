@@ -1,10 +1,50 @@
 import { betterAuth } from 'better-auth'
 import { magicLink } from 'better-auth/plugins'
 
+// PBKDF2 password hashing via Web Crypto — runs on hardware in Cloudflare Workers,
+// avoids the CPU time limit that bcrypt (pure-JS) exceeds (Error 1102).
+const PBKDF2_ITERS = 100_000
+const PBKDF2_KEY_BYTES = 32
+
+async function hashPassword(password) {
+  const enc = new TextEncoder()
+  const salt = crypto.getRandomValues(new Uint8Array(16))
+  const key = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits'])
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: PBKDF2_ITERS },
+    key, PBKDF2_KEY_BYTES * 8,
+  )
+  const saltB64 = btoa(String.fromCharCode(...salt))
+  const hashB64 = btoa(String.fromCharCode(...new Uint8Array(bits)))
+  return `pbkdf2:sha256:${PBKDF2_ITERS}:${saltB64}:${hashB64}`
+}
+
+async function verifyPassword({ hash, password }) {
+  if (!hash?.startsWith('pbkdf2:')) return false
+  const [, , itersStr, saltB64, storedB64] = hash.split(':')
+  const enc = new TextEncoder()
+  const salt = Uint8Array.from(atob(saltB64), c => c.charCodeAt(0))
+  const key = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits'])
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: parseInt(itersStr, 10) },
+    key, PBKDF2_KEY_BYTES * 8,
+  )
+  const computed = atob(btoa(String.fromCharCode(...new Uint8Array(bits))))
+  const stored = atob(storedB64)
+  if (computed.length !== stored.length) return false
+  // timing-safe compare
+  let diff = 0
+  for (let i = 0; i < computed.length; i++) diff |= computed.charCodeAt(i) ^ stored.charCodeAt(i)
+  return diff === 0
+}
+
 export function createAuth(env) {
   return betterAuth({
     database: env.ddsr_dashboard,
-    emailAndPassword: { enabled: true },
+    emailAndPassword: {
+      enabled: true,
+      password: { hash: hashPassword, verify: verifyPassword },
+    },
     user: {
       additionalFields: {
         clientSlug: { type: 'string',  required: false, defaultValue: null },
@@ -15,6 +55,7 @@ export function createAuth(env) {
       session: {
         create: {
           async after(session) {
+            if (!env?.ddsr_dashboard) return
             try {
               const user = await env.ddsr_dashboard
                 .prepare('SELECT id, email, clientSlug FROM "user" WHERE id = ? LIMIT 1')

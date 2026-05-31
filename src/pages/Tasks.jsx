@@ -8,6 +8,80 @@ import { StatusPill, CategoryPill } from '../components/Pill'
 import { STATUS_DOT } from '../data/constants'
 import { useConfig } from '../context/ConfigContext'
 
+function CheckDropdown({ label, options, selected, onToggle, getColor }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (!open) return
+    const handler = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  const count = selected.size
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        className="sel"
+        onClick={() => setOpen(v => !v)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer',
+          background: count > 0 ? 'var(--accent-dim, #e0faf8)' : undefined,
+          borderColor: count > 0 ? 'var(--accent)' : undefined,
+          fontWeight: count > 0 ? 600 : 400,
+        }}
+      >
+        <span>{count > 0 ? `${count} status${count > 1 ? 'es' : ''}` : label}</span>
+        <span style={{ fontSize: 9, color: 'var(--text-dim)', marginLeft: 2 }}>{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 4px)', left: 0, zIndex: 200,
+          background: 'var(--surface)', border: '1px solid var(--border)',
+          borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,.12)',
+          minWidth: 170, padding: '6px 0',
+        }}>
+          {options.map(s => {
+            const checked = selected.has(s)
+            const color   = getColor ? getColor('task_status', s) : null
+            return (
+              <label key={s} style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '6px 14px', cursor: 'pointer',
+                background: checked ? 'var(--accent-dim, #e0faf8)' : 'transparent',
+                fontSize: 13,
+              }}>
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => onToggle(s)}
+                  style={{ accentColor: color || 'var(--accent)', cursor: 'pointer' }}
+                />
+                {color && (
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                )}
+                <span style={{ color: 'var(--text)', fontWeight: checked ? 600 : 400 }}>{s}</span>
+              </label>
+            )
+          })}
+          {selected.size > 0 && (
+            <button
+              onClick={() => { onToggle(null); setOpen(false) }}
+              style={{
+                display: 'block', width: '100%', padding: '5px 14px', marginTop: 4,
+                borderTop: '1px solid var(--border)', background: 'none', border: 'none',
+                borderRadius: 0, fontSize: 11, color: 'var(--text-muted)', cursor: 'pointer',
+                textAlign: 'left', fontFamily: 'inherit',
+              }}
+            >✕ Clear</button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function fmtDate(d) {
   if (!d) return ''
   try {
@@ -252,7 +326,7 @@ export default function Tasks() {
 
   const [searchQuery, setSearchQuery]          = useState('')
   const [groupBy, setGroupBy]                 = useState('person')
-  const [filterStatus, setFilterStatus]       = useState('')
+  const [filterStatuses, setFilterStatuses]   = useState(new Set())
   const [filterSourceType, setFilterSourceType] = useState('')
   const [filterSecondary, setFilterSecondary] = useState('')
   const [filterPrimary, setFilterPrimary]     = useState('')
@@ -303,7 +377,7 @@ export default function Tasks() {
          || t.assignee_name?.toLowerCase().includes(q)
          || t.workflow_name?.toLowerCase().includes(q))) return false
     }
-    if (filterStatus && t.status !== filterStatus) return false
+    if (filterStatuses.size > 0 && !filterStatuses.has(t.status)) return false
     if (filterSourceType && (t.source_type || 'manual') !== filterSourceType) return false
     if (filterSecondary) {
       if (groupBy === 'person'   && t.workflow_name  !== filterSecondary) return false
@@ -323,7 +397,7 @@ export default function Tasks() {
   const groupKeys = groupBy === 'person' ? assigneeNames : workflowNames
 
   const changeGroup = g => {
-    setGroupBy(g); setFilterSecondary(''); setFilterPrimary(''); setFilterSourceType(''); setShowAll(false); setOpenTaskId(null)
+    setGroupBy(g); setFilterSecondary(''); setFilterPrimary(''); setFilterSourceType(''); setFilterStatuses(new Set()); setShowAll(false); setOpenTaskId(null)
   }
 
   const toggleArchiveView = async () => {
@@ -447,10 +521,18 @@ export default function Tasks() {
                 : assigneeNames.map(n => <option key={n}>{n}</option>)
               }
             </select>
-            <select className="sel" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
-              <option value="">All statuses</option>
-              {statuses.map(s => <option key={s}>{s}</option>)}
-            </select>
+            <CheckDropdown
+              label="All statuses"
+              options={statuses}
+              selected={filterStatuses}
+              getColor={getColor}
+              onToggle={s => setFilterStatuses(prev => {
+                if (s === null) return new Set()
+                const next = new Set(prev)
+                prev.has(s) ? next.delete(s) : next.add(s)
+                return next
+              })}
+            />
           </>
         )}
         <select className="sel" value={filterSourceType} onChange={e => setFilterSourceType(e.target.value)}>

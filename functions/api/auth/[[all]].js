@@ -6,6 +6,6 @@ export async function onRequest({ request, env }) {
     return await auth.handler(request)
   } catch (err) {
     console.error('[auth handler]', err)
-    return Response.json({ error: err?.message || 'Auth error', stack: err?.stack }, { status: 500 })
+    return Response.json({ message: err?.message || 'Auth service error' }, { status: 500 })
   }
 }
