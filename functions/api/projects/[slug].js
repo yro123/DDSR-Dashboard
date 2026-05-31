@@ -1,4 +1,10 @@
-export async function onRequestGet({ env, params }) {
+import { requireProjectAccess, requireAdmin } from '../../lib/authz.js'
+
+export async function onRequestGet({ env, params, request }) {
+  // requireProjectAccess handles login + ownership check (admins bypass)
+  const access = await requireProjectAccess(request, env, { slug: params.slug })
+  if (access instanceof Response) return access
+
   const project = await env.ddsr_dashboard.prepare(`
     SELECT id, name, client_display_name, subtitle, slug, go_live_date, project_start_date, project_end_date, is_active, client_id
     FROM projects WHERE slug = ?
@@ -8,6 +14,13 @@ export async function onRequestGet({ env, params }) {
 }
 
 export async function onRequestPut({ env, params, request }) {
+  // Only admins should mutate core project settings
+  const session = await requireProjectAccess(request, env, { slug: params.slug })
+  if (session instanceof Response) return session
+
+  const adminCheck = requireAdmin(session)
+  if (adminCheck) return adminCheck
+
   const { name, subtitle, go_live_date, project_start_date, project_end_date } = await request.json()
   const now = new Date().toISOString()
 

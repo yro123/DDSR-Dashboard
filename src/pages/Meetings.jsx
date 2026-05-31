@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import Layout from '../components/Layout'
 import { useProject } from '../context/ProjectContext'
 import { useConfig } from '../context/ConfigContext'
+import { useQuery } from '../hooks/useApi'
+import { showToast } from '../components/Toast'
 
 const btnSave = {
   fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 6,
@@ -128,10 +130,20 @@ function TopicForm({ initial, onSave, onCancel }) {
 }
 
 export default function Meetings() {
-  const { slug, authFetch, isAdmin } = useProject()
+  const { slug, api, isAdmin } = useProject()
+
+  const endpoint = isAdmin ? `&all=1` : ''
+  const { data: meetingsData = [], loading: meetingsLoading, refetch: reloadMeetings } = useQuery(
+    () => api.get(`/api/meetings?slug=${slug}${endpoint}`),
+    [slug, isAdmin]
+  )
+  const { data: peopleData = [] } = useQuery(
+    () => api.get(`/api/people?slug=${slug}`),
+    [slug]
+  )
+
   const [meetings, setMeetings] = useState([])
   const [people, setPeople]     = useState([])
-  const [loading, setLoading]   = useState(true)
   const [openId, setOpenId]     = useState(null)
 
   // Meeting-level state
@@ -154,75 +166,71 @@ export default function Meetings() {
   const [addingActionFor, setAddingActionFor] = useState(null)
   const [newActionForm, setNewActionForm]     = useState({ action_text: '', assignee_name: '' })
 
-  useEffect(() => {
-    setLoading(true)
-    const endpoint = isAdmin ? `&all=1` : ''
-    Promise.all([
-      authFetch(`/api/meetings?slug=${slug}${endpoint}`).then(r => r.json()),
-      authFetch(`/api/people?slug=${slug}`).then(r => r.json()),
-    ]).then(([m, p]) => { setMeetings(Array.isArray(m) ? m : []); setPeople(Array.isArray(p) ? p : []); setLoading(false) })
-  }, [slug, authFetch, isAdmin])
+  // Sync hook data
+  useEffect(() => { setMeetings(meetingsData) }, [meetingsData])
+  useEffect(() => { setPeople(peopleData) }, [peopleData])
 
-  const reload = () => {
-    const endpoint = isAdmin ? `&all=1` : ''
-    authFetch(`/api/meetings?slug=${slug}${endpoint}`).then(r => r.json()).then(m => setMeetings(Array.isArray(m) ? m : []))
-  }
+  const loading = meetingsLoading
+
+  const reload = () => reloadMeetings()
 
   // Meeting CRUD
   async function createMeeting(data) {
     if (!data.title || !data.meeting_date) return
-    await authFetch('/api/meetings', { method: 'POST', body: JSON.stringify({ slug, ...data }) })
+    await api.post('/api/meetings', { slug, ...data })
     setAddingNew(false); reload()
   }
   async function updateMeeting(id, data) {
-    await authFetch(`/api/meetings/${id}`, { method: 'PUT', body: JSON.stringify(data) })
+    await api.put(`/api/meetings/${id}`, data)
     setEditMeeting(null); reload()
   }
   async function deleteMeeting(id) {
-    if (!confirm('Delete this meeting and all its topics?')) return
-    await authFetch(`/api/meetings/${id}`, { method: 'DELETE' }); reload()
+    if (!window.confirm('Delete this meeting and all its topics?')) return
+    await api.del(`/api/meetings/${id}`)
+    reload()
   }
 
   // Topic CRUD
   async function createTopic(meetingId, data) {
-    await authFetch('/api/meeting-topics', { method: 'POST', body: JSON.stringify({ meeting_id: meetingId, ...data }) })
+    await api.post('/api/meeting-topics', { meeting_id: meetingId, ...data })
     setAddingTopicFor(null); reload()
   }
   async function updateTopic(id, data) {
-    await authFetch(`/api/meeting-topics/${id}`, { method: 'PUT', body: JSON.stringify(data) })
+    await api.put(`/api/meeting-topics/${id}`, data)
     setEditTopicId(null); reload()
   }
   async function deleteTopic(id) {
-    if (!confirm('Delete this topic and all its notes?')) return
-    await authFetch(`/api/meeting-topics/${id}`, { method: 'DELETE' }); reload()
+    if (!window.confirm('Delete this topic and all its notes?')) return
+    await api.del(`/api/meeting-topics/${id}`)
+    reload()
   }
 
   // Note CRUD
   async function createNote(topicId) {
     if (!newNoteText.trim()) return
-    await authFetch('/api/meeting-notes', { method: 'POST', body: JSON.stringify({ topic_id: topicId, note_text: newNoteText }) })
+    await api.post('/api/meeting-notes', { topic_id: topicId, note_text: newNoteText })
     setAddingNoteFor(null); setNewNoteText(''); reload()
   }
   async function updateNote(id) {
-    await authFetch(`/api/meeting-notes/${id}`, { method: 'PUT', body: JSON.stringify({ note_text: noteText }) })
+    await api.put(`/api/meeting-notes/${id}`, { note_text: noteText })
     setEditNoteId(null); reload()
   }
   async function deleteNote(id) {
-    await authFetch(`/api/meeting-notes/${id}`, { method: 'DELETE' }); reload()
+    await api.del(`/api/meeting-notes/${id}`); reload()
   }
 
   // Action CRUD
   async function createAction(topicId) {
     if (!newActionForm.action_text.trim()) return
-    await authFetch('/api/meeting-action-items', { method: 'POST', body: JSON.stringify({ topic_id: topicId, ...newActionForm }) })
+    await api.post('/api/meeting-action-items', { topic_id: topicId, ...newActionForm })
     setAddingActionFor(null); setNewActionForm({ action_text: '', assignee_name: '' }); reload()
   }
   async function updateAction(id) {
-    await authFetch(`/api/meeting-action-items/${id}`, { method: 'PUT', body: JSON.stringify(actionForm) })
+    await api.put(`/api/meeting-action-items/${id}`, actionForm)
     setEditActionId(null); reload()
   }
   async function deleteAction(id) {
-    await authFetch(`/api/meeting-action-items/${id}`, { method: 'DELETE' }); reload()
+    await api.del(`/api/meeting-action-items/${id}`); reload()
   }
 
   if (loading) return <Layout><div style={{ padding: 40, color: 'var(--text-dim)' }}>Loading…</div></Layout>

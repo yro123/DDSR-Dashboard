@@ -7,6 +7,7 @@ import Avatar from '../components/Avatar'
 import { STATUS_DOT } from '../data/constants'
 import { useProject } from '../context/ProjectContext'
 import { useTheme } from '../context/ThemeContext'
+import { useQuery } from '../hooks/useApi'
 
 const ACCENT = {
   '#F59E0B': '#B45309', '#22C55E': '#16793A', '#3B82F6': '#1D4ED8',
@@ -137,11 +138,21 @@ function StepList({ wfId, steps, isAdmin, openStep, setOpenStep, editingStepId, 
 }
 
 export default function Hub() {
-  const { slug, authFetch, isAdmin } = useProject()
+  const { slug, api, isAdmin } = useProject()
   const { dark } = useTheme()
+
+  // Use new hooks (item #5)
+  const { data: workflowsData = [], loading: wfLoading, refetch: reloadWorkflows } = useQuery(
+    () => api.get(`/api/workflows?slug=${slug}`),
+    [slug]
+  )
+  const { data: tasksData = [] } = useQuery(
+    () => api.get(`/api/tasks?slug=${slug}`),
+    [slug]
+  )
+
   const [workflows, setWorkflows] = useState([])
   const [tasks, setTasks]         = useState([])
-  const [loading, setLoading]     = useState(true)
   const [openWf, setOpenWf]       = useState(null)
   const [openStep, setOpenStep]   = useState(null)
   const [docOpen, setDocOpen]     = useState(false)
@@ -151,16 +162,11 @@ export default function Hub() {
   const [editingStepId, setEditingStepId] = useState(null)
   const [editForm, setEditForm]           = useState({})
 
-  useEffect(() => {
-    setLoading(true)
-    Promise.all([
-      authFetch(`/api/workflows?slug=${slug}`).then(r => r.json()),
-      authFetch(`/api/tasks?slug=${slug}`).then(r => r.json()),
-    ]).then(([w, t]) => { setWorkflows(w); setTasks(t); setLoading(false) })
-  }, [slug, authFetch])
+  // Sync hook data to local state (for existing mutation logic)
+  useEffect(() => { setWorkflows(workflowsData) }, [workflowsData])
+  useEffect(() => { setTasks(tasksData) }, [tasksData])
 
-  const reloadWorkflows = () =>
-    authFetch(`/api/workflows?slug=${slug}`).then(r => r.json()).then(setWorkflows)
+  const loading = wfLoading
 
   const STEP_CYCLE = { 'Not Started': 'In Progress', 'In Progress': 'Done', 'Done': 'Not Started' }
 
@@ -172,24 +178,18 @@ export default function Hub() {
       ? { ...w, steps: w.steps.map(s => s.id === stepId ? { ...s, status: next } : s) }
       : w
     ))
-    authFetch(`/api/workflow-steps/${stepId}`, { method: 'PUT', body: JSON.stringify({ status: next }) })
-      .then(r => { if (!r.ok) reloadWorkflows() })
+    api.put(`/api/workflow-steps/${stepId}`, { status: next }).catch(() => reloadWorkflows())
   }
 
   async function saveWorkflowDesc(id) {
-    await authFetch(`/api/workflows/${id}`, {
-      method: 'PUT', body: JSON.stringify({ description: editForm.description }),
-    })
+    await api.put(`/api/workflows/${id}`, { description: editForm.description })
     setWorkflows(prev => prev.map(w => w.id === id ? { ...w, description: editForm.description } : w))
     setEditingWfId(null)
   }
 
   async function saveStep(stepId) {
     const points = (editForm.points || '').split('\n').filter(p => p.trim())
-    await authFetch(`/api/workflow-steps/${stepId}`, {
-      method: 'PUT',
-      body: JSON.stringify({ label: editForm.label, summary: editForm.summary, points }),
-    })
+    await api.put(`/api/workflow-steps/${stepId}`, { label: editForm.label, summary: editForm.summary, points })
     setEditingStepId(null)
     reloadWorkflows()
   }
@@ -205,7 +205,7 @@ export default function Hub() {
         .map((s, idx) => ({ s, newOrder: idx }))
         .filter(({ s, newOrder }) => s.sort_order !== newOrder)
       await Promise.all(updates.map(({ s, newOrder }) =>
-        authFetch(`/api/workflow-steps/${s.id}`, { method: 'PUT', body: JSON.stringify({ sort_order: newOrder }) })
+        api.put(`/api/workflow-steps/${s.id}`, { sort_order: newOrder })
       ))
       reloadWorkflows()
     }

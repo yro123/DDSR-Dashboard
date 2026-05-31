@@ -1,6 +1,7 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { useEffect } from 'react'
 import { authClient } from './lib/auth-client'
-import { ProjectProvider } from './context/ProjectContext'
+import { ProjectProvider, useProject } from './context/ProjectContext'
 import { ConfigProvider } from './context/ConfigContext'
 import { ThemeProvider } from './context/ThemeContext'
 import Tasks    from './pages/Tasks'
@@ -25,7 +26,8 @@ function AuthenticatedApp() {
     <ProjectProvider>
       <ConfigProvider>
         <Routes>
-          <Route path="/" element={<Navigate to="/hinckley/tasks" replace />} />
+          {/* Smart default landing: admins go to Admin panel, everyone else goes to their first accessible client */}
+          <Route path="/" element={<DefaultRedirect />} />
           <Route path="/admin"           element={<Admin />} />
           <Route path="/search"          element={<Search />} />
           <Route path="/:slug/tasks"    element={<Tasks />} />
@@ -37,6 +39,29 @@ function AuthenticatedApp() {
       </ConfigProvider>
     </ProjectProvider>
   )
+}
+
+function DefaultRedirect() {
+  const { clients, isAdmin, currentClient, allProjects } = useProject()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (clients.length === 0) return // still loading
+
+    if (isAdmin) {
+      navigate('/admin', { replace: true })
+    } else {
+      // Land regular users on their current (or first) accessible client
+      const target = currentClient?.slug || allProjects[0]?.slug || clients[0]?.slug
+      if (target) {
+        navigate(`/${target}/tasks`, { replace: true })
+      } else {
+        navigate('/admin', { replace: true })
+      }
+    }
+  }, [clients, isAdmin, currentClient, allProjects, navigate])
+
+  return null
 }
 
 export default function App() {

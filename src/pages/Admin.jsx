@@ -13,22 +13,29 @@ import UsersTab from './admin/UsersTab'
 const TABS = ['Meetings', 'People', 'Documents', 'Project Settings', 'Config', 'Clients', 'Users']
 
 export default function Admin() {
-  const { isAdmin, clientSlug, allProjects, slug: urlSlug, authFetch } = useProject()
+  const { isAdmin, allProjects, currentClient } = useProject()
   const { dark, toggle } = useTheme()
   const [tab, setTab] = useState('Meetings')
-  const [projectSlug, setProjectSlug] = useState('')
 
+  // Local selection for tabs that scope to a specific client (People, Documents, Project Settings, Config, Meetings).
+  // This is independent of the main sidebar "current client" because Admin is a global view.
+  const [adminClientSlug, setAdminClientSlug] = useState('')
+
+  // Default the admin-scoped client selector to the global currentClient (from sidebar) or first available
   useEffect(() => {
-    if (!projectSlug && allProjects.length > 0) {
-      setProjectSlug(urlSlug || allProjects[0].slug)
+    if (!adminClientSlug && allProjects.length > 0) {
+      const preferred = currentClient?.slug || allProjects[0]?.slug
+      if (preferred) setAdminClientSlug(preferred)
     }
-  }, [allProjects, urlSlug])
+  }, [allProjects, currentClient, adminClientSlug])
 
   if (!isAdmin) {
-    return <Navigate to={`/${clientSlug || 'hinckley'}/tasks`} replace />
+    // Non-admins should not reach the full admin panel.
+    const fallback = currentClient?.slug || allProjects[0]?.slug
+    return <Navigate to={fallback ? `/${fallback}/tasks` : '/'} replace />
   }
 
-  const currentProject = allProjects.find(p => p.slug === projectSlug) || allProjects[0]
+  const showClientSelector = !['Clients', 'Users'].includes(tab)
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
@@ -59,10 +66,10 @@ export default function Admin() {
         </div>
 
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
-          {tab !== 'Clients' && tab !== 'Users' && (
+          {showClientSelector && allProjects.length > 0 && (
             <select
-              value={projectSlug}
-              onChange={e => setProjectSlug(e.target.value)}
+              value={adminClientSlug}
+              onChange={e => setAdminClientSlug(e.target.value)}
               style={{
                 border: '1px solid var(--border)', borderRadius: 7, padding: '5px 10px',
                 fontSize: 12, color: 'var(--text)', background: 'var(--surface)', cursor: 'pointer',
@@ -76,25 +83,27 @@ export default function Admin() {
           <button className="theme-toggle" onClick={toggle} title={dark ? 'Light mode' : 'Dark mode'}>
             {dark ? '☀' : '☾'}
           </button>
-          <a href={`/${projectSlug}/tasks`} style={{
-            fontSize: 12, color: 'var(--text-muted)', textDecoration: 'none',
-            padding: '5px 12px', border: '1px solid var(--border)', borderRadius: 7,
-            background: 'var(--surface)',
-          }}>
-            ← Dashboard
-          </a>
+          {adminClientSlug && (
+            <a href={`/${adminClientSlug}/tasks`} style={{
+              fontSize: 12, color: 'var(--text-muted)', textDecoration: 'none',
+              padding: '5px 12px', border: '1px solid var(--border)', borderRadius: 7,
+              background: 'var(--surface)',
+            }}>
+              ← Back to {adminClientSlug}
+            </a>
+          )}
         </div>
       </div>
 
-      {/* Tab content */}
+      {/* Tab content — pass the admin-selected client slug only to tabs that need it */}
       <div style={{ padding: '28px 32px', maxWidth: 980, margin: '0 auto' }}>
-        {tab === 'Meetings'          && <MeetingsTab  projectSlug={projectSlug} authFetch={authFetch} />}
-        {tab === 'People'            && <PeopleTab    projectSlug={projectSlug} authFetch={authFetch} currentProject={currentProject} />}
-        {tab === 'Documents'         && <DocumentsTab projectSlug={projectSlug} authFetch={authFetch} />}
-        {tab === 'Project Settings'  && <ProjectTab   projectSlug={projectSlug} authFetch={authFetch} />}
-        {tab === 'Config'            && <ConfigTab     projectSlug={projectSlug} authFetch={authFetch} />}
-        {tab === 'Clients'           && <ClientsTab   authFetch={authFetch} />}
-        {tab === 'Users'             && <UsersTab     authFetch={authFetch} />}
+        {tab === 'Meetings'          && <MeetingsTab  projectSlug={adminClientSlug} />}
+        {tab === 'People'            && <PeopleTab    projectSlug={adminClientSlug} />}
+        {tab === 'Documents'         && <DocumentsTab />}
+        {tab === 'Project Settings'  && <ProjectTab   />}
+        {tab === 'Config'            && <ConfigTab     />}
+        {tab === 'Clients'           && <ClientsTab   />}
+        {tab === 'Users'             && <UsersTab     />}
       </div>
     </div>
   )

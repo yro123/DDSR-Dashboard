@@ -46,16 +46,15 @@ const ConfigContext = createContext({
 export function useConfig() { return useContext(ConfigContext) }
 
 export function ConfigProvider({ children }) {
-  const { slug, authFetch } = useProject()
+  const { slug, api } = useProject()
   const [config, setConfig] = useState(null)
 
   const reload = useCallback(() => {
-    if (!slug || !authFetch) return
-    authFetch(`/api/config?slug=${slug}`)
-      .then(r => r.json())
+    if (!slug || !api) return
+    api.get(`/api/config?slug=${slug}`)
       .then(setConfig)
-      .catch(() => {})
-  }, [slug, authFetch])
+      .catch(() => setConfig(null))
+  }, [slug, api])
 
   useEffect(() => { reload() }, [reload])
 

@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { DndContext, PointerSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { useProject } from '../../context/ProjectContext'
+import { showToast } from '../../components/Toast'
 
 const CATEGORY_META = [
   { key: 'task_status',   label: 'Task Statuses',         hasColor: true  },
@@ -32,31 +34,32 @@ function ColorSwatch({ color }) {
   )
 }
 
-function SortableItemRow({ item, hasColor, isColorPalette, authFetch, onReload }) {
+function SortableItemRow({ item, hasColor, isColorPalette, onReload }) {
+  const { api } = useProject()
   const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({ id: item.id })
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState({ value: item.value, color: item.color || '' })
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
   const save = async () => {
-    await authFetch(`/api/config/${item.id}`, {
-      method: 'PUT',
-      body: JSON.stringify({
-        value: isColorPalette ? (form.color || form.value) : form.value,
-        color: form.color || null,
-        sort_order: item.sort_order,
-        is_active: item.is_active,
-      }),
+    await api.put(`/api/config/${item.id}`, {
+      value: isColorPalette ? (form.color || form.value) : form.value,
+      color: form.color || null,
+      sort_order: item.sort_order,
+      is_active: item.is_active,
     })
     setEditing(false)
     onReload()
   }
 
   const remove = async () => {
-    if (!confirm(`Delete "${item.value}"?`)) return
-    const res = await authFetch(`/api/config/${item.id}`, { method: 'DELETE' })
-    if (res.ok) onReload()
-    else { const j = await res.json(); alert(j.error || 'Delete failed') }
+    if (!window.confirm(`Delete "${item.value}"?`)) return
+    try {
+      await api.del(`/api/config/${item.id}`)
+      onReload()
+    } catch (err) {
+      showToast(err.message || 'Delete failed', 'error')
+    }
   }
 
   const rowStyle = {
@@ -126,7 +129,8 @@ function SortableItemRow({ item, hasColor, isColorPalette, authFetch, onReload }
   )
 }
 
-function AddItemForm({ category, projectId, hasColor, isColorPalette, authFetch, onReload, nextOrder }) {
+function AddItemForm({ category, projectId, hasColor, isColorPalette, onReload, nextOrder }) {
+  const { api } = useProject()
   const [form, setForm] = useState({ value: '', color: '#3B82F6' })
   const [busy, setBusy] = useState(false)
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
@@ -141,10 +145,9 @@ function AddItemForm({ category, projectId, hasColor, isColorPalette, authFetch,
       color: (hasColor || isColorPalette) ? form.color : null,
       sort_order: nextOrder,
     }
-    const res = await authFetch('/api/config', { method: 'POST', body: JSON.stringify(payload) })
+    await api.post('/api/config', payload)
     setBusy(false)
-    if (res.ok) { setForm({ value: '', color: '#3B82F6' }); onReload() }
-    else { const j = await res.json(); alert(j.error || 'Failed to add') }
+    setForm({ value: '', color: '#3B82F6' }); onReload()
   }
 
   return (
@@ -176,7 +179,8 @@ function AddItemForm({ category, projectId, hasColor, isColorPalette, authFetch,
   )
 }
 
-function CategorySection({ meta, items, globalItems, projectId, isOverride, authFetch, onReload }) {
+function CategorySection({ meta, items, globalItems, projectId, isOverride, onReload }) {
+  const { api } = useProject()
   const { key, label, hasColor, isColorPalette } = meta
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
@@ -190,7 +194,7 @@ function CategorySection({ meta, items, globalItems, projectId, isOverride, auth
       .map((item, idx) => ({ item, newOrder: idx }))
       .filter(({ item, newOrder }) => item.sort_order !== newOrder)
     await Promise.all(updates.map(({ item, newOrder }) =>
-      authFetch(`/api/config/${item.id}`, { method: 'PUT', body: JSON.stringify({ sort_order: newOrder }) })
+      api.put(`/api/config/${item.id}`, { sort_order: newOrder })
     ))
     onReload()
   }
@@ -198,24 +202,21 @@ function CategorySection({ meta, items, globalItems, projectId, isOverride, auth
   const overrideProject = async () => {
     const base = globalItems.length > 0 ? globalItems : items
     for (let i = 0; i < base.length; i++) {
-      await authFetch('/api/config', {
-        method: 'POST',
-        body: JSON.stringify({
-          project_id: projectId,
-          category: key,
-          value: base[i].value,
-          color: base[i].color || null,
-          sort_order: i,
-        }),
+      await api.post('/api/config', {
+        project_id: projectId,
+        category: key,
+        value: base[i].value,
+        color: base[i].color || null,
+        sort_order: i,
       })
     }
     onReload()
   }
 
   const resetToGlobal = async () => {
-    if (!confirm('Remove all project-specific overrides for this category? It will revert to global values.')) return
+    if (!window.confirm('Remove all project-specific overrides for this category? It will revert to global values.')) return
     for (const item of items) {
-      if (!item.is_system) await authFetch(`/api/config/${item.id}`, { method: 'DELETE' })
+      if (!item.is_system) await api.del(`/api/config/${item.id}`)
     }
     onReload()
   }
@@ -270,7 +271,6 @@ function CategorySection({ meta, items, globalItems, projectId, isOverride, auth
                   item={item}
                   hasColor={hasColor}
                   isColorPalette={isColorPalette}
-                  authFetch={authFetch}
                   onReload={onReload}
                 />
               ))}
@@ -281,7 +281,6 @@ function CategorySection({ meta, items, globalItems, projectId, isOverride, auth
             projectId={isOverride ? projectId : null}
             hasColor={hasColor}
             isColorPalette={isColorPalette}
-            authFetch={authFetch}
             onReload={onReload}
             nextOrder={items.length}
           />
@@ -291,7 +290,9 @@ function CategorySection({ meta, items, globalItems, projectId, isOverride, auth
   )
 }
 
-export default function ConfigTab({ projectSlug, authFetch }) {
+export default function ConfigTab() {
+  const { api, currentClient } = useProject()
+  const projectSlug = currentClient?.slug
   const [scope, setScope] = useState('global')  // 'global' | 'project'
   const [configData, setConfigData] = useState(null)
 
@@ -299,8 +300,8 @@ export default function ConfigTab({ projectSlug, authFetch }) {
     const url = scope === 'global'
       ? '/api/config?global=1'
       : `/api/config?slug=${projectSlug}`
-    authFetch(url).then(r => r.json()).then(setConfigData).catch(() => {})
-  }, [scope, projectSlug, authFetch])
+    api.get(url).then(setConfigData).catch(() => {})
+  }, [scope, projectSlug, api])
 
   useEffect(() => { reload() }, [reload])
 
@@ -344,7 +345,6 @@ export default function ConfigTab({ projectSlug, authFetch }) {
             globalItems={global}
             projectId={projectId}
             isOverride={isOverride}
-            authFetch={authFetch}
             onReload={reload}
           />
         )

@@ -1,11 +1,22 @@
 export async function onRequest({ env }) {
+  // Public health check — never leak secrets or schema
+  const hasSecret = !!env.BETTER_AUTH_SECRET
+  const hasDb = !!env.ddsr_dashboard
+
+  let dbOk = false
   try {
-    const tables = await env.ddsr_dashboard
-      .prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
-      .all()
-    const secret = !!env.BETTER_AUTH_SECRET
-    return Response.json({ ok: true, secret, tables: tables.results.map(r => r.name) })
-  } catch (err) {
-    return Response.json({ ok: false, error: err?.message }, { status: 500 })
+    if (hasDb) {
+      await env.ddsr_dashboard.prepare('SELECT 1').first()
+      dbOk = true
+    }
+  } catch {
+    dbOk = false
   }
+
+  return Response.json({
+    ok: hasDb && hasSecret && dbOk,
+    db: dbOk,
+    auth: hasSecret,
+    timestamp: new Date().toISOString(),
+  })
 }

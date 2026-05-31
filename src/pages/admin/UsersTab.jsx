@@ -25,47 +25,48 @@ function Badge({ label, color }) {
   )
 }
 
-function UserRow({ user, allProjects, authFetch, onRefresh, currentUserId }) {
-  const [editSlug, setEditSlug] = useState(user.clientSlug || '')
+function UserRow({ user, allProjects, onRefresh, currentUserId }) {
+  const { api } = useProject()
+  // Source of truth: memberships from user_clients join table.
+  const initialSlug = user.memberships?.[0]?.client_slug || ''
+  const [editSlug, setEditSlug] = useState(initialSlug)
   const [isAdmin, setIsAdmin] = useState(!!user.isAdmin)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [settingPwd, setSettingPwd] = useState(false)
   const [newPwd, setNewPwd] = useState('')
   const [pwdStatus, setPwdStatus] = useState('idle')
-  const isDirty = editSlug !== (user.clientSlug || '') || isAdmin !== !!user.isAdmin
+
+  const isDirty = editSlug !== initialSlug || isAdmin !== !!user.isAdmin
 
   const save = async () => {
     setSaving(true)
-    await authFetch(`/api/users/${user.id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ clientSlug: editSlug || null, isAdmin }),
+    // clientSlugs[] is the only format that matters. It syncs the user_clients join table.
+    await api.put(`/api/users/${user.id}`, { 
+      clientSlugs: editSlug ? [editSlug] : [], 
+      isAdmin 
     })
     setSaving(false)
     onRefresh()
   }
 
   const del = async () => {
-    if (!confirm(`Delete ${user.email}? This cannot be undone.`)) return
+    if (!window.confirm(`Delete ${user.email}? This cannot be undone.`)) return
     setDeleting(true)
-    await authFetch(`/api/users/${user.id}`, { method: 'DELETE' })
+    await api.del(`/api/users/${user.id}`)
     setDeleting(false)
     onRefresh()
   }
 
   const savePassword = async () => {
     setPwdStatus('saving')
-    const res = await authFetch(`/api/users/${user.id}/set-password`, {
-      method: 'POST',
-      body: JSON.stringify({ password: newPwd }),
-    })
-    const data = await res.json()
-    if (data.ok) {
+    const data = await api.post(`/api/users/${user.id}/set-password`, { password: newPwd })
+    if (data?.ok) {
       setPwdStatus('ok')
       setNewPwd('')
       setTimeout(() => { setPwdStatus('idle'); setSettingPwd(false) }, 1500)
     } else {
-      setPwdStatus(data.error || 'error')
+      setPwdStatus(data?.error || 'error')
       setTimeout(() => setPwdStatus('idle'), 3000)
     }
   }
@@ -153,8 +154,12 @@ function UserRow({ user, allProjects, authFetch, onRefresh, currentUserId }) {
   )
 }
 
-function InviteSection({ authFetch, allProjects }) {
-  const [clientSlug, setClientSlug] = useState(allProjects[0]?.slug || '')
+function InviteSection({ allProjects }) {
+  const { api, currentClient } = useProject()
+  // Which client/workspace the new invite targets (drives the invitations.client_id row).
+  const [targetSlug, setTargetSlug] = useState(
+    (currentClient?.slug) || allProjects[0]?.slug || ''
+  )
   const [email, setEmail] = useState('')
   const [creating, setCreating] = useState(false)
   const [invites, setInvites] = useState([])
@@ -162,7 +167,7 @@ function InviteSection({ authFetch, allProjects }) {
   const [copied, setCopied] = useState(false)
 
   const loadInvites = () => {
-    authFetch('/api/invitations').then(r => r.json()).then(data => {
+    api.get('/api/invitations').then(data => {
       if (Array.isArray(data)) setInvites(data)
     }).catch(() => {})
   }
@@ -170,15 +175,11 @@ function InviteSection({ authFetch, allProjects }) {
   useEffect(() => { loadInvites() }, [])
 
   const createInvite = async () => {
-    if (!clientSlug) return
+    if (!targetSlug) return
     setCreating(true)
     setGeneratedLink('')
     try {
-      const res = await authFetch('/api/invitations', {
-        method: 'POST',
-        body: JSON.stringify({ clientSlug, email: email.trim() || undefined }),
-      })
-      const data = await res.json()
+      const data = await api.post('/api/invitations', { slug: targetSlug, email: email.trim() || undefined })
       if (data.url) {
         setGeneratedLink(data.url)
         setEmail('')
@@ -190,7 +191,7 @@ function InviteSection({ authFetch, allProjects }) {
   }
 
   const revokeInvite = async (token) => {
-    await authFetch(`/api/invitations/${token}`, { method: 'DELETE' })
+    await api.del(`/api/invitations/${token}`)
     loadInvites()
   }
 
@@ -221,8 +222,8 @@ function InviteSection({ authFetch, allProjects }) {
           <div>
             <div style={{ ...labelStyle, marginBottom: 5 }}>Project</div>
             <select
-              value={clientSlug}
-              onChange={e => setClientSlug(e.target.value)}
+              value={targetSlug}
+              onChange={e => setTargetSlug(e.target.value)}
               style={{ ...inputStyle }}
             >
               {allProjects.map(p => (
@@ -240,7 +241,7 @@ function InviteSection({ authFetch, allProjects }) {
               style={{ ...inputStyle, width: 220 }}
             />
           </div>
-          <button onClick={createInvite} disabled={creating || !clientSlug} style={{
+          <button onClick={createInvite} disabled={creating || !targetSlug} style={{
             ...btnStyle, background: '#00D4C8', color: '#0A0A0A', padding: '7px 16px',
           }}>
             {creating ? '…' : 'Generate Link'}
@@ -322,8 +323,8 @@ function InviteSection({ authFetch, allProjects }) {
   )
 }
 
-export default function UsersTab({ authFetch }) {
-  const { allProjects, session } = useProject()
+export default function UsersTab() {
+  const { allProjects, session, api } = useProject()
   const currentUserId = session?.user?.id
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -331,7 +332,7 @@ export default function UsersTab({ authFetch }) {
 
   const loadUsers = () => {
     setLoading(true)
-    authFetch('/api/users').then(r => r.json()).then(data => {
+    api.get('/api/users').then(data => {
       if (Array.isArray(data)) setUsers(data)
       setLoading(false)
     }).catch(() => setLoading(false))
@@ -379,7 +380,7 @@ export default function UsersTab({ authFetch }) {
                 key={u.id}
                 user={u}
                 allProjects={allProjects}
-                authFetch={authFetch}
+                api={api}
                 onRefresh={loadUsers}
                 currentUserId={currentUserId}
               />
@@ -388,7 +389,7 @@ export default function UsersTab({ authFetch }) {
         </table>
       </div>
 
-      <InviteSection authFetch={authFetch} allProjects={allProjects} />
+      <InviteSection api={api} allProjects={allProjects} />
     </div>
   )
 }

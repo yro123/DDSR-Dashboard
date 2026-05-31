@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { useProject } from '../../context/ProjectContext'
+import { showToast } from '../../components/Toast'
 
 function slugify(str) {
   return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
@@ -22,7 +24,8 @@ const btnCancel = {
   padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
 }
 
-export default function ClientsTab({ authFetch }) {
+export default function ClientsTab() {
+  const { api } = useProject()
   const [clients, setClients] = useState([])
   const [loading, setLoading] = useState(true)
   const [openClientId, setOpenClientId] = useState(null)
@@ -34,8 +37,7 @@ export default function ClientsTab({ authFetch }) {
   const [saving, setSaving] = useState(false)
 
   function reload() {
-    authFetch('/api/clients')
-      .then(r => r.json())
+    api.get('/api/clients')
       .then(data => { setClients(Array.isArray(data) ? data : []); setLoading(false) })
   }
 
@@ -44,45 +46,45 @@ export default function ClientsTab({ authFetch }) {
   async function createClient() {
     if (!newClient.name || !newClient.slug) return
     setSaving(true)
-    const res = await authFetch('/api/clients', { method: 'POST', body: JSON.stringify(newClient) })
-    setSaving(false)
-    if (res.ok) {
+    try {
+      await api.post('/api/clients', newClient)
       setNewClient({ name: '', display_name: '', slug: '' })
       setShowNewClient(false); reload()
-    } else {
-      const err = await res.json()
-      alert(err.error || 'Failed to create client')
+    } catch (err) {
+      showToast(err.message || 'Failed to create client', 'error')
+    } finally {
+      setSaving(false)
     }
   }
 
   async function saveClientEdit() {
     setSaving(true)
-    await authFetch(`/api/clients/${editingClient.id}`, { method: 'PUT', body: JSON.stringify(editingClient) })
-    setSaving(false); setEditingClient(null); reload()
+    try {
+      await api.put(`/api/clients/${editingClient.id}`, editingClient)
+      setEditingClient(null); reload()
+    } catch (err) {
+      showToast(err.message || 'Failed to save client', 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function toggleClientActive(client) {
-    await authFetch(`/api/clients/${client.id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ ...client, is_active: client.is_active ? 0 : 1 }),
-    })
+    await api.put(`/api/clients/${client.id}`, { ...client, is_active: client.is_active ? 0 : 1 })
     reload()
   }
 
   async function createProject(clientId) {
     if (!newProject.name || !newProject.slug) return
     setSaving(true)
-    const res = await authFetch('/api/projects', {
-      method: 'POST',
-      body: JSON.stringify({ ...newProject, client_id: clientId }),
-    })
-    setSaving(false)
-    if (res.ok) {
+    try {
+      await api.post('/api/projects', { ...newProject, client_id: clientId })
       setNewProject({ name: '', subtitle: '', slug: '', go_live_date: '' })
       setAddingProjectFor(null); reload()
-    } else {
-      const err = await res.json()
-      alert(err.error || 'Failed to create project')
+    } catch (err) {
+      showToast(err.message || 'Failed to create project', 'error')
+    } finally {
+      setSaving(false)
     }
   }
 

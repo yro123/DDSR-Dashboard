@@ -1,12 +1,9 @@
-import { createAuth } from '../../../lib/auth'
+import { requireAdminUser } from '../../../lib/authz.js'
 import { hashPassword } from 'better-auth/crypto'
 
-const isAdminUser = u => !!(u?.isAdmin) || u?.email?.endsWith('@datadrivensr.com')
-
 export async function onRequestPost({ env, params, request }) {
-  const auth = createAuth(env)
-  const session = await auth.api.getSession({ headers: request.headers })
-  if (!isAdminUser(session?.user)) return Response.json({ error: 'Forbidden' }, { status: 403 })
+  const user = await requireAdminUser(request, env)
+  if (user instanceof Response) return user
 
   const { password } = await request.json()
   if (!password || password.length < 8)

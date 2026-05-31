@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useConfig } from '../../context/ConfigContext'
+import { useProject } from '../../context/ProjectContext'
+import Modal from '../../components/Modal'
+import { showToast } from '../../components/Toast'
 
 const PRESET_COLORS = [
   { bg: '#DBEAFE', fg: '#1E40AF' },
@@ -40,9 +43,14 @@ const btnStyle = (variant = 'primary') => ({
     : { background: 'var(--surface-2)', color: 'var(--text-muted)' }),
 })
 
-export default function PeopleTab({ projectSlug, authFetch, currentProject }) {
+export default function PeopleTab({ projectSlug: propProjectSlug }) {
+  const { api, currentClient } = useProject()
   const { getOptions } = useConfig()
   const orgTypes = getOptions('org_type')
+
+  // Prefer prop (from Admin client selector), fall back to global currentClient
+  const projectSlug = propProjectSlug || currentClient?.slug
+
   const [people, setPeople] = useState([])
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
@@ -52,56 +60,87 @@ export default function PeopleTab({ projectSlug, authFetch, currentProject }) {
   const [saving, setSaving] = useState(false)
   const [users, setUsers] = useState([])
   const [backfilling, setBackfilling] = useState(false)
+  const [selected, setSelected] = useState(new Set())
+
+  // Nice invite results modal (replaces ugly alert() spam for bulk/single invites)
+  const [inviteResults, setInviteResults] = useState(null) // array of {email, url} or null
 
   function reload() {
-    authFetch(`/api/people?slug=${projectSlug}`)
-      .then(r => r.json())
+    if (!projectSlug) return
+    api.get(`/api/people?slug=${projectSlug}`)
       .then(data => setPeople(Array.isArray(data) ? data : []))
   }
 
   useEffect(() => {
+    if (!projectSlug) return
     setLoading(true)
-    authFetch(`/api/people?slug=${projectSlug}`)
-      .then(r => r.json())
+    api.get(`/api/people?slug=${projectSlug}`)
       .then(data => { setPeople(Array.isArray(data) ? data : []); setLoading(false) })
-    authFetch('/api/users')
-      .then(r => r.json())
-      .then(data => setUsers(Array.isArray(data) ? data.filter(u => u.clientSlug === projectSlug) : []))
-      .catch(() => {})
+    api.get('/api/users')
+      .then(data => {
+        if (!Array.isArray(data)) return setUsers([]);
+
+        // In Admin we show users who have explicit membership in the current project via user_clients.
+        const relevantUsers = data.filter(u =>
+          u.memberships?.some(m => m.client_slug === projectSlug)
+        )
+
+        setUsers(relevantUsers);
+      })
+      .catch(() => {});
   }, [projectSlug])
 
   async function addPerson() {
-    if (!form.name.trim()) return
+    if (!form.name.trim() || !projectSlug) return
     setSaving(true)
-    await authFetch('/api/people', { method: 'POST', body: JSON.stringify({ ...form, slug: projectSlug }) })
+    await api.post('/api/people', { ...form, slug: projectSlug })
     setForm({ name: '', role: '', org_type: 'Client', email: '', avatar_bg: '#DBEAFE', avatar_fg: '#1E40AF' })
     setShowAdd(false); setSaving(false); reload()
   }
 
   async function savePerson() {
     setSaving(true)
-    await authFetch(`/api/people/${editingId}`, { method: 'PUT', body: JSON.stringify(editForm) })
+    await api.put(`/api/people/${editingId}`, editForm)
     setSaving(false); setEditingId(null); reload()
   }
 
   async function runBackfill() {
     setBackfilling(true)
     try {
-      const res = await authFetch('/api/admin/backfill-people-links', { method: 'POST' })
-      const data = await res.json()
-      alert(`Auto-link complete: ${data.linked} linked, ${data.skipped} skipped (no matching user email).`)
+      const data = await api.post('/api/admin/backfill-people-links', {})
+      showToast(`Auto-link complete: ${data.linked} linked, ${data.skipped} skipped`, 'success')
       reload()
     } catch {
-      alert('Backfill failed.')
+      showToast('Backfill failed', 'error')
     }
     setBackfilling(false)
   }
 
+  async function inviteSelected() {
+    const ids = Array.from(selected)
+    if (ids.length === 0) return
+
+    setSaving(true)
+    try {
+      if (!projectSlug) return
+      const data = await api.post('/api/invitations', { slug: projectSlug, personIds: ids })
+
+      if (data?.invites?.length > 0) {
+        setInviteResults(data.invites) // open nice modal
+      } else {
+        setInviteResults([]) // success but no links returned
+      }
+
+      setSelected(new Set())
+      reload()
+    } catch (e) {
+      showToast('Failed to send invites', 'error')
+    }
+    setSaving(false)
+  }
+
   async function toggleActive(person) {
-    await authFetch(`/api/people/${person.id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ ...person, is_active: person.is_active ? 0 : 1 }),
-    })
+    await api.put(`/api/people/${person.id}`, { ...person, is_active: person.is_active ? 0 : 1 })
     reload()
   }
 
@@ -161,6 +200,20 @@ export default function PeopleTab({ projectSlug, authFetch, currentProject }) {
         </div>
       )}
 
+      {selected.size > 0 && (
+        <div style={{ marginBottom: 12, padding: '8px 12px', background: 'var(--surface-2)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 13, fontWeight: 600 }}>{selected.size} selected</span>
+          <button onClick={inviteSelected} disabled={saving} style={btnStyle()}>
+            {saving ? 'Inviting…' : 'Invite Selected'}
+          </button>
+          <button onClick={() => {
+            const invitables = people.filter(p => !p.has_account && p.email && p.is_active).map(p => p.id)
+            setSelected(new Set(invitables))
+          }} style={btnStyle('cancel')}>Select All</button>
+          <button onClick={() => setSelected(new Set())} style={btnStyle('cancel')}>Clear</button>
+        </div>
+      )}
+
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
@@ -171,7 +224,11 @@ export default function PeopleTab({ projectSlug, authFetch, currentProject }) {
             </tr>
           </thead>
           <tbody>
-            {people.map(p => (
+            {people.map(p => {
+              const canInvite = !p.has_account && p.email && p.is_active
+              const isSelected = selected.has(p.id)
+
+              return (
               <tr key={p.id} style={{ borderBottom: '1px solid var(--border)', opacity: p.is_active ? 1 : 0.5 }}>
                 {editingId === p.id ? (
                   <td colSpan={8} style={{ padding: 14 }}>
@@ -218,15 +275,32 @@ export default function PeopleTab({ projectSlug, authFetch, currentProject }) {
                   </td>
                 ) : (
                   <>
-                    <td style={{ padding: '10px 14px' }}><Avatar name={p.name} bg={p.avatar_bg} fg={p.avatar_fg} size={30} /></td>
+                    <td style={{ padding: '10px 14px' }}>
+                      {canInvite ? (
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {
+                            const next = new Set(selected)
+                            if (next.has(p.id)) next.delete(p.id)
+                            else next.add(p.id)
+                            setSelected(next)
+                          }}
+                        />
+                      ) : (
+                        <Avatar name={p.name} bg={p.avatar_bg} fg={p.avatar_fg} size={30} />
+                      )}
+                    </td>
                     <td style={{ padding: '10px 14px', fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{p.name}</td>
                     <td style={{ padding: '10px 14px', fontSize: 12, color: 'var(--text-muted)' }}>{p.role || '—'}</td>
                     <td style={{ padding: '10px 14px', fontSize: 12, color: 'var(--text-muted)' }}>{p.org_type || '—'}</td>
                     <td style={{ padding: '10px 14px', fontSize: 12, color: 'var(--text-muted)' }}>{p.email || '—'}</td>
                     <td style={{ padding: '10px 14px' }}>
-                      {p.user_id
-                        ? <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: '#D1FAE5', color: '#065F46' }}>Linked</span>
-                        : <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>—</span>
+                      {p.has_account
+                        ? <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: '#D1FAE5', color: '#065F46' }}>Has account</span>
+                        : p.user_id
+                          ? <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: '#FEF3C7', color: '#92400E' }}>Linked</span>
+                          : <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>—</span>
                       }
                     </td>
                     <td style={{ padding: '10px 14px' }}>
@@ -245,14 +319,72 @@ export default function PeopleTab({ projectSlug, authFetch, currentProject }) {
                         fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', background: 'var(--surface-2)',
                         border: 'none', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontFamily: 'inherit',
                       }}>Edit</button>
+                      {canInvite && (
+                        <button onClick={async () => {
+                          if (!projectSlug) return
+                          try {
+                            const data = await api.post('/api/invitations', { slug: projectSlug, personIds: [p.id] })
+                            if (data?.invites?.length) {
+                              setInviteResults(data.invites)
+                            }
+                            reload()
+                          } catch {
+                            showToast('Failed to send invite', 'error')
+                          }
+                        }} style={{ marginLeft: 6, fontSize: 11, fontWeight: 600, color: 'var(--accent-text)', background: 'var(--accent)', border: 'none', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                          Invite
+                        </button>
+                      )}
                     </td>
                   </>
                 )}
               </tr>
-            ))}
+            );
+          })}
           </tbody>
         </table>
       </div>
+
+      {/* Nice invite success modal */}
+      <Modal
+        open={!!inviteResults}
+        onClose={() => setInviteResults(null)}
+        title="Invites Created"
+        footer={
+          <button onClick={() => setInviteResults(null)} style={btnStyle()}>
+            Close
+          </button>
+        }
+      >
+        {inviteResults?.length > 0 ? (
+          <div>
+            <p style={{ marginBottom: 12, fontSize: 13 }}>
+              Share these links with the selected people:
+            </p>
+            <div style={{ background: 'var(--surface-2)', borderRadius: 8, padding: 12, fontSize: 12, maxHeight: 220, overflow: 'auto' }}>
+              {inviteResults.map((inv, i) => (
+                <div key={i} style={{ marginBottom: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <strong>{inv.email}</strong>
+                  <a href={inv.url} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', flex: 1, wordBreak: 'break-all' }}>
+                    {inv.url}
+                  </a>
+                  <button
+                    onClick={() => navigator.clipboard.writeText(inv.url)}
+                    style={{ ...btnStyle('cancel'), fontSize: 10, padding: '2px 8px' }}
+                  >
+                    Copy
+                  </button>
+                </div>
+              ))}
+            </div>
+            <p style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 12 }}>
+              Links expire in 7 days. People will be able to sign up or sign in.
+            </p>
+          </div>
+        ) : (
+          <p>Invites created successfully.</p>
+        )}
+      </Modal>
     </div>
   )
 }

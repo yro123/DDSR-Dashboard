@@ -1,4 +1,4 @@
-import { createAuth } from '../lib/auth'
+import { requireSession, isAdmin, requireProjectAccess } from '../lib/authz.js'
 
 function nanoid(len = 21) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
@@ -9,21 +9,19 @@ function nanoid(len = 21) {
   return id
 }
 
-async function resolveProjectId(env, slug) {
-  if (!slug) return null
-  const proj = await env.ddsr_dashboard.prepare('SELECT id FROM projects WHERE slug = ? LIMIT 1').bind(slug).first()
-  return proj?.id ?? null
-}
-
 export async function onRequestGet({ env, request }) {
   const url = new URL(request.url)
-  const slug     = url.searchParams.get('slug')
+  const slug = url.searchParams.get('slug')
+
+  // Enforce proper project access
+  const access = await requireProjectAccess(request, env, { slug })
+  if (access instanceof Response) return access
+
+  const projectId = access.projectInfo.projectId
+
   const status   = url.searchParams.get('status')
   const category = url.searchParams.get('category')
   const priority = url.searchParams.get('priority')
-
-  const projectId = await resolveProjectId(env, slug)
-  if (!projectId) return Response.json({ error: 'Project not found' }, { status: 404 })
 
   let query = `
     SELECT tr.*,
@@ -46,20 +44,21 @@ export async function onRequestGet({ env, request }) {
 }
 
 export async function onRequestPost({ env, request }) {
-  const auth = createAuth(env)
-  const session = await auth.api.getSession({ headers: request.headers })
-
   const body = await request.json()
   const { slug, title, description, category, priority, workflow_id, requested_due_date } = body
 
   if (!title?.trim())       return Response.json({ error: 'title is required' }, { status: 400 })
   if (!description?.trim()) return Response.json({ error: 'description is required' }, { status: 400 })
 
-  const projectId = await resolveProjectId(env, slug)
-  if (!projectId) return Response.json({ error: 'Project not found' }, { status: 404 })
+  // Enforce that the user has access to this project
+  const access = await requireProjectAccess(request, env, { slug })
+  if (access instanceof Response) return access
+
+  const projectId = access.projectInfo.projectId
+  const user = access.session.user
 
   const id  = nanoid()
-  const now = Date.now()
+  const now = new Date().toISOString()
 
   await env.ddsr_dashboard.prepare(`
     INSERT INTO ticket_requests
@@ -68,8 +67,8 @@ export async function onRequestPost({ env, request }) {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', ?, ?)
   `).bind(
     id, projectId,
-    session?.user?.id   || null,
-    session?.user?.name || session?.user?.email || null,
+    user?.id   || null,
+    user?.name || user?.email || null,
     title.trim(), description.trim(),
     category || 'Other', priority || 'Normal',
     workflow_id || null, requested_due_date || null,

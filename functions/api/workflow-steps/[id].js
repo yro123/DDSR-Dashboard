@@ -1,8 +1,26 @@
+import { requireSession, isAdmin, getProjectClient, canAccessProject } from '../../lib/authz.js'
+
 export async function onRequestPut({ env, params, request }) {
   const { status, label, summary, points, sort_order } = await request.json()
   const now = new Date().toISOString()
+
   const step = await env.ddsr_dashboard.prepare('SELECT * FROM workflow_steps WHERE id = ?').bind(params.id).first()
   if (!step) return Response.json({ error: 'Not found' }, { status: 404 })
+
+  // Resolve project for authorization
+  const workflow = await env.ddsr_dashboard.prepare('SELECT project_id FROM workflows WHERE id = ? LIMIT 1').bind(step.workflow_id).first()
+  if (!workflow) return Response.json({ error: 'Workflow not found' }, { status: 404 })
+
+  const session = await requireSession(request, env)
+  if (session instanceof Response) return session
+
+  const user = session.user
+  if (!isAdmin(user)) {
+    const info = await getProjectClient(env, { projectId: workflow.project_id })
+    if (!info || !(await canAccessProject(user, info, env))) {
+      return Response.json({ error: 'Forbidden' }, { status: 403 })
+    }
+  }
 
   await env.ddsr_dashboard.prepare(
     `UPDATE workflow_steps SET label = ?, status = ?, sort_order = COALESCE(?, sort_order), updated_at = ? WHERE id = ?`

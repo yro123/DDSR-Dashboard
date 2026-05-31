@@ -1,4 +1,8 @@
+import { requireAdminUser, isAdmin, requireSession } from '../lib/authz.js'
+
 export async function onRequestPost({ env, request }) {
+  const user = await requireAdminUser(request, env)
+  if (user instanceof Response) return user
   const { name, display_name, slug } = await request.json()
   if (!name?.trim()) return Response.json({ error: 'name is required' }, { status: 400 })
   if (!display_name?.trim()) return Response.json({ error: 'display_name is required' }, { status: 400 })
@@ -17,18 +21,43 @@ export async function onRequestPost({ env, request }) {
   return Response.json(client, { status: 201 })
 }
 
-export async function onRequestGet({ env }) {
+export async function onRequestGet({ env, request }) {
+  const session = await requireSession(request, env)
+  if (session instanceof Response) {
+    // For clients list, unauthenticated users get nothing (or we could allow public clients, but for now strict)
+    return Response.json([])
+  }
+  const user = session.user
+
+  const isInternal = isAdmin(user)
+
   const db = env.ddsr_dashboard
 
-  const clients = await db.prepare(
-    `SELECT id, slug, display_name, name, is_active FROM clients WHERE is_active = 1 ORDER BY name`
-  ).all()
+  let clientRows
+
+  if (isInternal) {
+    // Internal team sees everything
+    clientRows = await db.prepare(
+      `SELECT id, slug, display_name, name, is_active FROM clients WHERE is_active = 1 ORDER BY name`
+    ).all()
+  } else if (user?.id) {
+    // Regular users only see clients they have explicit membership in
+    clientRows = await db.prepare(`
+      SELECT c.id, c.slug, c.display_name, c.name, c.is_active
+      FROM clients c
+      JOIN user_clients uc ON uc.client_id = c.id
+      WHERE uc.user_id = ? AND c.is_active = 1
+      ORDER BY c.name
+    `).bind(user.id).all()
+  } else {
+    clientRows = { results: [] }
+  }
 
   const projects = await db.prepare(
     `SELECT id, slug, name, subtitle, client_id FROM projects WHERE is_active = 1 ORDER BY name`
   ).all()
 
-  const result = clients.results.map(c => ({
+  const result = clientRows.results.map(c => ({
     ...c,
     projects: projects.results.filter(p => p.client_id === c.id),
   }))

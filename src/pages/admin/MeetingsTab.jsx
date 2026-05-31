@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useConfig } from '../../context/ConfigContext'
+import { useProject } from '../../context/ProjectContext'
+import { showToast } from '../../components/Toast'
 
 const btn = (extra = {}) => ({
   border: 'none', cursor: 'pointer', fontFamily: 'inherit',
@@ -40,9 +42,13 @@ function ColorPicker({ value, onChange, colors }) {
   )
 }
 
-export default function MeetingsTab({ projectSlug, authFetch }) {
+export default function MeetingsTab({ projectSlug: propProjectSlug }) {
+  const { api, currentClient } = useProject()
   const { getOptions } = useConfig()
   const topicColors = getOptions('topic_color')
+
+  const projectSlug = propProjectSlug || currentClient?.slug
+
   const [meetings, setMeetings] = useState([])
   const [loading, setLoading] = useState(true)
   const [openId, setOpenId] = useState(null)
@@ -58,8 +64,9 @@ export default function MeetingsTab({ projectSlug, authFetch }) {
   const [saving, setSaving] = useState(false)
 
   function load() {
+    if (!projectSlug) return
     setLoading(true)
-    authFetch(`/api/meetings?slug=${projectSlug}&all=1`)
+    api.get(`/api/meetings?slug=${projectSlug}&all=1`)
       .then(r => r.json())
       .then(data => { setMeetings(Array.isArray(data) ? data : []); setLoading(false) })
   }
@@ -67,9 +74,9 @@ export default function MeetingsTab({ projectSlug, authFetch }) {
   useEffect(() => { load() }, [projectSlug])
 
   async function createMeeting() {
-    if (!newMeeting.meeting_date || !newMeeting.title) return
+    if (!newMeeting.meeting_date || !newMeeting.title || !projectSlug) return
     setSaving(true)
-    await authFetch('/api/meetings', { method: 'POST', body: JSON.stringify({ ...newMeeting, slug: projectSlug }) })
+    await api.post('/api/meetings', { ...newMeeting, slug: projectSlug })
     setNewMeeting({ meeting_date: '', title: '', meeting_type: 'Weekly Sync', next_meeting: '', display_date: '' })
     setShowNewMeeting(false)
     setSaving(false)
@@ -78,48 +85,48 @@ export default function MeetingsTab({ projectSlug, authFetch }) {
 
   async function saveMeetingEdit(m) {
     setSaving(true)
-    await authFetch(`/api/meetings/${m.id}`, { method: 'PUT', body: JSON.stringify(m) })
+    await api.put(`/api/meetings/${m.id}`, m)
     setSaving(false); setEditingMeeting(null); load()
   }
 
   async function deleteMeeting(id) {
-    if (!confirm('Delete this meeting and all its topics/notes?')) return
-    await authFetch(`/api/meetings/${id}`, { method: 'DELETE' })
+    if (!window.confirm('Delete this meeting and all its topics/notes?')) return
+    await api.del(`/api/meetings/${id}`)
     load()
   }
 
   async function addTopic(meetingId) {
     if (!newTopic.area) return
     setSaving(true)
-    await authFetch('/api/meeting-topics', { method: 'POST', body: JSON.stringify({ meeting_id: meetingId, ...newTopic }) })
+    await api.post('/api/meeting-topics', { meeting_id: meetingId, ...newTopic })
     setNewTopic({ area: '', color: topicColors[0] || '' }); setAddingTopicFor(null); setSaving(false); load()
   }
 
   async function deleteTopic(id) {
-    if (!confirm('Delete this topic and all its notes/actions?')) return
-    await authFetch(`/api/meeting-topics/${id}`, { method: 'DELETE' }); load()
+    if (!window.confirm('Delete this topic and all its notes/actions?')) return
+    await api.del(`/api/meeting-topics/${id}`); load()
   }
 
   async function addNote(topicId) {
     if (!newNote.trim()) return
     setSaving(true)
-    await authFetch('/api/meeting-notes', { method: 'POST', body: JSON.stringify({ topic_id: topicId, note_text: newNote.trim() }) })
+    await api.post('/api/meeting-notes', { topic_id: topicId, note_text: newNote.trim() })
     setNewNote(''); setAddingNoteFor(null); setSaving(false); load()
   }
 
   async function deleteNote(id) {
-    await authFetch(`/api/meeting-notes/${id}`, { method: 'DELETE' }); load()
+    await api.del(`/api/meeting-notes/${id}`); load()
   }
 
   async function addAction(topicId) {
     if (!newAction.action_text.trim()) return
     setSaving(true)
-    await authFetch('/api/meeting-action-items', { method: 'POST', body: JSON.stringify({ topic_id: topicId, ...newAction }) })
+    await api.post('/api/meeting-action-items', { topic_id: topicId, ...newAction })
     setNewAction({ action_text: '', assignee_name: '' }); setAddingActionFor(null); setSaving(false); load()
   }
 
   async function deleteAction(id) {
-    await authFetch(`/api/meeting-action-items/${id}`, { method: 'DELETE' }); load()
+    await api.del(`/api/meeting-action-items/${id}`); load()
   }
 
   if (loading) return <div style={{ color: 'var(--text-dim)', padding: 20 }}>Loading…</div>

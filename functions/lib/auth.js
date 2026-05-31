@@ -1,5 +1,6 @@
 import { betterAuth } from 'better-auth'
 import { magicLink } from 'better-auth/plugins'
+import { getUserAccessibleClientSlugs } from './authz.js'
 
 // PBKDF2 password hashing via Web Crypto — runs on hardware in Cloudflare Workers,
 // avoids the CPU time limit that bcrypt (pure-JS) exceeds (Error 1102).
@@ -24,17 +25,20 @@ async function verifyPassword({ hash, password }) {
   const [, , itersStr, saltB64, storedB64] = hash.split(':')
   const enc = new TextEncoder()
   const salt = Uint8Array.from(atob(saltB64), c => c.charCodeAt(0))
+  const stored = Uint8Array.from(atob(storedB64), c => c.charCodeAt(0))
+
   const key = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits'])
   const bits = await crypto.subtle.deriveBits(
     { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: parseInt(itersStr, 10) },
     key, PBKDF2_KEY_BYTES * 8,
   )
-  const computed = atob(btoa(String.fromCharCode(...new Uint8Array(bits))))
-  const stored = atob(storedB64)
+  const computed = new Uint8Array(bits)
+
   if (computed.length !== stored.length) return false
+
   // timing-safe compare
   let diff = 0
-  for (let i = 0; i < computed.length; i++) diff |= computed.charCodeAt(i) ^ stored.charCodeAt(i)
+  for (let i = 0; i < computed.length; i++) diff |= computed[i] ^ stored[i]
   return diff === 0
 }
 
@@ -47,8 +51,10 @@ export function createAuth(env) {
     },
     user: {
       additionalFields: {
-        clientSlug: { type: 'string',  required: false, defaultValue: null },
-        isAdmin:    { type: 'boolean', required: false, defaultValue: false },
+        // clientSlug has been fully removed from the application access model.
+        // It is no longer declared here. The column may still exist in the D1 `user` table
+        // for historical rows; it is ignored everywhere and can be dropped in a future migration.
+        isAdmin: { type: 'boolean', required: false, defaultValue: false },
       },
     },
     databaseHooks: {
@@ -58,28 +64,43 @@ export function createAuth(env) {
             if (!env?.ddsr_dashboard) return
             try {
               const user = await env.ddsr_dashboard
-                .prepare('SELECT id, email, clientSlug FROM "user" WHERE id = ? LIMIT 1')
+                .prepare('SELECT id, email FROM "user" WHERE id = ? LIMIT 1')
                 .bind(session.userId)
                 .first()
 
-              if (!user?.email || !user?.clientSlug) return
+              if (!user?.email) return
 
-              const person = await env.ddsr_dashboard
-                .prepare(`
-                  SELECT pe.id, pe.user_id FROM people pe
-                  JOIN projects pr ON pr.id = pe.project_id
-                  WHERE LOWER(pe.email) = LOWER(?) AND pr.slug = ?
-                  LIMIT 1
-                `)
-                .bind(user.email, user.clientSlug)
-                .first()
+              // Auto-link authenticated user to matching "people" directory records (for display/enrichment only).
+              //
+              // Architectural separation:
+              // - `people` table = client-scoped directory of humans (employees, vendors, etc.) who can be assigned work.
+              // - `user` + `user_clients` = authentication + real data access control.
+              //
+              // Linking here never grants dashboard access.
+              const clientSlugs = await getUserAccessibleClientSlugs(session.userId, env)
 
-              if (!person || person.user_id === user.id) return
+              if (clientSlugs.length === 0) return
 
-              await env.ddsr_dashboard
-                .prepare('UPDATE people SET user_id = ?, updated_at = ? WHERE id = ?')
-                .bind(user.id, new Date().toISOString(), person.id)
-                .run()
+              // Try to find a matching person in any of the user's clients
+              for (const slug of clientSlugs) {
+                const person = await env.ddsr_dashboard
+                  .prepare(`
+                    SELECT pe.id, pe.user_id FROM people pe
+                    JOIN projects pr ON pr.id = pe.project_id
+                    WHERE LOWER(pe.email) = LOWER(?) AND pr.slug = ?
+                    LIMIT 1
+                  `)
+                  .bind(user.email, slug)
+                  .first()
+
+                if (person && person.user_id !== user.id) {
+                  await env.ddsr_dashboard
+                    .prepare('UPDATE people SET user_id = ?, updated_at = ? WHERE id = ?')
+                    .bind(user.id, new Date().toISOString(), person.id)
+                    .run()
+                  break
+                }
+              }
             } catch (err) {
               console.error('[auth hook] people link failed:', err)
             }
@@ -108,12 +129,13 @@ export function createAuth(env) {
         },
       }),
     ],
+    baseURL: env.BETTER_AUTH_URL || undefined,
     trustedOrigins: [
       'http://localhost:5173',
       'https://ddsr-dashboard.pages.dev',
       'https://dashboards.datadrivensr.com',
     ],
     session: { cookieCache: { enabled: true } },
-    secret: env.BETTER_AUTH_SECRET || 'dev-secret-change-in-production',
+    secret: env.BETTER_AUTH_SECRET,
   })
 }

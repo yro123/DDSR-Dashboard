@@ -1,6 +1,7 @@
-import { createAuth } from './lib/auth'
+import { requireSession } from './lib/authz.js'
 
-export async function onRequest({ request, env, next }) {
+export async function onRequest(context) {
+  const { request, next } = context
   const url = new URL(request.url)
 
   if (!url.pathname.startsWith('/api/')) return next()
@@ -10,13 +11,15 @@ export async function onRequest({ request, env, next }) {
   // Allow unauthenticated GET for invite token preview
   if (/^\/api\/invitations\/[^/]+$/.test(url.pathname) && request.method === 'GET') return next()
 
-  try {
-    const auth = createAuth(env)
-    const session = await auth.api.getSession({ headers: request.headers })
-    if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    return next()
-  } catch (err) {
-    console.error('[middleware]', err)
-    return Response.json({ error: err?.message || 'Middleware error', stack: err?.stack }, { status: 500 })
+  // Enforce authentication for everything else under /api
+  const sessionOrResponse = await requireSession(request, context.env)
+  if (sessionOrResponse instanceof Response) {
+    return sessionOrResponse
   }
+
+  // Attach session for downstream handlers (use context.data)
+  context.data = context.data || {}
+  context.data.session = sessionOrResponse
+
+  return next()
 }

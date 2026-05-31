@@ -288,7 +288,7 @@ function ProjectSection({ name, tasks, people, onConfirm, onDismiss, onReassign 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function Review() {
-  const { slug, authFetch, isAdmin, allProjects } = useProject()
+  const { slug, api, isAdmin, allProjects } = useProject()
   const navigate = useNavigate()
 
   const [tasks, setTasks]                     = useState([])
@@ -307,12 +307,12 @@ export default function Review() {
     setLoading(true)
 
     const peopleRequests = allProjects.map(p =>
-      authFetch(`/api/people?slug=${p.slug}`).then(r => r.json()).catch(() => [])
+      api.get(`/api/people?slug=${p.slug}`).catch(() => [])
     )
 
     Promise.all([
-      authFetch('/api/tasks?review=1&all=1').then(r => r.json()),
-      authFetch('/api/fathom-meeting-queue').then(r => r.json()),
+      api.get('/api/tasks?review=1&all=1'),
+      api.get('/api/admin/fathom-meeting-queue'),
       ...peopleRequests,
     ]).then(([t, q, ...peopleSets]) => {
       setTasks(Array.isArray(t) ? t : [])
@@ -323,46 +323,34 @@ export default function Review() {
       setPeopleBySlug(bySlug)
       setLoading(false)
     }).catch(() => setLoading(false))
-  }, [slug, authFetch, isAdmin])
+  }, [slug, api, isAdmin])
 
   const removeTask    = id => setTasks(prev => prev.filter(t => t.id !== id))
   const removeMeeting = id => setPendingMeetings(prev => prev.filter(m => m.id !== id))
 
   const confirmTask = async task => {
-    await authFetch(`/api/tasks/${task.id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ ...task, user_feedback: 'correct' }),
-    })
+    await api.put(`/api/tasks/${task.id}`, { ...task, user_feedback: 'correct' })
     removeTask(task.id)
   }
 
   const dismissTask = async task => {
-    await authFetch(`/api/tasks/${task.id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ ...task, is_archived: 1, user_feedback: 'not_a_task' }),
-    })
+    await api.put(`/api/tasks/${task.id}`, { ...task, is_archived: 1, user_feedback: 'not_a_task' })
     removeTask(task.id)
   }
 
   const reassignTask = async (task, person) => {
-    await authFetch(`/api/tasks/${task.id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ ...task, assignee_id: person.id, assignee_name: person.name, user_feedback: 'correct' }),
-    })
+    await api.put(`/api/tasks/${task.id}`, { ...task, assignee_id: person.id, assignee_name: person.name, user_feedback: 'correct' })
     removeTask(task.id)
   }
 
   const approveMeeting = async (entry, project_id) => {
-    const res = await authFetch(`/api/fathom-meeting-queue/${entry.id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ project_id }),
-    })
-    if (res.ok) removeMeeting(entry.id)
+    await api.put(`/api/admin/fathom-meeting-queue/${entry.id}`, { project_id })
+    removeMeeting(entry.id)
   }
 
   const rejectMeeting = async (entry) => {
-    const res = await authFetch(`/api/fathom-meeting-queue/${entry.id}`, { method: 'DELETE' })
-    if (res.ok) removeMeeting(entry.id)
+    await api.del(`/api/admin/fathom-meeting-queue/${entry.id}`)
+    removeMeeting(entry.id)
   }
 
   // Group tasks by project

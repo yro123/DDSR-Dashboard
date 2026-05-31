@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useConfig } from '../../context/ConfigContext'
+import { useProject } from '../../context/ProjectContext'
+import { showToast } from '../../components/Toast'
 
 const inputStyle = {
   border: '1px solid var(--border)', borderRadius: 7, padding: '7px 10px',
@@ -18,7 +20,9 @@ const btnCancel = {
   padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
 }
 
-export default function DocumentsTab({ projectSlug, authFetch }) {
+export default function DocumentsTab() {
+  const { api, currentClient } = useProject()
+  const projectSlug = currentClient?.slug
   const { getOptions } = useConfig()
   const docTypes = getOptions('doc_type')
   const [docs, setDocs] = useState([])
@@ -32,13 +36,13 @@ export default function DocumentsTab({ projectSlug, authFetch }) {
 
   function reload() {
     Promise.all([
-      authFetch(`/api/documents?slug=${projectSlug}`).then(r => r.json()),
-      authFetch(`/api/workflows?slug=${projectSlug}`).then(r => r.json()),
+      api.get(`/api/documents?slug=${projectSlug}`),
+      api.get(`/api/workflows?slug=${projectSlug}`),
     ]).then(([d, w]) => {
       setDocs(Array.isArray(d) ? d : [])
       setWorkflows(Array.isArray(w) ? w : [])
       setLoading(false)
-    })
+    }).catch(() => setLoading(false))
   }
 
   useEffect(() => { setLoading(true); reload() }, [projectSlug])
@@ -46,27 +50,21 @@ export default function DocumentsTab({ projectSlug, authFetch }) {
   async function saveUrl(id) {
     setSaving(true)
     const doc = docs.find(d => d.id === id)
-    await authFetch(`/api/documents/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ ...doc, url: urlVal.trim() || null }),
-    })
+    await api.put(`/api/documents/${id}`, { ...doc, url: urlVal.trim() || null })
     setSaving(false); setEditingUrl(null); reload()
   }
 
   async function addDoc() {
     if (!newDoc.name.trim()) return
     setSaving(true)
-    await authFetch('/api/documents', {
-      method: 'POST',
-      body: JSON.stringify({ ...newDoc, slug: projectSlug, workflow_id: newDoc.workflow_id || null }),
-    })
+    await api.post('/api/documents', { ...newDoc, slug: projectSlug, workflow_id: newDoc.workflow_id || null })
     setNewDoc({ name: '', url: '', doc_type: 'Process Doc', workflow_id: '' })
     setShowAdd(false); setSaving(false); reload()
   }
 
   async function deleteDoc(id) {
-    if (!confirm('Remove this document?')) return
-    await authFetch(`/api/documents/${id}`, { method: 'DELETE' }); reload()
+    if (!window.confirm('Remove this document?')) return
+    await api.del(`/api/documents/${id}`); reload()
   }
 
   if (loading) return <div style={{ color: 'var(--text-dim)', padding: 20 }}>Loading…</div>

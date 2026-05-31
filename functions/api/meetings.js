@@ -1,12 +1,14 @@
+import { requireSession, isAdmin, getProjectClient, canAccessProject, requireProjectAccess } from '../lib/authz.js'
+
 export async function onRequestPost({ env, request }) {
   const body = await request.json()
   let { project_id, slug, meeting_date, display_date, title, meeting_type, location, next_meeting } = body
-  if (slug && !project_id) {
-    const proj = await env.ddsr_dashboard.prepare('SELECT id FROM projects WHERE slug = ? LIMIT 1').bind(slug).first()
-    if (!proj) return Response.json({ error: 'Project not found' }, { status: 404 })
-    project_id = proj.id
-  }
-  if (!project_id) return Response.json({ error: 'project_id or slug required' }, { status: 400 })
+
+  const access = await requireProjectAccess(request, env, { slug, projectId: project_id })
+  if (access instanceof Response) return access
+
+  project_id = access.projectInfo.projectId
+
   if (!title?.trim()) return Response.json({ error: 'title is required' }, { status: 400 })
   if (!meeting_date) return Response.json({ error: 'meeting_date is required' }, { status: 400 })
 
@@ -26,11 +28,27 @@ export async function onRequestGet({ env, request }) {
   const url = new URL(request.url);
   const slug = url.searchParams.get('slug');
   const showAll = url.searchParams.get('all') === '1';
-  let projectId = url.searchParams.get('project_id') || 1;
+  let projectId = url.searchParams.get('project_id');
+
   if (slug) {
     const proj = await env.ddsr_dashboard.prepare('SELECT id FROM projects WHERE slug = ? LIMIT 1').bind(slug).first();
     if (!proj) return Response.json({ error: 'Project not found' }, { status: 404 });
     projectId = proj.id;
+  }
+
+  if (!projectId) {
+    return Response.json({ error: 'project_id or slug is required' }, { status: 400 });
+  }
+
+  const session = await requireSession(request, env);
+  if (session instanceof Response) return session;
+
+  const user = session.user;
+  if (!isAdmin(user)) {
+    const info = await getProjectClient(env, { projectId });
+    if (!info || !(await canAccessProject(user, info, env))) {
+      return Response.json({ error: 'Forbidden' }, { status: 403 });
+    }
   }
 
   const publishedFilter = showAll ? '' : 'AND is_published = 1';

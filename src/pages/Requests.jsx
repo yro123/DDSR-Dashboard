@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import Layout from '../components/Layout'
 import { useProject } from '../context/ProjectContext'
 import { useConfig } from '../context/ConfigContext'
+import { useQuery } from '../hooks/useApi'
 
 function fmtDate(ts) {
   if (!ts) return ''
@@ -265,17 +266,14 @@ function DeferPanel({ onConfirm, onCancel }) {
   )
 }
 
-function TicketRow({ ticket, isAdmin, authFetch, onUpdate, people, workflows, getColor }) {
+function TicketRow({ ticket, isAdmin, api, onUpdate, people, workflows, getColor }) {
   const [open, setOpen] = useState(false)
   const [panel, setPanel] = useState(null) // 'approve' | 'reject' | 'defer'
   const [acting, setActing] = useState(false)
 
   const transition = async (status, extra = {}) => {
     setActing(true)
-    const res = await authFetch(`/api/tickets/${ticket.id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ status, ...extra }),
-    }).then(r => r.json())
+    const res = await api.put(`/api/tickets/${ticket.id}`, { status, ...extra })
     onUpdate(res.ticket || res)
     setPanel(null)
     setActing(false)
@@ -438,42 +436,43 @@ function TicketRow({ ticket, isAdmin, authFetch, onUpdate, people, workflows, ge
 }
 
 export default function Requests() {
-  const { slug, authFetch, isAdmin } = useProject()
+  const { slug, api, isAdmin } = useProject()
   const { getOptions, getColor } = useConfig()
 
   const categories = getOptions('ticket_category')
   const priorities = getOptions('ticket_priority')
   const statuses   = getOptions('ticket_status')
 
+  const { data: ticketsData = [], loading: ticketsLoading } = useQuery(
+    () => api.get(`/api/tickets?slug=${slug}`),
+    [slug]
+  )
+  const { data: peopleData = [] } = useQuery(
+    () => api.get(`/api/people?slug=${slug}`),
+    [slug]
+  )
+  const { data: workflowsData = [] } = useQuery(
+    () => api.get(`/api/workflows?slug=${slug}`),
+    [slug]
+  )
+
   const [tickets, setTickets]     = useState([])
   const [people, setPeople]       = useState([])
   const [workflows, setWorkflows] = useState([])
-  const [loading, setLoading]     = useState(true)
   const [addingNew, setAddingNew] = useState(false)
 
   const [filterStatus,   setFilterStatus]   = useState('')
   const [filterCategory, setFilterCategory] = useState('')
   const [filterPriority, setFilterPriority] = useState('')
 
-  useEffect(() => {
-    setLoading(true)
-    Promise.all([
-      authFetch(`/api/tickets?slug=${slug}`).then(r => r.json()),
-      authFetch(`/api/people?slug=${slug}`).then(r => r.json()),
-      authFetch(`/api/workflows?slug=${slug}`).then(r => r.json()),
-    ]).then(([t, p, w]) => {
-      setTickets(Array.isArray(t) ? t : [])
-      setPeople(Array.isArray(p) ? p : [])
-      setWorkflows(Array.isArray(w) ? w : [])
-      setLoading(false)
-    }).catch(() => setLoading(false))
-  }, [slug])
+  useEffect(() => { setTickets(ticketsData) }, [ticketsData])
+  useEffect(() => { setPeople(peopleData) }, [peopleData])
+  useEffect(() => { setWorkflows(workflowsData) }, [workflowsData])
+
+  const loading = ticketsLoading
 
   const submitTicket = async form => {
-    const res = await authFetch('/api/tickets', {
-      method: 'POST',
-      body: JSON.stringify({ slug, ...form }),
-    }).then(r => r.json())
+    const res = await api.post('/api/tickets', { slug, ...form })
     setTickets(prev => [res, ...prev])
     setAddingNew(false)
   }
@@ -568,7 +567,7 @@ export default function Requests() {
                 key={t.id}
                 ticket={t}
                 isAdmin={isAdmin}
-                authFetch={authFetch}
+                api={api}
                 onUpdate={updateTicket}
                 people={people}
                 workflows={workflows}

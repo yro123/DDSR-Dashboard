@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
+import { useProject } from '../../context/ProjectContext'
 
-export default function ProjectTab({ projectSlug, authFetch }) {
+export default function ProjectTab() {
+  const { api, currentClient } = useProject()
+  const projectSlug = currentClient?.slug
   const [form, setForm] = useState({ name: '', subtitle: '', go_live_date: '', project_start_date: '', project_end_date: '', slug: '' })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -8,8 +11,7 @@ export default function ProjectTab({ projectSlug, authFetch }) {
 
   useEffect(() => {
     setLoading(true)
-    authFetch(`/api/projects/${projectSlug}`)
-      .then(r => r.json())
+    api.get(`/api/projects/${projectSlug}`)
       .then(data => {
         setForm({
           name: data.name || '',
@@ -25,7 +27,7 @@ export default function ProjectTab({ projectSlug, authFetch }) {
 
   async function save() {
     setSaving(true)
-    await authFetch(`/api/projects/${projectSlug}`, { method: 'PUT', body: JSON.stringify(form) })
+    await api.put(`/api/projects/${projectSlug}`, form)
     setSaving(false); setSaved(true)
     setTimeout(() => setSaved(false), 2500)
   }

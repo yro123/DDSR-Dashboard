@@ -65,9 +65,26 @@ export default function Invite() {
     fetch(`/api/invitations/${t}`, { method: 'POST', credentials: 'include' })
       .then(() => {
         sessionStorage.removeItem('pendingInviteToken')
-        // Force session refresh then navigate
+        // After accepting the invite, the user now has proper membership(s).
+        // Prefer the first client they now have access to (from /api/clients).
         authClient.getSession({ fetchOptions: { cache: 'no-store' } })
-          .then(() => navigate(`/${invite.clientSlug}/tasks`, { replace: true }))
+          .then(async () => {
+            try {
+              const res = await fetch('/api/clients', { credentials: 'include' })
+              const accessible = await res.json()
+              const targetSlug = Array.isArray(accessible) && accessible.length > 0 
+                ? accessible[0].slug 
+                : null
+
+              if (targetSlug) {
+                navigate(`/${targetSlug}/tasks`, { replace: true })
+              } else {
+                navigate('/', { replace: true })
+              }
+            } catch {
+              navigate('/', { replace: true })
+            }
+          })
       })
       .catch(() => navigate('/', { replace: true }))
   }, [session, isPending, invite])
@@ -80,7 +97,16 @@ export default function Invite() {
         sessionStorage.removeItem('pendingInviteToken')
       } catch {}
     }
-    navigate(invite ? `/${invite.clientSlug}/tasks` : '/', { replace: true })
+    // Use the client's list returned by /api/clients (respects user_clients).
+    // After acceptance, prefer the list of clients the user actually has access to.
+    try {
+      const res = await fetch('/api/clients', { credentials: 'include' })
+      const accessible = await res.json()
+      const target = Array.isArray(accessible) && accessible.length > 0 ? accessible[0].slug : null
+      navigate(target ? `/${target}/tasks` : '/', { replace: true })
+    } catch {
+      navigate('/', { replace: true })
+    }
   }
 
   const handlePassword = async e => {

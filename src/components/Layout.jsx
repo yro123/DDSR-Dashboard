@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { authClient } from '../lib/auth-client'
 import { useProject } from '../context/ProjectContext'
+import { usePermissions } from '../hooks/usePermissions'
+import ToastContainer from './Toast'
 import { useTheme } from '../context/ThemeContext'
 
 function UserMenu() {
@@ -116,7 +118,8 @@ const PAGE_TITLES = {
 export default function Layout({ children }) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
-  const { allProjects, current, slug, isAdmin, clientSlug } = useProject()
+  const { allProjects, current, slug, currentClient, clients } = useProject()
+  const { isAdmin, hasMultipleClients, currentUserScope } = usePermissions()
   const { dark, toggle } = useTheme()
 
   const [collapsed, setCollapsed] = useState(
@@ -143,11 +146,10 @@ export default function Layout({ children }) {
     localStorage.setItem('sidebar-collapsed', collapsed)
   }, [collapsed])
 
-  useEffect(() => {
-    if (!isAdmin && clientSlug && slug !== clientSlug) {
-      navigate(`/${clientSlug}/tasks`, { replace: true })
-    }
-  }, [isAdmin, clientSlug, slug])
+  // Access is enforced server-side via user_clients + authz helpers. Frontend uses currentUserScope.
+  // In the new model, access is controlled by user_clients on the backend.
+  // If a user doesn't have access to a slug, the API calls will return
+  // empty data or 403, which the pages can handle gracefully.
 
   const navItems = [
     { key: 'tasks',    label: 'Tasks',          Icon: IconTasks,    path: `/${slug}/tasks` },
@@ -191,17 +193,22 @@ export default function Layout({ children }) {
 
         {/* Footer */}
         <div className="sidebar-footer">
-          {/* Project switcher (admin only) */}
-          {isAdmin && allProjects.length > 1 && (
-            <select
-              className="sidebar-sel"
-              value={slug || ''}
-              onChange={e => navigate(`/${e.target.value}/${screen}`)}
-            >
-              {allProjects.map(p => (
-                <option key={p.slug} value={p.slug}>{p.name}</option>
-              ))}
-            </select>
+          {/* Client / Workspace switcher — prominent for users with access to multiple clients */}
+          {hasMultipleClients && (
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 9, color: 'var(--text-dim)', marginBottom: 3, paddingLeft: 4 }}>
+                {currentUserScope.isAdmin ? 'Workspace (admin)' : 'Workspace'}
+              </div>
+              <select
+                className="sidebar-sel"
+                value={slug || currentClient?.slug || ''}
+                onChange={e => navigate(`/${e.target.value}/${screen}`)}
+              >
+                {clients.map(c => (
+                  <option key={c.slug} value={c.slug}>{c.name}</option>
+                ))}
+              </select>
+            </div>
           )}
 
           {/* Utilities */}
@@ -221,7 +228,12 @@ export default function Layout({ children }) {
       <div className="main-area">
         <div className="main-topbar">
           <span className="main-topbar-title">
-            {PAGE_TITLES[screen] || current?.name || 'Dashboard'}
+            {PAGE_TITLES[screen] || 'Dashboard'}
+            {hasMultipleClients && currentClient && (
+              <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-dim)', marginLeft: 8 }}>
+                {currentClient.name}
+              </span>
+            )}
           </span>
 
           {/* Admin global search — flex item between title and center */}
@@ -252,6 +264,11 @@ export default function Layout({ children }) {
             {current?.name && (
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
                 {current.name}
+                {hasMultipleClients && currentClient && (
+                  <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-dim)', marginLeft: 8 }}>
+                    · {currentClient.name}
+                  </span>
+                )}
               </div>
             )}
             {current?.subtitle && (
@@ -286,6 +303,8 @@ export default function Layout({ children }) {
           {children}
         </div>
       </div>
+
+      <ToastContainer />
     </div>
   )
 }

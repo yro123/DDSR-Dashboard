@@ -1,15 +1,15 @@
-import { createAuth } from '../lib/auth'
-
-const isAdminUser = u => !!(u?.isAdmin) || u?.email?.endsWith('@datadrivensr.com')
+import { requireAdminUser, requireProjectAccess } from '../lib/authz.js'
 
 async function resolveProjectId(env, url) {
-  const slug = url.searchParams.get('slug');
+  const slug = url.searchParams.get('slug')
   if (slug) {
-    const proj = await env.ddsr_dashboard.prepare('SELECT id FROM projects WHERE slug = ? LIMIT 1').bind(slug).first();
-    if (!proj) return null;
-    return proj.id;
+    const proj = await env.ddsr_dashboard.prepare('SELECT id FROM projects WHERE slug = ? LIMIT 1').bind(slug).first()
+    if (!proj) return null
+    return proj.id
   }
-  return url.searchParams.get('project_id') || 1;
+  const explicit = url.searchParams.get('project_id')
+  if (explicit) return explicit
+  return null // no more silent default to project 1
 }
 
 export async function onRequestGet({ env, request }) {
@@ -19,9 +19,8 @@ export async function onRequestGet({ env, request }) {
 
   // Admin-only: review queue across ALL projects
   if (review && all) {
-    const auth = createAuth(env)
-    const session = await auth.api.getSession({ headers: request.headers })
-    if (!isAdminUser(session?.user)) return Response.json({ error: 'Forbidden' }, { status: 403 })
+    const user = await requireAdminUser(request, env)
+    if (user instanceof Response) return user
 
     const { results } = await env.ddsr_dashboard.prepare(`
       SELECT t.*,
@@ -45,8 +44,16 @@ export async function onRequestGet({ env, request }) {
     return Response.json(results)
   }
 
-  const projectId = await resolveProjectId(env, url);
-  if (projectId === null) return Response.json({ error: 'Project not found' }, { status: 404 });
+  // For normal requests, enforce proper project/client access via the membership model
+  const access = await requireProjectAccess(request, env, { 
+    slug: url.searchParams.get('slug'), 
+    projectId: url.searchParams.get('project_id') 
+  });
+  if (access instanceof Response) return access;
+
+  const projectId = access.projectInfo.projectId;
+
+  // For the rest of the function we use the authorized projectId
   const workflowId  = url.searchParams.get('workflow_id');
   const assigneeId  = url.searchParams.get('assignee_id');
   const status      = url.searchParams.get('status');
@@ -106,7 +113,9 @@ export async function onRequestPost({ env, request }) {
     if (!proj) return Response.json({ error: 'Project not found' }, { status: 404 });
     project_id = proj.id;
   }
-  project_id = project_id || 1;
+  if (!project_id) {
+    return Response.json({ error: 'project_id or slug is required' }, { status: 400 })
+  }
 
   if (!title?.trim()) return Response.json({ error: 'title is required' }, { status: 400 });
 

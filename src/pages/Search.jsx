@@ -15,7 +15,7 @@ function fmtDate(d) {
 export default function Search() {
   const [searchParams] = useSearchParams()
   const q = searchParams.get('q') || ''
-  const { authFetch, isAdmin } = useProject()
+  const { api, isAdmin } = useProject()
   const navigate = useNavigate()
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
@@ -24,8 +24,7 @@ export default function Search() {
     if (!isAdmin) { navigate('/'); return }
     if (q.length < 3) { setResults([]); setLoading(false); return }
     setLoading(true)
-    authFetch(`/api/admin/search?q=${encodeURIComponent(q)}`)
-      .then(r => r.json())
+    api.get(`/api/admin/search?q=${encodeURIComponent(q)}`)
       .then(data => { setResults(Array.isArray(data) ? data : []); setLoading(false) })
   }, [q, isAdmin])
 

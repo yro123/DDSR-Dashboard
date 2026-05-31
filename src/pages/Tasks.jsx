@@ -7,6 +7,7 @@ import Avatar from '../components/Avatar'
 import { StatusPill, CategoryPill } from '../components/Pill'
 import { STATUS_DOT } from '../data/constants'
 import { useConfig } from '../context/ConfigContext'
+import { useQuery, useMutation } from '../hooks/useApi'
 
 function CheckDropdown({ label, options, selected, onToggle, getColor }) {
   const [open, setOpen] = useState(false)
@@ -164,16 +165,13 @@ function ConfidenceDot({ confidence }) {
   )
 }
 
-function FeedbackButtons({ task, authFetch, onUpdate }) {
+function FeedbackButtons({ task, api , onUpdate }) {
   const [busy, setBusy] = useState(false)
   const [showReasons, setShowReasons] = useState(false)
 
   const sendFeedback = async feedback => {
     setBusy(true)
-    const res = await authFetch(`/api/tasks/${task.id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ ...task, user_feedback: feedback }),
-    }).then(r => r.json())
+    const res = await api.put(`/api/tasks/${task.id}`, { ...task, user_feedback: feedback })
     onUpdate(res)
     setBusy(false)
     setShowReasons(false)
@@ -314,15 +312,36 @@ function KanbanBoard({ tasks, statuses, getColor, onStatusChange, onArchive }) {
 }
 
 export default function Tasks() {
-  const { slug, authFetch, isAdmin } = useProject()
+  const { slug, api, isAdmin } = useProject()
   const { dark } = useTheme()
   const { getOptions, getColor } = useConfig()
   const statuses = getOptions('task_status')
+
+  // Use the new lightweight query hook (item #3)
+  const { data: tasksData = [], loading: tasksLoading, refetch: reloadTasks } = useQuery(
+    () => api.get(`/api/tasks?slug=${slug}`),
+    [slug]
+  )
+  const { data: peopleData = [] } = useQuery(
+    () => api.get(`/api/people?slug=${slug}`),
+    [slug]
+  )
+  const { data: workflowsData = [] } = useQuery(
+    () => api.get(`/api/workflows?slug=${slug}`),
+    [slug]
+  )
+
   const [tasks, setTasks]         = useState([])
   const [archived, setArchived]   = useState([])
   const [people, setPeople]       = useState([])
   const [workflows, setWorkflows] = useState([])
-  const [loading, setLoading]     = useState(true)
+
+  // Keep local copies in sync with the hook data (simple pattern for now)
+  useEffect(() => { setTasks(tasksData) }, [tasksData])
+  useEffect(() => { setPeople(peopleData) }, [peopleData])
+  useEffect(() => { setWorkflows(workflowsData) }, [workflowsData])
+
+  const loading = tasksLoading
 
   const [searchQuery, setSearchQuery]          = useState('')
   const [groupBy, setGroupBy]                 = useState('person')
@@ -341,24 +360,8 @@ export default function Tasks() {
 
   const setView = mode => { setViewMode(mode); localStorage.setItem('tasks-view', mode) }
 
-  useEffect(() => {
-    setLoading(true)
-    setArchived([])
-    Promise.all([
-      authFetch(`/api/tasks?slug=${slug}`).then(r => r.json()),
-      authFetch(`/api/people?slug=${slug}`).then(r => r.json()),
-      authFetch(`/api/workflows?slug=${slug}`).then(r => r.json()),
-    ]).then(([t, p, w]) => {
-      setTasks(t); setPeople(p); setWorkflows(w); setLoading(false)
-      // auto-select first group on initial load
-      setFilterPrimary(prev => prev || (groupBy === 'person'
-        ? [...new Set(t.map(task => task.assignee_name).filter(Boolean))].sort()[0] || ''
-        : (w[0]?.short_name || '')
-      ))
-    })
-  }, [slug, authFetch])
-
-  const reload = () => authFetch(`/api/tasks?slug=${slug}`).then(r => r.json()).then(setTasks)
+  // Simple reload wrapper (still useful for optimistic updates)
+  const reload = () => reloadTasks()
 
   const personAv = name => {
     const p = people.find(p => p.name === name)
@@ -402,33 +405,28 @@ export default function Tasks() {
 
   const toggleArchiveView = async () => {
     if (!showArchive && archived.length === 0) {
-      const data = await authFetch(`/api/tasks?slug=${slug}&archived=1`).then(r => r.json())
-      setArchived(data)
+      const data = await api.get(`/api/tasks?slug=${slug}&archived=1`)
+      setArchived(data || [])
     }
     setShowArchive(v => !v)
   }
 
   const createTask = async data => {
-    const res = await authFetch('/api/tasks', {
-      method: 'POST', body: JSON.stringify({ slug, ...data }),
-    }).then(r => r.json())
+    const res = await api.post('/api/tasks', { slug, ...data })
     setTasks(prev => [...prev, res])
     setAddingNew(false)
+    reloadTasks()
   }
 
   const updateTask = async (id, data) => {
-    const res = await authFetch(`/api/tasks/${id}`, {
-      method: 'PUT', body: JSON.stringify(data),
-    }).then(r => r.json())
+    const res = await api.put(`/api/tasks/${id}`, data)
     setTasks(prev => prev.map(t => t.id === id ? res : t))
     setOpenTaskId(null)
   }
 
   const archiveTask = async id => {
     const task = tasks.find(t => t.id === id)
-    await authFetch(`/api/tasks/${id}`, {
-      method: 'PUT', body: JSON.stringify({ ...task, is_archived: 1 }),
-    })
+    await api.put(`/api/tasks/${id}`, { ...task, is_archived: 1 })
     setTasks(prev => prev.filter(t => t.id !== id))
     setArchived(prev => [...prev, { ...task, is_archived: 1 }])
     setOpenTaskId(null)
@@ -436,9 +434,7 @@ export default function Tasks() {
 
   const restoreTask = async id => {
     const task = archived.find(t => t.id === id)
-    const res = await authFetch(`/api/tasks/${id}`, {
-      method: 'PUT', body: JSON.stringify({ ...task, is_archived: 0, archived_at: null }),
-    }).then(r => r.json())
+    const res = await api.put(`/api/tasks/${id}`, { ...task, is_archived: 0, archived_at: null })
     setArchived(prev => prev.filter(t => t.id !== id))
     setTasks(prev => [...prev, res])
   }
@@ -462,21 +458,17 @@ export default function Tasks() {
     if (!value) return
     await Promise.all([...bulkSelected].map(id => {
       const task = tasks.find(t => t.id === id)
-      return authFetch(`/api/tasks/${id}`, {
-        method: 'PUT', body: JSON.stringify({ ...task, [field]: value }),
-      })
+      return api.put(`/api/tasks/${id}`, { ...task, [field]: value })
     }))
     await reload()
     setBulkSelected(new Set())
   }
 
   const bulkArchive = async () => {
-    if (!confirm(`Archive ${bulkSelected.size} task(s)?`)) return
+    if (!window.confirm(`Archive ${bulkSelected.size} task(s)?`)) return
     await Promise.all([...bulkSelected].map(id => {
       const task = tasks.find(t => t.id === id)
-      return authFetch(`/api/tasks/${id}`, {
-        method: 'PUT', body: JSON.stringify({ ...task, is_archived: 1 }),
-      })
+      return api.put(`/api/tasks/${id}`, { ...task, is_archived: 1 })
     }))
     setTasks(prev => prev.filter(t => !bulkSelected.has(t.id)))
     setBulkSelected(new Set())
@@ -779,7 +771,7 @@ export default function Tasks() {
                           {t.source_type && t.source_type !== 'manual' && (
                             <FeedbackButtons
                               task={t}
-                              authFetch={authFetch}
+                              api ={api }
                               onUpdate={updated => setTasks(prev => prev.map(x => x.id === updated.id ? updated : x))}
                             />
                           )}

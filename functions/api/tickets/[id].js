@@ -1,6 +1,4 @@
-import { createAuth } from '../../lib/auth'
-
-const isAdminUser = u => !!(u?.isAdmin) || u?.email?.endsWith('@datadrivensr.com')
+import { requireAdminUser, requireProjectAccess, isAdmin, requireSession } from '../../lib/authz.js'
 
 const fetchTicket = (env, id) => env.ddsr_dashboard.prepare(`
   SELECT tr.*, w.short_name as workflow_name, w.color as workflow_color
@@ -9,27 +7,34 @@ const fetchTicket = (env, id) => env.ddsr_dashboard.prepare(`
   WHERE tr.id = ?
 `).bind(id).first()
 
-export async function onRequestGet({ env, params }) {
+export async function onRequestGet({ env, params, request }) {
   const ticket = await fetchTicket(env, params.id)
   if (!ticket) return Response.json({ error: 'Not found' }, { status: 404 })
+
+  const authResult = await requireProjectAccess(request, env, { projectId: ticket.project_id })
+  if (authResult instanceof Response) return authResult
+
   return Response.json(ticket)
 }
 
 export async function onRequestPut({ env, params, request }) {
-  const auth = createAuth(env)
-  const session = await auth.api.getSession({ headers: request.headers })
-  if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  const ticket = await fetchTicket(env, params.id)
+  if (!ticket) return Response.json({ error: 'Not found' }, { status: 404 })
 
+  const authResult = await requireProjectAccess(request, env, { projectId: ticket.project_id })
+  if (authResult instanceof Response) return authResult
+
+  const session = authResult.session
   const body = await request.json()
   const { status, title, description, category, priority, workflow_id, requested_due_date,
           reviewer_notes, rejection_reason,
           task_workflow_id, task_assignee_id, task_due_date } = body
 
-  const now = Date.now()
+  const now = new Date().toISOString()
 
   // Status transitions require admin
   if (status) {
-    if (!isAdminUser(session.user)) return Response.json({ error: 'Forbidden' }, { status: 403 })
+    if (!isAdmin(session.user)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
     if (status === 'Approved') {
       const ticket = await fetchTicket(env, params.id)
@@ -105,7 +110,11 @@ export async function onRequestPut({ env, params, request }) {
     return Response.json({ ticket: updated })
   }
 
-  // Field edits (submitter editing their own Pending ticket)
+  // Field edits — only the original submitter can edit while status is still 'Pending'
+  if (ticket.status !== 'Pending' || ticket.submitted_by_id !== session.user.id) {
+    return Response.json({ error: 'Only the submitter can edit their own Pending ticket' }, { status: 403 })
+  }
+
   await env.ddsr_dashboard.prepare(`
     UPDATE ticket_requests
     SET title = ?, description = ?, category = ?, priority = ?,
@@ -122,9 +131,9 @@ export async function onRequestPut({ env, params, request }) {
 }
 
 export async function onRequestDelete({ env, params, request }) {
-  const auth = createAuth(env)
-  const session = await auth.api.getSession({ headers: request.headers })
-  if (!isAdminUser(session?.user)) return Response.json({ error: 'Forbidden' }, { status: 403 })
+  const session = await requireSession(request, env)
+  if (session instanceof Response) return session
+  if (!isAdmin(session?.user)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   await env.ddsr_dashboard.prepare('DELETE FROM ticket_requests WHERE id = ?').bind(params.id).run()
   return Response.json({ deleted: true })

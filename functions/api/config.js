@@ -1,3 +1,5 @@
+import { requireSession, isAdmin, requireProjectAccess, getProjectClient, canAccessProject } from '../lib/authz.js'
+
 const CATEGORIES = ['task_status', 'task_priority', 'org_type', 'doc_type', 'action_status', 'topic_color']
 
 export async function onRequestGet({ env, request }) {
@@ -7,11 +9,9 @@ export async function onRequestGet({ env, request }) {
 
   let projectId = null
   if (slug && !globalOnly) {
-    const proj = await env.ddsr_dashboard.prepare(
-      'SELECT id FROM projects WHERE slug = ? LIMIT 1'
-    ).bind(slug).first()
-    if (!proj) return Response.json({ error: 'Project not found' }, { status: 404 })
-    projectId = proj.id
+    const access = await requireProjectAccess(request, env, { slug })
+    if (access instanceof Response) return access
+    projectId = access.projectInfo.projectId
   }
 
   const { results: globalItems } = await env.ddsr_dashboard.prepare(
@@ -60,6 +60,20 @@ export async function onRequestPost({ env, request }) {
   if (!CATEGORIES.includes(category)) return Response.json({ error: 'Invalid category' }, { status: 400 })
   if (!value?.trim() && category !== 'topic_color') return Response.json({ error: 'value is required' }, { status: 400 })
   if (category === 'topic_color' && !color && !value) return Response.json({ error: 'color is required for topic_color' }, { status: 400 })
+
+  // If modifying a specific project's config, check access
+  if (project_id) {
+    const session = await requireSession(request, env)
+    if (session instanceof Response) return session
+
+    const user = session.user
+    if (!isAdmin(user)) {
+      const info = await getProjectClient(env, { projectId: project_id })
+      if (!info || !(await canAccessProject(user, info, env))) {
+        return Response.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    }
+  }
 
   const now = new Date().toISOString()
   const insertValue = category === 'topic_color' ? (color || value) : value.trim()

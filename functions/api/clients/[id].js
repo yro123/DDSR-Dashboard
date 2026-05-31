@@ -1,4 +1,13 @@
+import { requireSession, isAdmin } from '../../lib/authz.js'
+
 export async function onRequestPut({ env, params, request }) {
+  const session = await requireSession(request, env)
+  if (session instanceof Response) return session
+
+  if (!isAdmin(session.user)) {
+    return Response.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   const { name, display_name, slug, is_active } = await request.json()
   const now = new Date().toISOString()
 

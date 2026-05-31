@@ -1,11 +1,8 @@
-import { createAuth } from '../../lib/auth'
-
-const isAdminUser = u => !!(u?.isAdmin) || u?.email?.endsWith('@datadrivensr.com')
+import { requireAdminUser } from '../../lib/authz.js'
 
 export async function onRequestGet({ env, request }) {
-  const auth = createAuth(env)
-  const session = await auth.api.getSession({ headers: request.headers })
-  if (!isAdminUser(session?.user)) return Response.json({ error: 'Forbidden' }, { status: 403 })
+  const user = await requireAdminUser(request, env)
+  if (user instanceof Response) return user
 
   const q = new URL(request.url).searchParams.get('q')?.trim()
   if (!q || q.length < 3) return Response.json([])
