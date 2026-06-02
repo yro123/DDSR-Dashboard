@@ -1,4 +1,9 @@
+import { requireAdminUser } from '../lib/authz.js'
+
 export async function onRequestPost({ env, request }) {
+  const admin = await requireAdminUser(request, env)
+  if (admin instanceof Response) return admin
+
   const body = await request.json()
   const { client_id, name, subtitle, slug, go_live_date, project_start_date } = body
   if (!client_id) return Response.json({ error: 'client_id is required' }, { status: 400 })

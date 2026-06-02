@@ -226,3 +226,39 @@ export async function requireProjectAccess(request, env, { slug, projectId }) {
   // Attach useful data for the handler
   return { session, projectInfo: info }
 }
+
+/**
+ * Resolves the project_id for a meeting_note via its topic.
+ * Returns the project_id or null if not found.
+ */
+export async function getMeetingProjectIdByTopic(env, topicId) {
+  if (!topicId) return null;
+  const row = await env.ddsr_dashboard
+    .prepare(`
+      SELECT m.project_id 
+      FROM meeting_topics mt
+      JOIN meetings m ON m.id = mt.meeting_id
+      WHERE mt.id = ?
+    `)
+    .bind(topicId)
+    .first();
+  return row?.project_id ?? null;
+}
+
+/**
+ * Resolves the project_id for a meeting_action_item via its topic.
+ */
+export async function getMeetingProjectIdByActionItem(env, actionItemId) {
+  if (!actionItemId) return null;
+  const row = await env.ddsr_dashboard
+    .prepare(`
+      SELECT m.project_id 
+      FROM meeting_action_items mai
+      JOIN meeting_topics mt ON mt.id = mai.topic_id
+      JOIN meetings m ON m.id = mt.meeting_id
+      WHERE mai.id = ?
+    `)
+    .bind(actionItemId)
+    .first();
+  return row?.project_id ?? null;
+}

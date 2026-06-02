@@ -1,6 +1,11 @@
 import { requireSession, isAdmin, getProjectClient, canAccessProject } from '../lib/authz.js'
 
+import { requireAdminUser } from '../lib/authz.js'
+
 export async function onRequestPost({ env, request }) {
+  const admin = await requireAdminUser(request, env)
+  if (admin instanceof Response) return admin
+
   const body = await request.json()
   let { project_id, slug, name, role, org_type, email, avatar_bg, avatar_fg } = body
   if (slug && !project_id) {

@@ -1,6 +1,13 @@
+import { requireProjectAccess } from '../lib/authz.js'
+
 export async function onRequestPost({ env, request }) {
   const body = await request.json()
-  const { project_id, slug, meeting_date, display_date, title, meeting_type, location, next_meeting } = body
+  let { project_id, slug, meeting_date, display_date, title, meeting_type, location, next_meeting } = body
+
+  const access = await requireProjectAccess(request, env, { slug, projectId: project_id })
+  if (access instanceof Response) return access
+
+  project_id = access.projectInfo.projectId
 
   let projectId = project_id
   if (slug && !projectId) {

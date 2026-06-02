@@ -53,6 +53,8 @@ export async function onRequestGet({ env, request }) {
   })
 }
 
+import { requireAdminUser } from '../lib/authz.js'
+
 export async function onRequestPost({ env, request }) {
   const body = await request.json()
   const { project_id, category, value, color, sort_order } = body
@@ -61,7 +63,6 @@ export async function onRequestPost({ env, request }) {
   if (!value?.trim() && category !== 'topic_color') return Response.json({ error: 'value is required' }, { status: 400 })
   if (category === 'topic_color' && !color && !value) return Response.json({ error: 'color is required for topic_color' }, { status: 400 })
 
-  // If modifying a specific project's config, check access
   if (project_id) {
     const session = await requireSession(request, env)
     if (session instanceof Response) return session
@@ -73,6 +74,10 @@ export async function onRequestPost({ env, request }) {
         return Response.json({ error: 'Forbidden' }, { status: 403 })
       }
     }
+  } else {
+    // Global config changes are admin-only
+    const admin = await requireAdminUser(request, env)
+    if (admin instanceof Response) return admin
   }
 
   const now = new Date().toISOString()

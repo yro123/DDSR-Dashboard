@@ -7,7 +7,7 @@ import { getUserAccessibleClientSlugs } from './authz.js'
 const PBKDF2_ITERS = 100_000
 const PBKDF2_KEY_BYTES = 32
 
-async function hashPassword(password) {
+export async function hashPassword(password) {
   const enc = new TextEncoder()
   const salt = crypto.getRandomValues(new Uint8Array(16))
   const key = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits'])

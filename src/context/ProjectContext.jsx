@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { authClient } from '../lib/auth-client'
 
@@ -35,12 +35,12 @@ export function ProjectProvider({ children }) {
   }, [])
 
   // Central API helper + hooks (useQuery, useMutation, usePermissions) are the preferred patterns.
-  const api = {
+  const api = useMemo(() => ({
     get: (url) => authFetch(url),
     post: (url, body) => authFetch(url, { method: 'POST', body: JSON.stringify(body) }),
     put: (url, body) => authFetch(url, { method: 'PUT', body: JSON.stringify(body) }),
     del: (url) => authFetch(url, { method: 'DELETE' }),
-  }
+  }), [authFetch])
 
   useEffect(() => {
     if (session) {
@@ -53,7 +53,7 @@ export function ProjectProvider({ children }) {
         })
         .catch(() => setClients([]))
     }
-  }, [session, api])
+  }, [session])
 
   return (
     <ProjectContext.Provider 

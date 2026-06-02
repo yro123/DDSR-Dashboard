@@ -106,6 +106,9 @@ export async function onRequestGet({ env, request }) {
 }
 
 export async function onRequestPost({ env, request }) {
+  const admin = await requireAdminUser(request, env)
+  if (admin instanceof Response) return admin
+
   const body = await request.json();
   let { project_id, slug, workflow_id, assignee_id, title, notes, status, priority, due_date } = body;
   if (slug && !project_id) {

@@ -1,5 +1,5 @@
 import { requireAdminUser } from '../../../lib/authz.js'
-import { hashPassword } from 'better-auth/crypto'
+import { hashPassword } from '../../../lib/auth.js'
 
 export async function onRequestPost({ env, params, request }) {
   const user = await requireAdminUser(request, env)
