@@ -3,7 +3,7 @@ import { requireAdminUser, isAdmin, requireSession } from '../lib/authz.js'
 export async function onRequestPost({ env, request }) {
   const user = await requireAdminUser(request, env)
   if (user instanceof Response) return user
-  const { name, display_name, slug } = await request.json()
+  const { name, display_name, slug, email_domain } = await request.json()
   if (!name?.trim()) return Response.json({ error: 'name is required' }, { status: 400 })
   if (!display_name?.trim()) return Response.json({ error: 'display_name is required' }, { status: 400 })
   if (!slug?.trim()) return Response.json({ error: 'slug is required' }, { status: 400 })
@@ -13,9 +13,9 @@ export async function onRequestPost({ env, request }) {
 
   const now = new Date().toISOString()
   const { meta } = await env.ddsr_dashboard.prepare(`
-    INSERT INTO clients (name, display_name, slug, is_active, created_at, updated_at)
-    VALUES (?, ?, ?, 1, ?, ?)
-  `).bind(name.trim(), display_name.trim(), slug.trim(), now, now).run()
+    INSERT INTO clients (name, display_name, slug, email_domain, is_active, created_at, updated_at)
+    VALUES (?, ?, ?, ?, 1, ?, ?)
+  `).bind(name.trim(), display_name.trim(), slug.trim(), email_domain?.trim().toLowerCase() || null, now, now).run()
 
   const client = await env.ddsr_dashboard.prepare('SELECT * FROM clients WHERE id = ?').bind(meta.last_row_id).first()
   return Response.json(client, { status: 201 })
@@ -36,14 +36,14 @@ export async function onRequestGet({ env, request }) {
   let clientRows
 
   if (isInternal) {
-    // Internal team sees everything
+    // Internal team sees everything, including deactivated clients (so they can be reactivated)
     clientRows = await db.prepare(
-      `SELECT id, slug, display_name, name, is_active FROM clients WHERE is_active = 1 ORDER BY name`
+      `SELECT id, slug, display_name, name, email_domain, is_active FROM clients ORDER BY is_active DESC, name`
     ).all()
   } else if (user?.id) {
     // Regular users only see clients they have explicit membership in
     clientRows = await db.prepare(`
-      SELECT c.id, c.slug, c.display_name, c.name, c.is_active
+      SELECT c.id, c.slug, c.display_name, c.name, c.email_domain, c.is_active
       FROM clients c
       JOIN user_clients uc ON uc.client_id = c.id
       WHERE uc.user_id = ? AND c.is_active = 1

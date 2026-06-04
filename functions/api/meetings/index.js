@@ -1,4 +1,4 @@
-import { requireProjectAccess } from '../lib/authz.js'
+import { requireProjectAccess } from '../../lib/authz.js'
 
 export async function onRequestPost({ env, request }) {
   const body = await request.json()

@@ -67,8 +67,8 @@ export default function MeetingsTab({ projectSlug: propProjectSlug }) {
     if (!projectSlug) return
     setLoading(true)
     api.get(`/api/meetings?slug=${projectSlug}&all=1`)
-      .then(r => r.json())
       .then(data => { setMeetings(Array.isArray(data) ? data : []); setLoading(false) })
+      .catch(() => setLoading(false))
   }
 
   useEffect(() => { load() }, [projectSlug])
