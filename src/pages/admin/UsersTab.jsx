@@ -154,11 +154,12 @@ function UserRow({ user, allProjects, onRefresh, currentUserId }) {
   )
 }
 
-function InviteSection({ allProjects }) {
-  const { api, currentClient } = useProject()
-  // Which client/workspace the new invite targets (drives the invitations.client_id row).
+function InviteSection() {
+  const { api, clients, currentClient } = useProject()
+  // Invitations are CLIENT-scoped (the API resolves a client slug -> invitations.client_id),
+  // so this selector lists clients/workspaces, not projects.
   const [targetSlug, setTargetSlug] = useState(
-    (currentClient?.slug) || allProjects[0]?.slug || ''
+    currentClient?.slug || clients[0]?.slug || ''
   )
   const [email, setEmail] = useState('')
   const [creating, setCreating] = useState(false)
@@ -220,14 +221,14 @@ function InviteSection({ allProjects }) {
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <div>
-            <div style={{ ...labelStyle, marginBottom: 5 }}>Project</div>
+            <div style={{ ...labelStyle, marginBottom: 5 }}>Client / Workspace</div>
             <select
               value={targetSlug}
               onChange={e => setTargetSlug(e.target.value)}
               style={{ ...inputStyle }}
             >
-              {allProjects.map(p => (
-                <option key={p.slug} value={p.slug}>{p.name}</option>
+              {clients.map(c => (
+                <option key={c.slug} value={c.slug}>{c.name}</option>
               ))}
             </select>
           </div>
@@ -389,7 +390,7 @@ export default function UsersTab() {
         </table>
       </div>
 
-      <InviteSection api={api} allProjects={allProjects} />
+      <InviteSection />
     </div>
   )
 }

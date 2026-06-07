@@ -91,6 +91,39 @@ function fmtDate(d) {
   } catch { return '' }
 }
 
+const CSV_COLUMNS = [
+  ['Title',      t => t.title],
+  ['Assignee',   t => t.assignee_name],
+  ['Workflow',   t => t.workflow_name],
+  ['Status',     t => t.status],
+  ['Due Date',   t => t.due_date],
+  ['Source',     t => t.source_type || 'manual'],
+  ['Confidence', t => t.confidence != null ? `${Math.round(t.confidence * 100)}%` : ''],
+  ['Notes',      t => t.notes],
+]
+
+function tasksToCSV(rows) {
+  const esc = v => {
+    const s = v == null ? '' : String(v)
+    return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+  }
+  const lines = [CSV_COLUMNS.map(([h]) => h).join(',')]
+  for (const t of rows) lines.push(CSV_COLUMNS.map(([, get]) => esc(get(t))).join(','))
+  return '﻿' + lines.join('\r\n')  // BOM so Excel reads UTF-8
+}
+
+function downloadCSV(filename, csv) {
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
 function TaskEditForm({ task, people, workflows, statuses, onSave, onCancel, onArchive }) {
   const [form, setForm] = useState({
     title: task?.title || '',
@@ -350,6 +383,7 @@ export default function Tasks() {
   const [filterSecondary, setFilterSecondary] = useState('')
   const [filterPrimary, setFilterPrimary]     = useState('')
   const [showAll, setShowAll]                 = useState(false)
+  const [showCompleted, setShowCompleted]     = useState(false)
   const [showArchive, setShowArchive]         = useState(false)
   const [openTaskId, setOpenTaskId]           = useState(null)
   const [addingNew, setAddingNew]             = useState(false)
@@ -373,6 +407,7 @@ export default function Tasks() {
 
   // forCards: ignores filterPrimary so all stat tiles always show with real counts
   const forCards = tasks.filter(t => {
+    if (!showCompleted && t.status === 'Done') return false
     if (searchQuery) {
       const q = searchQuery.toLowerCase()
       if (!(t.title?.toLowerCase().includes(q)
@@ -398,6 +433,12 @@ export default function Tasks() {
   })
 
   const groupKeys = groupBy === 'person' ? assigneeNames : workflowNames
+
+  const exportCSV = () => {
+    const rows = viewMode === 'list' ? visible : forCards
+    if (!rows.length) return
+    downloadCSV(`tasks-${slug}.csv`, tasksToCSV(rows))
+  }
 
   const changeGroup = g => {
     setGroupBy(g); setFilterSecondary(''); setFilterPrimary(''); setFilterSourceType(''); setFilterStatuses(new Set()); setShowAll(false); setOpenTaskId(null)
@@ -539,6 +580,16 @@ export default function Tasks() {
         {viewMode === 'list' && (
           <button className={`btn${showAll ? ' btn-active' : ''}`} onClick={() => setShowAll(v => !v)}>
             {showAll ? 'Collapse' : 'View All'}
+          </button>
+        )}
+        {viewMode === 'list' && !showArchive && (
+          <button className={`btn${showCompleted ? ' btn-active' : ''}`} onClick={() => setShowCompleted(v => !v)}>
+            {showCompleted ? '✓ Showing completed' : 'Show completed'}
+          </button>
+        )}
+        {!showArchive && (
+          <button className="btn" onClick={exportCSV} title="Export current tasks to CSV">
+            ⤓ Export CSV
           </button>
         )}
         {isAdmin && !showArchive && (

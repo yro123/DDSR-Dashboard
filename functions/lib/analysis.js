@@ -171,3 +171,35 @@ export async function writeTask(db, task, people, defaultProjectId, sourceType, 
 
   return taskId
 }
+
+// ── Assessment writer ─────────────────────────────────────────────────────────
+
+/**
+ * Store Claude's per-email rating onto the existing snapshot row.
+ * No-op if the snapshot row or assessment columns don't exist.
+ * @param {D1Database} db
+ * @param {object} a - { source_email_id, is_task, urgency, criticality, resolution_bucket, solution_outline, status }
+ */
+export async function writeAssessment(db, a) {
+  if (!a || !a.source_email_id) return
+  try {
+    await db.prepare(`
+      UPDATE email_snapshots SET
+        is_task = ?, urgency = ?, criticality = ?, resolution_bucket = ?,
+        solution_outline = ?, assessment_status = ?, assessed_at = ?
+      WHERE message_id = ?
+    `).bind(
+      a.is_task ? 1 : 0,
+      a.urgency ?? null,
+      a.criticality ?? null,
+      a.resolution_bucket ?? null,
+      a.solution_outline ?? null,
+      a.status ?? null,
+      new Date().toISOString(),
+      a.source_email_id,
+    ).run()
+  } catch (err) {
+    // Columns missing (pre-0025) — assessment is best-effort here.
+    console.warn('[analysis] writeAssessment skipped:', err.message)
+  }
+}

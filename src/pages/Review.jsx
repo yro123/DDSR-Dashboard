@@ -13,6 +13,28 @@ function fmtDate(d) {
   } catch { return '' }
 }
 
+// Local YYYY-MM-DD for a Date (used by the emails-tab day filter).
+function localDateStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+// UTC ISO bounds [start, end) covering the given local day (YYYY-MM-DD).
+function localDayBounds(dateStr) {
+  const start = new Date(`${dateStr}T00:00:00`)
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000)
+  return { since: start.toISOString(), until: end.toISOString() }
+}
+
+// Add `days` to a YYYY-MM-DD string, returning a new YYYY-MM-DD string.
+function shiftDateStr(dateStr, days) {
+  const d = new Date(`${dateStr}T00:00:00`)
+  d.setDate(d.getDate() + days)
+  return localDateStr(d)
+}
+
+// Rows shown for a collapsed client window in the emails tab.
+const COLLAPSED_EMAIL_ROWS = 3
+
 function ConfidenceBadge({ confidence }) {
   if (confidence == null) return <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>no score</span>
   const pct = Math.round(confidence * 100)
@@ -31,6 +53,76 @@ function EmptyState() {
       <div style={{ fontSize: 14, fontWeight: 600 }}>All caught up</div>
       <div style={{ fontSize: 12, marginTop: 4 }}>No items need review right now.</div>
     </div>
+  )
+}
+
+// ── Email assessment (urgency / criticality / resolution) ──────────────────────
+
+const RATING_ORDINAL = { High: 3, Medium: 2, Low: 1 }
+const BUCKET_ORDINAL = { '<1h': 1, '1-4h': 2, '1d': 3, 'multi-day': 4 }
+const RATING_COLOR = { High: '#dc2626', Medium: '#d97706', Low: '#6b7280' }
+const SORT_KEYS = [
+  { key: 'urgency', label: 'Urgency' },
+  { key: 'criticality', label: 'Criticality' },
+  { key: 'resolution', label: 'Time to resolve' },
+]
+
+// Sort emails by the chosen assessment key/direction (client-side, for the
+// per-client group view). Unrated emails sort to the bottom.
+function sortEmails(list, sort, dir) {
+  const sign = dir === 'asc' ? 1 : -1
+  const val = e =>
+    sort === 'criticality' ? (RATING_ORDINAL[e.criticality] ?? 0)
+    : sort === 'resolution' ? (BUCKET_ORDINAL[e.resolution_bucket] ?? 0)
+    : (RATING_ORDINAL[e.urgency] ?? 0)
+  return [...list].sort((a, b) => {
+    const d = (val(a) - val(b)) * sign
+    if (d !== 0) return d
+    return new Date(b.received_at || 0) - new Date(a.received_at || 0)
+  })
+}
+
+function ratingPill(label, value) {
+  if (!value) return null
+  const color = RATING_COLOR[value] || '#9ca3af'
+  return (
+    <span title={label} style={{ fontSize: 10, fontWeight: 700, color, background: color + '18', borderRadius: 4, padding: '1px 6px', whiteSpace: 'nowrap' }}>
+      {label[0]}: {value}
+    </span>
+  )
+}
+
+function AssessmentBadges({ email }) {
+  if (!email.urgency && !email.criticality && !email.resolution_bucket) return null
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+      {ratingPill('Urgency', email.urgency)}
+      {ratingPill('Criticality', email.criticality)}
+      {email.resolution_bucket && (
+        <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text)', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 4, padding: '1px 6px', whiteSpace: 'nowrap' }}>
+          ⏱ {email.resolution_bucket}
+        </span>
+      )}
+      {email.assessment_status === 'waiting_on_others' && (
+        <span style={{ fontSize: 10, color: 'var(--text-dim)', fontStyle: 'italic' }}>waiting on others</span>
+      )}
+    </span>
+  )
+}
+
+// Compact sort controls (key dropdown + direction toggle) reused in each box header.
+function SortControls({ sort, dir, onSort, onDir }) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }} onClick={e => e.stopPropagation()}>
+      <select value={sort} onChange={e => onSort(e.target.value)}
+        style={{ fontSize: 11, padding: '2px 6px', borderRadius: 5, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}>
+        {SORT_KEYS.map(k => <option key={k.key} value={k.key}>{k.label}</option>)}
+      </select>
+      <button onClick={() => onDir(dir === 'asc' ? 'desc' : 'asc')} title={dir === 'asc' ? 'Least → most' : 'Most → least'}
+        style={{ fontSize: 11, padding: '2px 7px', borderRadius: 5, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer', fontFamily: 'inherit' }}>
+        {dir === 'asc' ? '↑' : '↓'}
+      </button>
+    </span>
   )
 }
 
@@ -459,9 +551,23 @@ export default function Review() {
   const [loading, setLoading]                     = useState(true)
 
   // Emails tab — lazy loaded on first visit
-  const [emailSnapshots, setEmailSnapshots]       = useState(null)
-  const [analyzingGroup, setAnalyzingGroup]       = useState(null)
+  const [emailSnapshots, setEmailSnapshots]           = useState(null)
+  const [analyzingGroup, setAnalyzingGroup]           = useState(null)
   const [emailAnalysisResult, setEmailAnalysisResult] = useState({})
+  const [emailSearch, setEmailSearch]                 = useState('')
+  const [expandedEmailIds, setExpandedEmailIds]       = useState(new Set())
+  const [selectedUnmatchedIds, setSelectedUnmatchedIds] = useState(new Set())
+  const [unmatchedBulkProjectId, setUnmatchedBulkProjectId] = useState('')
+  // Emails tab: selected day (local) — defaults to today; only one client window
+  // expands at a time (others collapse to a few rows so the page stays short).
+  const [emailDate, setEmailDate]             = useState(() => localDateStr(new Date()))
+  const [expandedClientKey, setExpandedClientKey] = useState(null)
+  // Emails tab: assessment sort (shared by every group box + the Needs Attention box).
+  const [emailSort, setEmailSort]             = useState('urgency')
+  const [emailSortDir, setEmailSortDir]       = useState('desc')
+  // Cross-client "Needs Attention" list (last 3 days, non-task, unresolved).
+  const [attentionEmails, setAttentionEmails] = useState(null)
+  const [resolvedIds, setResolvedIds]         = useState(new Set())
 
   // Manual tab
   const [manualTaskText, setManualTaskText]           = useState('')
@@ -500,14 +606,37 @@ export default function Review() {
     }).catch(() => setLoading(false))
   }, [slug, api, isAdmin])
 
-  // Lazy-load email snapshots only when the tab is first opened
+  // Load email snapshots for the selected day when the emails tab is active.
+  // Refetches whenever the day changes so the date filter can reach past days
+  // beyond the 300-row cap.
   useEffect(() => {
-    if (activeTab === 'emails' && emailSnapshots === null && isAdmin) {
-      api.get('/api/admin/email-snapshots')
-        .then(data => setEmailSnapshots(data))
-        .catch(() => setEmailSnapshots({ groups: [], unmatched: [] }))
-    }
-  }, [activeTab, emailSnapshots, isAdmin, api])
+    if (activeTab !== 'emails' || !isAdmin) return
+    setEmailSnapshots(null)
+    setExpandedClientKey(null)
+    const { since, until } = localDayBounds(emailDate)
+    const qs = `since=${encodeURIComponent(since)}&until=${encodeURIComponent(until)}`
+    api.get(`/api/admin/email-snapshots?${qs}`)
+      .then(data => setEmailSnapshots(data))
+      .catch(() => setEmailSnapshots({ groups: [], unmatched: [] }))
+  }, [activeTab, emailDate, isAdmin, api])
+
+  // Load the cross-client "Needs Attention" list (last 3 days, non-task, open).
+  // Refetches when the sort key/direction changes so ordering is server-side.
+  useEffect(() => {
+    if (activeTab !== 'emails' || !isAdmin) return
+    setAttentionEmails(null)
+    const qs = `sort=${emailSort}&dir=${emailSortDir}`
+    api.get(`/api/admin/email-attention?${qs}`)
+      .then(data => setAttentionEmails(data.emails || []))
+      .catch(() => setAttentionEmails([]))
+  }, [activeTab, emailSort, emailSortDir, isAdmin, api])
+
+  // Mark an email's thread resolved — drops it from the Needs Attention view.
+  const resolveEmail = async (messageId) => {
+    setResolvedIds(prev => new Set(prev).add(messageId))
+    setAttentionEmails(prev => (prev || []).filter(e => e.message_id !== messageId))
+    await api.post('/api/admin/email-resolve', { message_id: messageId }).catch(() => null)
+  }
 
   const removeTask    = id => setTasks(prev => prev.filter(t => t.id !== id))
   const removeMeeting = id => setPendingMeetings(prev => prev.filter(m => m.id !== id))
@@ -750,67 +879,286 @@ export default function Review() {
                 ? <div style={{ color: 'var(--text-dim)', fontSize: 13 }}>Loading…</div>
                 : (() => {
                     const { groups = [], unmatched = [] } = emailSnapshots
-                    if (groups.length === 0 && unmatched.length === 0) return <EmptyState />
-                    const allGroups = [
-                      ...groups.map(g => ({ ...g, key: String(g.project_id) })),
-                      ...(unmatched.length > 0 ? [{ key: 'unmatched', project_name: 'Unmatched', client_domain: null, project_id: null, emails: unmatched }] : []),
-                    ]
-                    return allGroups.map(group => {
-                      const groupKey = group.key
-                      const result = emailAnalysisResult[groupKey]
-                      const isAnalyzing = analyzingGroup === groupKey
+
+                    const q = emailSearch.toLowerCase().trim()
+                    const matchesSearch = e =>
+                      !q ||
+                      e.subject?.toLowerCase().includes(q) ||
+                      e.from_email?.toLowerCase().includes(q) ||
+                      e.from_name?.toLowerCase().includes(q) ||
+                      e.body_preview?.toLowerCase().includes(q) ||
+                      e.body_full?.toLowerCase().includes(q)
+
+                    const filteredGroups = groups.map(g => ({ ...g, emails: g.emails.filter(matchesSearch) })).filter(g => g.emails.length > 0)
+                    const filteredUnmatched = unmatched.filter(matchesSearch)
+
+                    const toggleExpand = id => setExpandedEmailIds(prev => {
+                      const next = new Set(prev)
+                      next.has(id) ? next.delete(id) : next.add(id)
+                      return next
+                    })
+
+                    const EmailCard = ({ email, projectId, groupKey, showCheckbox = false, showClient = false, onResolve = null }) => {
+                      const expanded = expandedEmailIds.has(email.message_id)
+                      const indivKey = `${groupKey}_${email.message_id}`
+                      const isAnalyzing = analyzingGroup === indivKey
+                      const result = emailAnalysisResult[indivKey]
                       return (
-                        <div key={groupKey} style={{ border: '1px solid var(--border)', borderRadius: 10, marginBottom: 16, overflow: 'hidden' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
+                        <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 0' }}>
+                            {showCheckbox && (
+                              <input type="checkbox" checked={selectedUnmatchedIds.has(email.message_id)}
+                                onChange={() => setSelectedUnmatchedIds(prev => {
+                                  const next = new Set(prev)
+                                  next.has(email.message_id) ? next.delete(email.message_id) : next.add(email.message_id)
+                                  return next
+                                })}
+                                style={{ marginTop: 3, flexShrink: 0, cursor: 'pointer' }} />
+                            )}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                                <button onClick={() => toggleExpand(email.message_id)}
+                                  style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0, fontFamily: 'inherit', flex: 1, minWidth: 0 }}>
+                                  <span style={{ marginRight: 4, color: 'var(--text-dim)' }}>{expanded ? '▾' : '▸'}</span>
+                                  {email.subject || '(no subject)'}
+                                </button>
+                              </div>
+                              <div style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 2 }}>
+                                {email.from_name && <span style={{ fontWeight: 600 }}>{email.from_name} </span>}
+                                <span style={{ fontFamily: 'monospace' }}>&lt;{email.from_email}&gt;</span>
+                                {email.received_at && <span> · {new Date(email.received_at).toLocaleDateString()}</span>}
+                                {showClient && email.project_name && <span> · <span style={{ color: '#6366f1', fontWeight: 600 }}>{email.project_name}</span></span>}
+                              </div>
+                              <div style={{ marginBottom: expanded ? 4 : 2 }}><AssessmentBadges email={email} /></div>
+                              {!expanded && email.body_preview && (
+                                <div style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{email.body_preview}</div>
+                              )}
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0 }}>
+                              {projectId && (
+                                <button onClick={() => analyzeEmailGroup([email.message_id], projectId, indivKey)} disabled={isAnalyzing}
+                                  style={{ fontSize: 11, padding: '3px 9px', borderRadius: 5, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', cursor: isAnalyzing ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit' }}>
+                                  {isAnalyzing ? '…' : 'Analyze'}
+                                </button>
+                              )}
+                              {onResolve && (
+                                <button onClick={() => onResolve(email.message_id)}
+                                  style={{ fontSize: 11, padding: '3px 9px', borderRadius: 5, border: '1px solid var(--border)', background: 'var(--surface)', color: '#16a34a', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit' }}>
+                                  ✓ Resolve
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          {email.solution_outline && (
+                            <div style={{ margin: '0 0 8px 16px', padding: '6px 10px', borderRadius: 6, background: 'var(--surface-2)', border: '1px solid var(--border)', fontSize: 11, color: 'var(--text)' }}>
+                              <span style={{ fontWeight: 700, color: 'var(--text-dim)' }}>Possible solution: </span>{email.solution_outline}
+                            </div>
+                          )}
+                          {expanded && (
+                            <div style={{ margin: '0 0 10px 16px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 7, padding: '10px 12px', fontSize: 12, color: 'var(--text)', lineHeight: 1.6, whiteSpace: 'pre-wrap', maxHeight: 400, overflowY: 'auto' }}>
+                              {email.body_full || email.body_preview || '(no body)'}
+                            </div>
+                          )}
+                          {result && (
+                            <div style={{ margin: '0 0 8px 16px', padding: '6px 10px', borderRadius: 6, background: result.error ? '#fef2f2' : '#f0fdf4', fontSize: 11 }}>
+                              {result.error ? <span style={{ color: '#dc2626' }}>Error: {result.error}</span>
+                                : <span style={{ color: '#16a34a' }}>✓ {result.tasks_added} added · {result.tasks_for_review} for review</span>}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    }
+
+                    // Accordion window. Collapsed → a few rows; clicking the header
+                    // (or "show more") expands it fully and collapses any other window.
+                    // An active search forces full expansion so matches aren't hidden.
+                    const GroupSection = ({ group }) => {
+                      const groupKey = String(group.project_id)
+                      const open = expandedClientKey === groupKey || !!q
+                      const groupResult = emailAnalysisResult[groupKey]
+                      const isAnalyzingGroup = analyzingGroup === groupKey
+                      const sorted = sortEmails(group.emails, emailSort, emailSortDir)
+                      const visible = open ? sorted : sorted.slice(0, COLLAPSED_EMAIL_ROWS)
+                      const hiddenCount = sorted.length - visible.length
+                      const toggle = () => setExpandedClientKey(k => (k === groupKey ? null : groupKey))
+                      return (
+                        <div style={{ border: '1px solid var(--border)', borderRadius: 10, marginBottom: 14, overflow: 'hidden' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
+                            onClick={toggle}>
+                            <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{open ? '▾' : '▸'}</span>
                             <div style={{ flex: 1 }}>
                               <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{group.project_name}</span>
                               {group.client_domain && <span style={{ fontSize: 11, color: '#6366f1', marginLeft: 8 }}>@{group.client_domain}</span>}
                             </div>
-                            <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{group.emails.length} email{group.emails.length !== 1 ? 's' : ''}</span>
-                            {group.project_id && (
-                              <button
-                                onClick={() => analyzeEmailGroup(group.emails.map(e => e.message_id), group.project_id, groupKey)}
-                                disabled={isAnalyzing}
-                                style={{ fontSize: 12, padding: '4px 12px', borderRadius: 6, border: 'none', background: isAnalyzing ? '#e5e7eb' : '#6366f1', color: isAnalyzing ? '#9ca3af' : '#fff', cursor: isAnalyzing ? 'not-allowed' : 'pointer', fontWeight: 600, fontFamily: 'inherit' }}
-                              >
-                                {isAnalyzing ? 'Analyzing…' : `Analyze All (${group.emails.length})`}
+                            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-dim)', background: 'var(--surface)', borderRadius: 99, padding: '1px 8px' }}>{group.emails.length}</span>
+                            <SortControls sort={emailSort} dir={emailSortDir} onSort={setEmailSort} onDir={setEmailSortDir} />
+                            <button onClick={e => { e.stopPropagation(); analyzeEmailGroup(group.emails.map(e => e.message_id), group.project_id, groupKey) }}
+                              disabled={isAnalyzingGroup}
+                              style={{ fontSize: 11, padding: '3px 10px', borderRadius: 5, border: 'none', background: isAnalyzingGroup ? '#e5e7eb' : '#6366f1', color: isAnalyzingGroup ? '#9ca3af' : '#fff', cursor: isAnalyzingGroup ? 'not-allowed' : 'pointer', fontWeight: 600, fontFamily: 'inherit', flexShrink: 0 }}>
+                              {isAnalyzingGroup ? 'Analyzing…' : 'Analyze All'}
+                            </button>
+                          </div>
+                          {groupResult && (
+                            <div style={{ padding: '6px 14px', background: groupResult.error ? '#fef2f2' : '#f0fdf4', borderBottom: '1px solid var(--border)', fontSize: 11 }}>
+                              {groupResult.error ? <span style={{ color: '#dc2626' }}>Error: {groupResult.error}</span>
+                                : <span style={{ color: '#16a34a' }}>✓ {groupResult.tasks_added} added · {groupResult.tasks_for_review} for review · {groupResult.completions_marked} completions</span>}
+                            </div>
+                          )}
+                          <div style={{ padding: '0 14px' }}>
+                            {visible.map(email => <EmailCard key={email.message_id} email={email} projectId={group.project_id} groupKey={groupKey} />)}
+                            {!open && hiddenCount > 0 && (
+                              <button onClick={toggle}
+                                style={{ width: '100%', textAlign: 'left', padding: '8px 0', fontSize: 11, fontWeight: 600, color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+                                + {hiddenCount} more email{hiddenCount !== 1 ? 's' : ''} — show all
                               </button>
                             )}
                           </div>
-                          {result && (
-                            <div style={{ padding: '8px 16px', background: result.error ? '#fef2f2' : '#f0fdf4', borderBottom: '1px solid var(--border)', fontSize: 12 }}>
-                              {result.error
-                                ? <span style={{ color: '#dc2626' }}>Error: {result.error}</span>
-                                : <span style={{ color: '#16a34a' }}>✓ {result.tasks_added} task{result.tasks_added !== 1 ? 's' : ''} added · {result.tasks_for_review} for review · {result.completions_marked} completion{result.completions_marked !== 1 ? 's' : ''}</span>
-                              }
-                            </div>
-                          )}
-                          <div style={{ padding: '8px 16px' }}>
-                            {group.emails.map(email => (
-                              <div key={email.message_id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--border)', lastChild: { borderBottom: 'none' } }}>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>{email.subject || '(no subject)'}</div>
-                                  <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>
-                                    {email.from_name && <span>{email.from_name} · </span>}
-                                    {email.from_email} · {email.received_at ? new Date(email.received_at).toLocaleDateString() : ''}
-                                  </div>
-                                  {email.body_preview && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{email.body_preview}</div>}
-                                </div>
-                                {group.project_id && (
-                                  <button
-                                    onClick={() => analyzeEmailGroup([email.message_id], group.project_id, `${groupKey}_${email.message_id}`)}
-                                    disabled={analyzingGroup === `${groupKey}_${email.message_id}`}
-                                    style={{ fontSize: 11, padding: '3px 9px', borderRadius: 5, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit', flexShrink: 0 }}
-                                  >
-                                    {analyzingGroup === `${groupKey}_${email.message_id}` ? '…' : 'Analyze'}
-                                  </button>
-                                )}
-                              </div>
-                            ))}
-                          </div>
                         </div>
                       )
-                    })
+                    }
+
+                    const allUnmatchedIds = filteredUnmatched.map(e => e.message_id)
+                    const allUnmatchedSelected = allUnmatchedIds.length > 0 && allUnmatchedIds.every(id => selectedUnmatchedIds.has(id))
+                    const unmatchedAnalyzeKey = 'unmatched_bulk'
+                    const unmatchedResult = emailAnalysisResult[unmatchedAnalyzeKey]
+                    const isAnalyzingUnmatched = analyzingGroup === unmatchedAnalyzeKey
+
+                    const isToday = emailDate === localDateStr(new Date())
+                    const dayLabel = (() => {
+                      const today = localDateStr(new Date())
+                      if (emailDate === today) return 'Today'
+                      if (emailDate === shiftDateStr(today, -1)) return 'Yesterday'
+                      return new Date(`${emailDate}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+                    })()
+
+                    return (
+                      <div>
+                        {/* Date filter */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+                          <button onClick={() => setEmailDate(d => shiftDateStr(d, -1))}
+                            style={{ fontSize: 13, padding: '6px 10px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer', fontFamily: 'inherit' }} title="Previous day">‹</button>
+                          <input type="date" value={emailDate} max={localDateStr(new Date())}
+                            onChange={e => e.target.value && setEmailDate(e.target.value)}
+                            style={{ fontSize: 13, padding: '6px 10px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontFamily: 'inherit' }} />
+                          <button onClick={() => setEmailDate(d => shiftDateStr(d, 1))} disabled={isToday}
+                            style={{ fontSize: 13, padding: '6px 10px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface)', color: isToday ? 'var(--text-dim)' : 'var(--text)', cursor: isToday ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }} title="Next day">›</button>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{dayLabel}</span>
+                          {!isToday && (
+                            <button onClick={() => setEmailDate(localDateStr(new Date()))}
+                              style={{ fontSize: 12, padding: '5px 10px', borderRadius: 7, border: 'none', background: 'var(--accent-dim)', color: 'var(--accent)', cursor: 'pointer', fontWeight: 600, fontFamily: 'inherit' }}>Today</button>
+                          )}
+                        </div>
+
+                        {/* Search */}
+                        <input
+                          value={emailSearch} onChange={e => setEmailSearch(e.target.value)}
+                          placeholder="Search by subject, address, or body…"
+                          style={{ width: '100%', fontSize: 13, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontFamily: 'inherit', marginBottom: 16, boxSizing: 'border-box' }} />
+
+                        {/* All Clients — Needs Attention (last 3 days, non-task, open) */}
+                        {(() => {
+                          const list = (attentionEmails || []).filter(e => !resolvedIds.has(e.message_id)).filter(matchesSearch)
+                          const open = expandedClientKey === 'attention' || !!q
+                          const visible = open ? list : list.slice(0, COLLAPSED_EMAIL_ROWS)
+                          const hidden = list.length - visible.length
+                          const toggle = () => setExpandedClientKey(k => (k === 'attention' ? null : 'attention'))
+                          return (
+                            <div style={{ border: '1px solid #6366f150', borderLeft: '4px solid #6366f1', borderRadius: 10, marginBottom: 18, overflow: 'hidden' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', background: '#6366f114', borderBottom: '1px solid var(--border)', cursor: 'pointer' }} onClick={toggle}>
+                                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{open ? '▾' : '▸'}</span>
+                                <div style={{ flex: 1 }}>
+                                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>🔔 Needs Attention — All Clients</span>
+                                  <span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 8 }}>last 3 days · open · non-task</span>
+                                </div>
+                                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-dim)', background: 'var(--surface)', borderRadius: 99, padding: '1px 8px' }}>{attentionEmails === null ? '…' : list.length}</span>
+                                <SortControls sort={emailSort} dir={emailSortDir} onSort={setEmailSort} onDir={setEmailSortDir} />
+                              </div>
+                              <div style={{ padding: '0 14px' }}>
+                                {attentionEmails === null
+                                  ? <div style={{ padding: '12px 0', fontSize: 12, color: 'var(--text-dim)' }}>Loading…</div>
+                                  : list.length === 0
+                                    ? <div style={{ padding: '12px 0', fontSize: 12, color: 'var(--text-dim)' }}>Nothing open needs attention. 🎉</div>
+                                    : <>
+                                        {visible.map(email => (
+                                          <EmailCard key={email.message_id} email={email} projectId={email.project_id} groupKey="attention" showClient onResolve={resolveEmail} />
+                                        ))}
+                                        {!open && hidden > 0 && (
+                                          <button onClick={toggle}
+                                            style={{ width: '100%', textAlign: 'left', padding: '8px 0', fontSize: 11, fontWeight: 600, color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+                                            + {hidden} more email{hidden !== 1 ? 's' : ''} — show all
+                                          </button>
+                                        )}
+                                      </>}
+                              </div>
+                            </div>
+                          )
+                        })()}
+
+                        {filteredGroups.map(group => <GroupSection key={group.project_id} group={group} />)}
+
+                        {/* Unmatched */}
+                        {filteredUnmatched.length > 0 && (
+                          <div style={{ border: '1px solid #f59e0b50', borderLeft: '4px solid #f59e0b', borderRadius: 10, overflow: 'hidden' }}>
+                            <div style={{ padding: '11px 14px', background: '#fef3c730', borderBottom: '1px solid #f59e0b30' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', flex: 1 }}>⚠️ Unmatched</span>
+                                <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{filteredUnmatched.length} email{filteredUnmatched.length !== 1 ? 's' : ''}</span>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, cursor: 'pointer', color: 'var(--text-dim)', flexShrink: 0 }}>
+                                  <input type="checkbox" checked={allUnmatchedSelected}
+                                    onChange={() => setSelectedUnmatchedIds(allUnmatchedSelected ? new Set() : new Set(allUnmatchedIds))} />
+                                  Select all
+                                </label>
+                                <select value={unmatchedBulkProjectId} onChange={e => setUnmatchedBulkProjectId(e.target.value)}
+                                  style={{ fontSize: 12, padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', flex: '1 1 180px' }}>
+                                  <option value="">— assign to client —</option>
+                                  {allProjects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                </select>
+                                <button
+                                  disabled={selectedUnmatchedIds.size === 0 || !unmatchedBulkProjectId || isAnalyzingUnmatched}
+                                  onClick={() => analyzeEmailGroup([...selectedUnmatchedIds], parseInt(unmatchedBulkProjectId, 10), unmatchedAnalyzeKey)}
+                                  style={{ fontSize: 12, padding: '4px 12px', borderRadius: 6, border: 'none', fontWeight: 600, fontFamily: 'inherit', cursor: selectedUnmatchedIds.size > 0 && unmatchedBulkProjectId ? 'pointer' : 'not-allowed', background: selectedUnmatchedIds.size > 0 && unmatchedBulkProjectId && !isAnalyzingUnmatched ? '#f59e0b' : '#e5e7eb', color: selectedUnmatchedIds.size > 0 && unmatchedBulkProjectId && !isAnalyzingUnmatched ? '#fff' : '#9ca3af', flexShrink: 0 }}>
+                                  {isAnalyzingUnmatched ? 'Analyzing…' : `Analyze Selected (${selectedUnmatchedIds.size})`}
+                                </button>
+                              </div>
+                              {unmatchedResult && (
+                                <div style={{ marginTop: 8, padding: '6px 10px', borderRadius: 6, background: unmatchedResult.error ? '#fef2f2' : '#f0fdf4', fontSize: 11 }}>
+                                  {unmatchedResult.error ? <span style={{ color: '#dc2626' }}>Error: {unmatchedResult.error}</span>
+                                    : <span style={{ color: '#16a34a' }}>✓ {unmatchedResult.tasks_added} added · {unmatchedResult.tasks_for_review} for review</span>}
+                                </div>
+                              )}
+                            </div>
+                            <div style={{ padding: '0 14px', background: 'var(--surface)' }}>
+                              {(() => {
+                                const open = expandedClientKey === 'unmatched' || !!q
+                                const visible = open ? filteredUnmatched : filteredUnmatched.slice(0, COLLAPSED_EMAIL_ROWS)
+                                const hidden = filteredUnmatched.length - visible.length
+                                return (
+                                  <>
+                                    {visible.map(email => (
+                                      <EmailCard key={email.message_id} email={email} projectId={unmatchedBulkProjectId ? parseInt(unmatchedBulkProjectId, 10) : null} groupKey="unmatched" showCheckbox />
+                                    ))}
+                                    {!open && hidden > 0 && (
+                                      <button onClick={() => setExpandedClientKey('unmatched')}
+                                        style={{ width: '100%', textAlign: 'left', padding: '8px 0', fontSize: 11, fontWeight: 600, color: '#f59e0b', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+                                        + {hidden} more email{hidden !== 1 ? 's' : ''} — show all
+                                      </button>
+                                    )}
+                                  </>
+                                )
+                              })()}
+                            </div>
+                          </div>
+                        )}
+
+                        {filteredGroups.length === 0 && filteredUnmatched.length === 0 && (
+                          <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-dim)', fontSize: 13 }}>
+                            {q ? `No emails match "${emailSearch}"` : `No emails ingested for ${dayLabel.toLowerCase() === 'today' ? 'today' : dayLabel} yet.`}
+                          </div>
+                        )}
+                      </div>
+                    )
                   })()
             )}
 

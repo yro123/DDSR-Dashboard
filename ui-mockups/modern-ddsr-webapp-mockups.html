@@ -1,0 +1,940 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DDSR Modern Webapp Mockups</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --panel-2: #f8fafc;
+      --panel-3: #edf3f9;
+      --text: #101828;
+      --muted: #667085;
+      --dim: #98a2b3;
+      --line: #d8e1ea;
+      --line-2: #c5d1dd;
+      --brand-blue: #26a8df;
+      --brand-blue-dark: #268eb7;
+      --brand-green: #83c341;
+      --brand-green-dark: #3f6e2f;
+      --brand-navy: #20195c;
+      --danger: #d92d20;
+      --warning: #dc6803;
+      --success: #039855;
+      --shadow: 0 18px 45px rgba(16, 24, 40, .12);
+      --shadow-sm: 0 1px 2px rgba(16, 24, 40, .08), 0 1px 3px rgba(16, 24, 40, .08);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0b1020;
+      --panel: #111827;
+      --panel-2: #162033;
+      --panel-3: #1d293d;
+      --text: #eef2f6;
+      --muted: #aab6c5;
+      --dim: #748094;
+      --line: #273548;
+      --line-2: #34465f;
+      --shadow: 0 20px 50px rgba(0, 0, 0, .32);
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, .24), 0 1px 3px rgba(0, 0, 0, .2);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at top left, rgba(38, 168, 223, .12), transparent 30rem),
+        linear-gradient(180deg, var(--bg), color-mix(in srgb, var(--bg) 86%, #000 14%));
+      color: var(--text);
+      min-height: 100vh;
+    }
+    button, input, select { font: inherit; }
+
+    .prototype {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 268px minmax(0, 1fr);
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 18px 14px;
+      background: color-mix(in srgb, var(--panel) 92%, var(--brand-navy) 8%);
+      border-right: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 8px 14px;
+      border-bottom: 1px solid var(--line);
+    }
+    .brand img {
+      width: 42px;
+      height: 42px;
+      object-fit: contain;
+      border-radius: 8px;
+      background: #fff;
+      border: 1px solid rgba(255,255,255,.8);
+    }
+    .brand strong { display: block; font-size: 14px; letter-spacing: 0; }
+    .brand span { color: var(--muted); font-size: 11px; }
+
+    .workspace-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 10px;
+      box-shadow: var(--shadow-sm);
+    }
+    .eyebrow {
+      color: var(--dim);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .workspace-name {
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .client-select {
+      margin-top: 8px;
+      width: 100%;
+      height: 32px;
+      border-radius: 7px;
+      border: 1px solid var(--line);
+      background: var(--panel-2);
+      color: var(--text);
+      padding: 0 8px;
+      font-size: 12px;
+    }
+
+    .nav { display: flex; flex-direction: column; gap: 4px; }
+    .nav button {
+      width: 100%;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted);
+      min-height: 38px;
+      padding: 0 10px;
+      display: grid;
+      grid-template-columns: 22px 1fr auto;
+      align-items: center;
+      gap: 9px;
+      cursor: pointer;
+      text-align: left;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .nav button:hover { background: var(--panel-2); color: var(--text); }
+    .nav button.active {
+      background: linear-gradient(90deg, rgba(38,168,223,.16), rgba(131,195,65,.12));
+      color: var(--brand-navy);
+      box-shadow: inset 3px 0 0 var(--brand-blue);
+    }
+    [data-theme="dark"] .nav button.active { color: #dbeafe; }
+    .nav .icon {
+      width: 22px;
+      height: 22px;
+      display: grid;
+      place-items: center;
+      border-radius: 6px;
+      background: var(--panel-2);
+      color: var(--brand-blue-dark);
+      font-size: 12px;
+    }
+    .badge {
+      min-width: 22px;
+      height: 20px;
+      padding: 0 7px;
+      display: inline-grid;
+      place-items: center;
+      border-radius: 999px;
+      background: var(--panel-3);
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      display: grid;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .main {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .topbar {
+      height: 68px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 28px;
+      border-bottom: 1px solid var(--line);
+      background: color-mix(in srgb, var(--panel) 90%, transparent);
+      backdrop-filter: blur(18px);
+    }
+    .page-title { min-width: 190px; }
+    .page-title strong { display: block; font-size: 18px; letter-spacing: 0; }
+    .page-title span { color: var(--muted); font-size: 12px; }
+    .global-search {
+      flex: 1;
+      max-width: 560px;
+      height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-2);
+      color: var(--text);
+      padding: 0 14px;
+      outline: none;
+    }
+    .top-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+    .btn {
+      height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--panel);
+      color: var(--text);
+      padding: 0 12px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+    }
+    .btn.primary {
+      border-color: color-mix(in srgb, var(--brand-blue) 75%, #000 10%);
+      background: linear-gradient(135deg, var(--brand-blue), var(--brand-green));
+      color: #fff;
+    }
+    .avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 1px solid var(--line);
+      background: var(--brand-navy);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .content {
+      padding: 24px 28px 42px;
+      display: grid;
+      gap: 18px;
+    }
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 10px;
+      width: fit-content;
+      box-shadow: var(--shadow-sm);
+    }
+    .tabs button {
+      border: 0;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--muted);
+      height: 32px;
+      padding: 0 12px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .tabs button.active {
+      background: var(--text);
+      color: var(--panel);
+    }
+    .view { display: none; }
+    .view.active { display: grid; gap: 18px; }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 14px;
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      position: relative;
+    }
+    .metric:after {
+      content: "";
+      position: absolute;
+      inset: auto 0 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--brand-blue), var(--brand-green));
+    }
+    .metric .value { font-size: 28px; font-weight: 900; letter-spacing: 0; }
+    .metric .label { color: var(--muted); font-size: 12px; font-weight: 700; margin-top: 3px; }
+    .metric .trend { color: var(--success); font-size: 11px; font-weight: 800; margin-top: 10px; }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+    .panel-header {
+      min-height: 52px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+    }
+    .panel-title { font-size: 14px; font-weight: 900; }
+    .panel-sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+    .filters { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip {
+      height: 30px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel-2);
+      color: var(--muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .chip.on { background: rgba(38,168,223,.13); color: var(--brand-blue-dark); border-color: rgba(38,168,223,.35); }
+    .dot { width: 7px; height: 7px; border-radius: 999px; background: var(--brand-green); display: inline-block; }
+    .dot.blue { background: var(--brand-blue); }
+    .dot.warn { background: var(--warning); }
+    .dot.danger { background: var(--danger); }
+
+    .task-row {
+      display: grid;
+      grid-template-columns: 34px minmax(260px, 1.3fr) 150px 140px 120px 96px;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+    .task-row:last-child { border-bottom: 0; }
+    .task-row:hover { background: var(--panel-2); }
+    .check {
+      width: 18px;
+      height: 18px;
+      border: 1px solid var(--line-2);
+      border-radius: 5px;
+      background: var(--panel);
+    }
+    .task-title { font-size: 13px; font-weight: 800; }
+    .task-meta { color: var(--muted); font-size: 11px; margin-top: 4px; }
+    .pill {
+      width: fit-content;
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 11px;
+      font-weight: 900;
+      background: var(--panel-3);
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .pill.blue { background: rgba(38,168,223,.14); color: var(--brand-blue-dark); }
+    .pill.green { background: rgba(131,195,65,.18); color: var(--brand-green-dark); }
+    .pill.warn { background: rgba(220,104,3,.13); color: var(--warning); }
+    .pill.red { background: rgba(217,45,32,.12); color: var(--danger); }
+    .person { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; }
+    .mini-avatar {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--brand-blue), var(--brand-green));
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 10px;
+      font-weight: 900;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(220px, 1fr));
+      gap: 12px;
+      overflow-x: auto;
+    }
+    .column {
+      min-height: 480px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--panel) 78%, var(--panel-2) 22%);
+      padding: 10px;
+    }
+    .column-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+      padding: 2px 2px 8px;
+      border-bottom: 1px solid var(--line);
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 12px;
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 10px;
+    }
+    .card strong { display: block; font-size: 13px; line-height: 1.35; }
+    .card .meta { margin-top: 9px; display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 11px; }
+
+    .hub-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 14px;
+    }
+    .workflow {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+    }
+    .workflow-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .progress {
+      height: 8px;
+      border-radius: 999px;
+      background: var(--panel-3);
+      overflow: hidden;
+    }
+    .progress span { display: block; height: 100%; background: linear-gradient(90deg, var(--brand-blue), var(--brand-green)); }
+    .steps { display: grid; gap: 8px; }
+    .step {
+      display: grid;
+      grid-template-columns: 24px 1fr auto;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .timeline { display: grid; gap: 12px; }
+    .meeting {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 14px;
+      display: grid;
+      grid-template-columns: 130px 1fr 160px;
+      gap: 16px;
+      align-items: start;
+    }
+    .datebox {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-2);
+      padding: 10px;
+      text-align: center;
+      font-weight: 900;
+    }
+    .datebox span { display: block; color: var(--muted); font-size: 11px; font-weight: 800; margin-top: 2px; }
+    .note-list { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 7px; color: var(--muted); font-size: 12px; }
+    .note-list li { padding-left: 14px; position: relative; }
+    .note-list li:before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--brand-blue); position: absolute; left: 0; top: .55em; }
+
+    .request-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      gap: 14px;
+    }
+    .request {
+      border-bottom: 1px solid var(--line);
+      padding: 14px 16px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+    }
+    .request:last-child { border-bottom: 0; }
+    .form-preview {
+      display: grid;
+      gap: 10px;
+      padding: 16px;
+    }
+    .field label {
+      display: block;
+      color: var(--dim);
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+    .field .input {
+      min-height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--panel-2);
+      color: var(--muted);
+      padding: 9px 10px;
+      font-size: 12px;
+    }
+    .field .input.textarea { min-height: 92px; }
+
+    .admin-layout {
+      display: grid;
+      grid-template-columns: 220px minmax(0, 1fr);
+      gap: 14px;
+    }
+    .admin-tabs {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 8px;
+      display: grid;
+      gap: 4px;
+      height: fit-content;
+    }
+    .admin-tabs button {
+      border: 0;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--muted);
+      height: 34px;
+      padding: 0 10px;
+      text-align: left;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .admin-tabs button.active { background: var(--panel-2); color: var(--text); box-shadow: inset 3px 0 0 var(--brand-green); }
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .table th {
+      color: var(--dim);
+      text-align: left;
+      font-size: 10px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel-2);
+    }
+    .table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+    }
+    .table td strong { color: var(--text); }
+
+    .audit {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .audit .card { margin: 0; min-height: 160px; }
+    .audit ul { margin: 10px 0 0; padding-left: 18px; color: var(--muted); font-size: 12px; line-height: 1.55; }
+
+    @media (max-width: 1060px) {
+      .prototype { grid-template-columns: 78px minmax(0, 1fr); }
+      .brand div, .workspace-card, .nav .label, .nav .badge, .sidebar-footer { display: none; }
+      .sidebar { padding: 14px 10px; }
+      .brand { justify-content: center; padding-inline: 0; }
+      .nav button { grid-template-columns: 1fr; justify-items: center; padding: 0; }
+      .grid-4, .audit { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .task-row { grid-template-columns: 34px minmax(260px, 1fr) 120px; }
+      .task-row > :nth-child(4), .task-row > :nth-child(5), .task-row > :nth-child(6) { display: none; }
+      .hub-grid, .request-grid, .admin-layout { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 760px) {
+      .prototype { grid-template-columns: 1fr; }
+      .sidebar { position: relative; height: auto; flex-direction: row; overflow-x: auto; }
+      .brand { border-bottom: 0; padding: 0; }
+      .nav { flex-direction: row; }
+      .nav button { width: 44px; }
+      .topbar { height: auto; min-height: 68px; flex-wrap: wrap; padding: 14px 16px; }
+      .global-search { order: 3; flex-basis: 100%; max-width: none; }
+      .content { padding: 16px; }
+      .grid-4, .audit { grid-template-columns: 1fr; }
+      .board { grid-template-columns: repeat(4, 240px); }
+      .meeting { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body data-theme="light">
+  <div class="prototype">
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="../public/ddsr-logo.png" alt="DataDriven Solutions & Reporting logo" />
+        <div>
+          <strong>DataDriven</strong>
+          <span>Solutions & Reporting</span>
+        </div>
+      </div>
+
+      <div class="workspace-card">
+        <div class="eyebrow">Client Workspace</div>
+        <div class="workspace-name">
+          <span>Gourmet Nut</span>
+          <span class="badge">3</span>
+        </div>
+        <select class="client-select" aria-label="Client workspace">
+          <option>Gourmet Nut</option>
+          <option>Hinckley Yachts</option>
+          <option>Oil Depot</option>
+          <option>EP Heller</option>
+        </select>
+      </div>
+
+      <nav class="nav" aria-label="Main navigation">
+        <button class="active"><span class="icon">T</span><span class="label">Tasks</span><span class="badge">42</span></button>
+        <button><span class="icon">B</span><span class="label">Board</span><span class="badge">18</span></button>
+        <button><span class="icon">H</span><span class="label">Process Hub</span><span class="badge">7</span></button>
+        <button><span class="icon">M</span><span class="label">Meetings</span><span class="badge">5</span></button>
+        <button><span class="icon">R</span><span class="label">Requests</span><span class="badge">9</span></button>
+        <button><span class="icon">A</span><span class="label">Admin</span><span class="badge">6</span></button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <span class="eyebrow">Modernization Goals</span>
+        <span>One DDSR-branded shell, dense project views, cleaner controls, and stronger status hierarchy.</span>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="page-title">
+          <strong id="screen-title">Tasks</strong>
+          <span>Gourmet Nut ERP implementation</span>
+        </div>
+        <input class="global-search" value="" placeholder="Search tasks, meetings, requests, people..." />
+        <div class="top-actions">
+          <button class="btn" id="theme-toggle">Theme</button>
+          <button class="btn">Export</button>
+          <button class="btn primary">New Task</button>
+          <div class="avatar">AD</div>
+        </div>
+      </header>
+
+      <section class="content">
+        <div class="tabs" role="tablist">
+          <button class="active" data-view="audit">Audit</button>
+          <button data-view="tasks">Tasks</button>
+          <button data-view="board">Board</button>
+          <button data-view="hub">Hub</button>
+          <button data-view="meetings">Meetings</button>
+          <button data-view="requests">Requests</button>
+          <button data-view="admin">Admin</button>
+        </div>
+
+        <section class="view active" id="audit">
+          <div class="grid-4">
+            <div class="metric"><div class="value">7</div><div class="label">Primary app surfaces</div><div class="trend">Shell + pages covered</div></div>
+            <div class="metric"><div class="value">3</div><div class="label">Core workflows</div><div class="trend">Track, review, administer</div></div>
+            <div class="metric"><div class="value">2</div><div class="label">View modes</div><div class="trend">Dense list and Kanban</div></div>
+            <div class="metric"><div class="value">1</div><div class="label">Brand system</div><div class="trend">DDSR only</div></div>
+          </div>
+          <div class="audit">
+            <div class="card">
+              <strong>Current UI Issues</strong>
+              <ul>
+                <li>Many pages rely on inline styling, making consistency harder.</li>
+                <li>Topbar, Admin, forms, and filters use different interaction patterns.</li>
+                <li>Status, priority, source, and workflow tags compete visually.</li>
+                <li>The app is functional but reads more like an internal prototype than a finished client-management product.</li>
+              </ul>
+            </div>
+            <div class="card">
+              <strong>Modern Direction</strong>
+              <ul>
+                <li>Keep a restrained operations-app layout with high information density.</li>
+                <li>Use DDSR blue, green, and navy as the brand palette.</li>
+                <li>Make the client/project switcher a first-class control.</li>
+                <li>Standardize cards, tables, filters, drawers, badges, empty states, and bulk actions.</li>
+              </ul>
+            </div>
+            <div class="card">
+              <strong>Implementation Notes</strong>
+              <ul>
+                <li>Extract shell, toolbar, page header, table, stat, badge, and form primitives.</li>
+                <li>Move page-specific inline styles into shared component classes.</li>
+                <li>Use a right-side details drawer for task, request, and meeting edits.</li>
+                <li>Keep client names as workspace labels only, not visual branding.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="tasks">
+          <div class="grid-4">
+            <div class="metric"><div class="value">42</div><div class="label">Open tasks</div><div class="trend">8 due this week</div></div>
+            <div class="metric"><div class="value">14</div><div class="label">In progress</div><div class="trend">By 6 assignees</div></div>
+            <div class="metric"><div class="value">6</div><div class="label">Needs attention</div><div class="trend" style="color:var(--warning)">Review due dates</div></div>
+            <div class="metric"><div class="value">81%</div><div class="label">Extraction confidence</div><div class="trend">Email + Fathom</div></div>
+          </div>
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <div class="panel-title">Task Command Center</div>
+                <div class="panel-sub">Grouped by assignee with compact metadata and review signals.</div>
+              </div>
+              <div class="filters">
+                <span class="chip on"><span class="dot blue"></span> Open</span>
+                <span class="chip"><span class="dot warn"></span> Due soon</span>
+                <span class="chip">Email</span>
+                <span class="chip">Fathom</span>
+                <span class="chip">By person</span>
+              </div>
+            </div>
+            <div class="task-row">
+              <span class="check"></span>
+              <div><div class="task-title">Confirm NetSuite item mapping for almond butter SKUs</div><div class="task-meta">From May 29 email thread, 92% confidence</div></div>
+              <div class="person"><span class="mini-avatar">JM</span>Jamie M.</div>
+              <span class="pill blue">Data Migration</span>
+              <span class="pill warn">Jun 12</span>
+              <span class="pill">Open</span>
+            </div>
+            <div class="task-row">
+              <span class="check"></span>
+              <div><div class="task-title">Review Shopify connector exception report</div><div class="task-meta">Added from weekly sync notes</div></div>
+              <div class="person"><span class="mini-avatar">AR</span>Avery R.</div>
+              <span class="pill green">Integration</span>
+              <span class="pill red">Jun 08</span>
+              <span class="pill blue">Active</span>
+            </div>
+            <div class="task-row">
+              <span class="check"></span>
+              <div><div class="task-title">Send revised cutover checklist to finance users</div><div class="task-meta">Manual task, assigned by admin</div></div>
+              <div class="person"><span class="mini-avatar">DS</span>Dana S.</div>
+              <span class="pill">Training</span>
+              <span class="pill">Jun 18</span>
+              <span class="pill">Open</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="board">
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <div class="panel-title">Kanban Board</div>
+                <div class="panel-sub">Clear vertical status lanes, drag targets, and compact cards for repeated daily use.</div>
+              </div>
+              <div class="filters"><span class="chip on">All workflows</span><span class="chip">Priority</span><span class="chip">Assignee</span></div>
+            </div>
+          </div>
+          <div class="board">
+            <div class="column">
+              <div class="column-head"><span><span class="dot"></span> Not Started</span><span class="badge">12</span></div>
+              <div class="card"><strong>Finalize customer record duplicate rules</strong><div class="meta"><span>Data Migration</span><span>Jun 17</span></div></div>
+              <div class="card"><strong>Collect missing warehouse location list</strong><div class="meta"><span>Operations</span><span>Jun 20</span></div></div>
+            </div>
+            <div class="column">
+              <div class="column-head"><span><span class="dot blue"></span> In Progress</span><span class="badge">14</span></div>
+              <div class="card"><strong>Validate Shopify refund flow in sandbox</strong><div class="meta"><span>Integration</span><span>Avery</span></div></div>
+              <div class="card"><strong>Draft EDI testing matrix for distributors</strong><div class="meta"><span>Testing</span><span>Dana</span></div></div>
+            </div>
+            <div class="column">
+              <div class="column-head"><span><span class="dot warn"></span> Needs Review</span><span class="badge">6</span></div>
+              <div class="card"><strong>AI extracted task may belong to Hinckley Yachts</strong><div class="meta"><span>Low confidence</span><span>61%</span></div></div>
+              <div class="card"><strong>Unclear assignee for sales tax follow-up</strong><div class="meta"><span>Email</span><span>Review</span></div></div>
+            </div>
+            <div class="column">
+              <div class="column-head"><span><span class="dot"></span> Done</span><span class="badge">28</span></div>
+              <div class="card"><strong>Archive completed data-load signoff task</strong><div class="meta"><span>Complete</span><span>Jun 04</span></div></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="hub">
+          <div class="hub-grid">
+            <div class="view active">
+              <div class="workflow">
+                <div class="workflow-top">
+                  <div><div class="panel-title">Data Migration</div><div class="panel-sub">7 steps, 4 active tasks, 71% complete</div></div>
+                  <span class="pill blue">Phase 2</span>
+                </div>
+                <div class="progress"><span style="width:71%"></span></div>
+                <div class="steps">
+                  <div class="step"><span class="dot"></span><span>Export legacy customer and item records</span><span class="pill green">Done</span></div>
+                  <div class="step"><span class="dot blue"></span><span>Normalize SKU and unit-of-measure rules</span><span class="pill blue">Active</span></div>
+                  <div class="step"><span class="dot warn"></span><span>Resolve duplicate customer account conflicts</span><span class="pill warn">Review</span></div>
+                </div>
+              </div>
+              <div class="workflow">
+                <div class="workflow-top">
+                  <div><div class="panel-title">Integration Readiness</div><div class="panel-sub">Shopify, EDI, 3PL, and finance workflows.</div></div>
+                  <span class="pill green">On track</span>
+                </div>
+                <div class="progress"><span style="width:48%"></span></div>
+              </div>
+            </div>
+            <aside class="panel">
+              <div class="panel-header"><div><div class="panel-title">Workflow Details</div><div class="panel-sub">A persistent side panel can replace scattered expanded cards.</div></div></div>
+              <div class="form-preview">
+                <div class="field"><label>Owner</label><div class="input">DataDriven project team</div></div>
+                <div class="field"><label>Documents</label><div class="input">4 linked process docs</div></div>
+                <div class="field"><label>Next milestone</label><div class="input">Sandbox load signoff</div></div>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <section class="view" id="meetings">
+          <div class="timeline">
+            <div class="meeting">
+              <div class="datebox">Jun 03<span>Weekly Sync</span></div>
+              <div>
+                <div class="panel-title">Gourmet Nut Implementation Check-in</div>
+                <ul class="note-list">
+                  <li>Finance users approved revised cutover calendar.</li>
+                  <li>Shopify refund flow needs one more sandbox test.</li>
+                  <li>Distributor EDI contacts still pending from client team.</li>
+                </ul>
+              </div>
+              <div class="filters"><span class="chip on">6 notes</span><span class="chip">4 actions</span><span class="chip">2 topics</span></div>
+            </div>
+            <div class="meeting">
+              <div class="datebox">May 29<span>Data Review</span></div>
+              <div>
+                <div class="panel-title">Item Master Validation</div>
+                <ul class="note-list">
+                  <li>Almond butter SKU grouping requires one final confirmation.</li>
+                  <li>Warehouse location naming has been standardized.</li>
+                </ul>
+              </div>
+              <div class="filters"><span class="chip">Archive</span><span class="chip">Export PDF</span></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="requests">
+          <div class="request-grid">
+            <div class="panel">
+              <div class="panel-header">
+                <div><div class="panel-title">Client Requests</div><div class="panel-sub">Submission, triage, and conversion to tracked tasks.</div></div>
+                <span class="chip on">Pending first</span>
+              </div>
+              <div class="request">
+                <div><div class="task-title">Add dashboard view for inventory exceptions</div><div class="task-meta">Submitted by Gourmet Nut operations, requested Jun 21</div></div>
+                <span class="pill warn">Pending</span>
+              </div>
+              <div class="request">
+                <div><div class="task-title">Reopen training topic for AP approval routing</div><div class="task-meta">Converted to task after admin review</div></div>
+                <span class="pill green">Approved</span>
+              </div>
+              <div class="request">
+                <div><div class="task-title">Change warehouse pick ticket sort order</div><div class="task-meta">Deferred until post go-live</div></div>
+                <span class="pill">Deferred</span>
+              </div>
+            </div>
+            <aside class="panel">
+              <div class="panel-header"><div><div class="panel-title">New Request</div><div class="panel-sub">Client-friendly form with admin-grade metadata.</div></div></div>
+              <div class="form-preview">
+                <div class="field"><label>Title</label><div class="input">Brief request summary</div></div>
+                <div class="field"><label>Description</label><div class="input textarea">Context, impact, urgency, and supporting details.</div></div>
+                <div class="field"><label>Routing</label><div class="input">Category, priority, workflow, requested due date</div></div>
+                <button class="btn primary">Submit Request</button>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <section class="view" id="admin">
+          <div class="admin-layout">
+            <div class="admin-tabs">
+              <button class="active">Meetings</button>
+              <button>People</button>
+              <button>Documents</button>
+              <button>Project Settings</button>
+              <button>Config</button>
+              <button>Clients</button>
+              <button>Users</button>
+            </div>
+            <div class="panel">
+              <div class="panel-header">
+                <div><div class="panel-title">Admin Console</div><div class="panel-sub">Global controls with a consistent project selector and table system.</div></div>
+                <div class="filters"><span class="chip on">Gourmet Nut</span><span class="chip">Import</span><span class="chip">Invite</span></div>
+              </div>
+              <table class="table">
+                <thead><tr><th>Name</th><th>Role</th><th>Access</th><th>Status</th><th>Last active</th></tr></thead>
+                <tbody>
+                  <tr><td><strong>Jamie Mitchell</strong></td><td>Client lead</td><td>Gourmet Nut</td><td><span class="pill green">Active</span></td><td>Today</td></tr>
+                  <tr><td><strong>Avery Ross</strong></td><td>DDSR admin</td><td>All clients</td><td><span class="pill green">Active</span></td><td>Yesterday</td></tr>
+                  <tr><td><strong>Dana Singh</strong></td><td>Project user</td><td>Gourmet Nut, Hinckley</td><td><span class="pill warn">Invite sent</span></td><td>Pending</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const titles = {
+      audit: 'UI Modernization',
+      tasks: 'Tasks',
+      board: 'Kanban Board',
+      hub: 'Process Hub',
+      meetings: 'Meeting Notes',
+      requests: 'Requests',
+      admin: 'Admin Console'
+    };
+
+    document.querySelectorAll('.tabs button').forEach(button => {
+      button.addEventListener('click', () => {
+        const view = button.dataset.view;
+        document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('active', b === button));
+        document.querySelectorAll('.content > .view').forEach(panel => panel.classList.toggle('active', panel.id === view));
+        document.getElementById('screen-title').textContent = titles[view] || 'DDSR';
+      });
+    });
+
+    document.getElementById('theme-toggle').addEventListener('click', () => {
+      const body = document.body;
+      body.dataset.theme = body.dataset.theme === 'dark' ? 'light' : 'dark';
+    });
+  </script>
+</body>
+</html>

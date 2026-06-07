@@ -1,4 +1,5 @@
 import { requireAdminUser, isAdmin, requireSession } from '../lib/authz.js'
+import { isValidSlug, slugTaken } from '../lib/slug.js'
 
 export async function onRequestPost({ env, request }) {
   const user = await requireAdminUser(request, env)
@@ -8,14 +9,18 @@ export async function onRequestPost({ env, request }) {
   if (!display_name?.trim()) return Response.json({ error: 'display_name is required' }, { status: 400 })
   if (!slug?.trim()) return Response.json({ error: 'slug is required' }, { status: 400 })
 
-  const existing = await env.ddsr_dashboard.prepare('SELECT id FROM clients WHERE slug = ?').bind(slug.trim()).first()
-  if (existing) return Response.json({ error: 'Slug already in use' }, { status: 409 })
+  const cleanSlug = slug.trim()
+  if (!isValidSlug(cleanSlug)) {
+    return Response.json({ error: 'Slug must be lowercase letters, numbers, and single hyphens' }, { status: 400 })
+  }
+  // Slugs share a URL namespace with projects, so enforce global uniqueness.
+  if (await slugTaken(env, cleanSlug)) return Response.json({ error: 'Slug already in use' }, { status: 409 })
 
   const now = new Date().toISOString()
   const { meta } = await env.ddsr_dashboard.prepare(`
     INSERT INTO clients (name, display_name, slug, email_domain, is_active, created_at, updated_at)
     VALUES (?, ?, ?, ?, 1, ?, ?)
-  `).bind(name.trim(), display_name.trim(), slug.trim(), email_domain?.trim().toLowerCase() || null, now, now).run()
+  `).bind(name.trim(), display_name.trim(), cleanSlug, email_domain?.trim().toLowerCase() || null, now, now).run()
 
   const client = await env.ddsr_dashboard.prepare('SELECT * FROM clients WHERE id = ?').bind(meta.last_row_id).first()
   return Response.json(client, { status: 201 })

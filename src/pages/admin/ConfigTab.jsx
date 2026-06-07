@@ -290,9 +290,9 @@ function CategorySection({ meta, items, globalItems, projectId, isOverride, onRe
   )
 }
 
-export default function ConfigTab() {
-  const { api, currentClient } = useProject()
-  const projectSlug = currentClient?.slug
+export default function ConfigTab({ projectSlug: propProjectSlug }) {
+  const { api, current } = useProject()
+  const projectSlug = propProjectSlug || current?.slug
   const [scope, setScope] = useState('global')  // 'global' | 'project'
   const [configData, setConfigData] = useState(null)
 

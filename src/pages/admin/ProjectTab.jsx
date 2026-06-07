@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useProject } from '../../context/ProjectContext'
 
-export default function ProjectTab() {
-  const { api, currentClient } = useProject()
-  const projectSlug = currentClient?.slug
+export default function ProjectTab({ projectSlug: propProjectSlug }) {
+  const { api, current } = useProject()
+  const projectSlug = propProjectSlug || current?.slug
   const [form, setForm] = useState({ name: '', subtitle: '', go_live_date: '', project_start_date: '', project_end_date: '', slug: '' })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)

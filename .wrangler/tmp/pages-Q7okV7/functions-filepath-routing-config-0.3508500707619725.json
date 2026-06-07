@@ -1,0 +1,573 @@
+{
+  "routes": [
+    {
+      "routePath": "/api/admin/fathom-meeting-queue/:id",
+      "mountPath": "/api/admin/fathom-meeting-queue",
+      "method": "DELETE",
+      "module": [
+        "api/admin/fathom-meeting-queue/[id].js:onRequestDelete"
+      ]
+    },
+    {
+      "routePath": "/api/admin/fathom-meeting-queue/:id",
+      "mountPath": "/api/admin/fathom-meeting-queue",
+      "method": "PUT",
+      "module": [
+        "api/admin/fathom-meeting-queue/[id].js:onRequestPut"
+      ]
+    },
+    {
+      "routePath": "/api/users/:id/set-password",
+      "mountPath": "/api/users/:id",
+      "method": "POST",
+      "module": [
+        "api/users/[id]/set-password.js:onRequestPost"
+      ]
+    },
+    {
+      "routePath": "/api/admin/analyze-snapshots",
+      "mountPath": "/api/admin",
+      "method": "POST",
+      "module": [
+        "api/admin/analyze-snapshots.js:onRequestPost"
+      ]
+    },
+    {
+      "routePath": "/api/admin/analyze-text",
+      "mountPath": "/api/admin",
+      "method": "POST",
+      "module": [
+        "api/admin/analyze-text.js:onRequestPost"
+      ]
+    },
+    {
+      "routePath": "/api/admin/backfill-people-links",
+      "mountPath": "/api/admin",
+      "method": "POST",
+      "module": [
+        "api/admin/backfill-people-links.js:onRequestPost"
+      ]
+    },
+    {
+      "routePath": "/api/admin/email-snapshots",
+      "mountPath": "/api/admin",
+      "method": "GET",
+      "module": [
+        "api/admin/email-snapshots.js:onRequestGet"
+      ]
+    },
+    {
+      "routePath": "/api/admin/fathom-meeting-queue",
+      "mountPath": "/api/admin",
+      "method": "GET",
+      "module": [
+        "api/admin/fathom-meeting-queue.js:onRequestGet"
+      ]
+    },
+    {
+      "routePath": "/api/admin/search",
+      "mountPath": "/api/admin",
+      "method": "GET",
+      "module": [
+        "api/admin/search.js:onRequestGet"
+      ]
+    },
+    {
+      "routePath": "/api/clients/:id",
+      "mountPath": "/api/clients",
+      "method": "PUT",
+      "module": [
+        "api/clients/[id].js:onRequestPut"
+      ]
+    },
+    {
+      "routePath": "/api/config/:id",
+      "mountPath": "/api/config",
+      "method": "DELETE",
+      "module": [
+        "api/config/[id].js:onRequestDelete"
+      ]
+    },
+    {
+      "routePath": "/api/config/:id",
+      "mountPath": "/api/config",
+      "method": "PUT",
+      "module": [
+        "api/config/[id].js:onRequestPut"
+      ]
+    },
+    {
+      "routePath": "/api/documents/:id",
+      "mountPath": "/api/documents",
+      "method": "DELETE",
+      "module": [
+        "api/documents/[id].js:onRequestDelete"
+      ]
+    },
+    {
+      "routePath": "/api/documents/:id",
+      "mountPath": "/api/documents",
+      "method": "PUT",
+      "module": [
+        "api/documents/[id].js:onRequestPut"
+      ]
+    },
+    {
+      "routePath": "/api/email-snapshots/:messageId",
+      "mountPath": "/api/email-snapshots",
+      "method": "GET",
+      "module": [
+        "api/email-snapshots/[messageId].js:onRequestGet"
+      ]
+    },
+    {
+      "routePath": "/api/fathom-meeting-queue/:id",
+      "mountPath": "/api/fathom-meeting-queue",
+      "method": "DELETE",
+      "module": [
+        "api/fathom-meeting-queue/[id].js:onRequestDelete"
+      ]
+    },
+    {
+      "routePath": "/api/fathom-meeting-queue/:id",
+      "mountPath": "/api/fathom-meeting-queue",
+      "method": "GET",
+      "module": [
+        "api/fathom-meeting-queue/[id].js:onRequestGet"
+      ]
+    },
+    {
+      "routePath": "/api/fathom-meeting-queue/:id",
+      "mountPath": "/api/fathom-meeting-queue",
+      "method": "PUT",
+      "module": [
+        "api/fathom-meeting-queue/[id].js:onRequestPut"
+      ]
+    },
+    {
+      "routePath": "/api/invitations/:token",
+      "mountPath": "/api/invitations",
+      "method": "DELETE",
+      "module": [
+        "api/invitations/[token].js:onRequestDelete"
+      ]
+    },
+    {
+      "routePath": "/api/invitations/:token",
+      "mountPath": "/api/invitations",
+      "method": "GET",
+      "module": [
+        "api/invitations/[token].js:onRequestGet"
+      ]
+    },
+    {
+      "routePath": "/api/invitations/:token",
+      "mountPath": "/api/invitations",
+      "method": "POST",
+      "module": [
+        "api/invitations/[token].js:onRequestPost"
+      ]
+    },
+    {
+      "routePath": "/api/meeting-action-items/:id",
+      "mountPath": "/api/meeting-action-items",
+      "method": "DELETE",
+      "module": [
+        "api/meeting-action-items/[id].js:onRequestDelete"
+      ]
+    },
+    {
+      "routePath": "/api/meeting-action-items/:id",
+      "mountPath": "/api/meeting-action-items",
+      "method": "PUT",
+      "module": [
+        "api/meeting-action-items/[id].js:onRequestPut"
+      ]
+    },
+    {
+      "routePath": "/api/meeting-notes/:id",
+      "mountPath": "/api/meeting-notes",
+      "method": "DELETE",
+      "module": [
+        "api/meeting-notes/[id].js:onRequestDelete"
+      ]
+    },
+    {
+      "routePath": "/api/meeting-notes/:id",
+      "mountPath": "/api/meeting-notes",
+      "method": "PUT",
+      "module": [
+        "api/meeting-notes/[id].js:onRequestPut"
+      ]
+    },
+    {
+      "routePath": "/api/meeting-topics/:id",
+      "mountPath": "/api/meeting-topics",
+      "method": "DELETE",
+      "module": [
+        "api/meeting-topics/[id].js:onRequestDelete"
+      ]
+    },
+    {
+      "routePath": "/api/meeting-topics/:id",
+      "mountPath": "/api/meeting-topics",
+      "method": "PUT",
+      "module": [
+        "api/meeting-topics/[id].js:onRequestPut"
+      ]
+    },
+    {
+      "routePath": "/api/meetings/:id",
+      "mountPath": "/api/meetings",
+      "method": "DELETE",
+      "module": [
+        "api/meetings/[id].js:onRequestDelete"
+      ]
+    },
+    {
+      "routePath": "/api/meetings/:id",
+      "mountPath": "/api/meetings",
+      "method": "PUT",
+      "module": [
+        "api/meetings/[id].js:onRequestPut"
+      ]
+    },
+    {
+      "routePath": "/api/people/:id",
+      "mountPath": "/api/people",
+      "method": "PUT",
+      "module": [
+        "api/people/[id].js:onRequestPut"
+      ]
+    },
+    {
+      "routePath": "/api/projects/:slug",
+      "mountPath": "/api/projects",
+      "method": "GET",
+      "module": [
+        "api/projects/[slug].js:onRequestGet"
+      ]
+    },
+    {
+      "routePath": "/api/projects/:slug",
+      "mountPath": "/api/projects",
+      "method": "PUT",
+      "module": [
+        "api/projects/[slug].js:onRequestPut"
+      ]
+    },
+    {
+      "routePath": "/api/tasks/:id",
+      "mountPath": "/api/tasks",
+      "method": "DELETE",
+      "module": [
+        "api/tasks/[id].js:onRequestDelete"
+      ]
+    },
+    {
+      "routePath": "/api/tasks/:id",
+      "mountPath": "/api/tasks",
+      "method": "GET",
+      "module": [
+        "api/tasks/[id].js:onRequestGet"
+      ]
+    },
+    {
+      "routePath": "/api/tasks/:id",
+      "mountPath": "/api/tasks",
+      "method": "PUT",
+      "module": [
+        "api/tasks/[id].js:onRequestPut"
+      ]
+    },
+    {
+      "routePath": "/api/tickets/:id",
+      "mountPath": "/api/tickets",
+      "method": "DELETE",
+      "module": [
+        "api/tickets/[id].js:onRequestDelete"
+      ]
+    },
+    {
+      "routePath": "/api/tickets/:id",
+      "mountPath": "/api/tickets",
+      "method": "GET",
+      "module": [
+        "api/tickets/[id].js:onRequestGet"
+      ]
+    },
+    {
+      "routePath": "/api/tickets/:id",
+      "mountPath": "/api/tickets",
+      "method": "PUT",
+      "module": [
+        "api/tickets/[id].js:onRequestPut"
+      ]
+    },
+    {
+      "routePath": "/api/users/:id",
+      "mountPath": "/api/users",
+      "method": "DELETE",
+      "module": [
+        "api/users/[id].js:onRequestDelete"
+      ]
+    },
+    {
+      "routePath": "/api/users/:id",
+      "mountPath": "/api/users",
+      "method": "PUT",
+      "module": [
+        "api/users/[id].js:onRequestPut"
+      ]
+    },
+    {
+      "routePath": "/api/workflow-steps/:id",
+      "mountPath": "/api/workflow-steps",
+      "method": "PUT",
+      "module": [
+        "api/workflow-steps/[id].js:onRequestPut"
+      ]
+    },
+    {
+      "routePath": "/api/workflows/:id",
+      "mountPath": "/api/workflows",
+      "method": "PUT",
+      "module": [
+        "api/workflows/[id].js:onRequestPut"
+      ]
+    },
+    {
+      "routePath": "/api/auth/:all*",
+      "mountPath": "/api/auth",
+      "method": "",
+      "module": [
+        "api/auth/[[all]].js:onRequest"
+      ]
+    },
+    {
+      "routePath": "/api/clients",
+      "mountPath": "/api",
+      "method": "GET",
+      "module": [
+        "api/clients.js:onRequestGet"
+      ]
+    },
+    {
+      "routePath": "/api/clients",
+      "mountPath": "/api",
+      "method": "POST",
+      "module": [
+        "api/clients.js:onRequestPost"
+      ]
+    },
+    {
+      "routePath": "/api/config",
+      "mountPath": "/api",
+      "method": "GET",
+      "module": [
+        "api/config.js:onRequestGet"
+      ]
+    },
+    {
+      "routePath": "/api/config",
+      "mountPath": "/api",
+      "method": "POST",
+      "module": [
+        "api/config.js:onRequestPost"
+      ]
+    },
+    {
+      "routePath": "/api/documents",
+      "mountPath": "/api",
+      "method": "GET",
+      "module": [
+        "api/documents.js:onRequestGet"
+      ]
+    },
+    {
+      "routePath": "/api/documents",
+      "mountPath": "/api",
+      "method": "POST",
+      "module": [
+        "api/documents.js:onRequestPost"
+      ]
+    },
+    {
+      "routePath": "/api/fathom-meeting-queue",
+      "mountPath": "/api",
+      "method": "DELETE",
+      "module": [
+        "api/fathom-meeting-queue.js:onRequestDelete"
+      ]
+    },
+    {
+      "routePath": "/api/fathom-meeting-queue",
+      "mountPath": "/api",
+      "method": "GET",
+      "module": [
+        "api/fathom-meeting-queue.js:onRequestGet"
+      ]
+    },
+    {
+      "routePath": "/api/fathom-meeting-queue",
+      "mountPath": "/api",
+      "method": "PUT",
+      "module": [
+        "api/fathom-meeting-queue.js:onRequestPut"
+      ]
+    },
+    {
+      "routePath": "/api/invitations",
+      "mountPath": "/api",
+      "method": "GET",
+      "module": [
+        "api/invitations.js:onRequestGet"
+      ]
+    },
+    {
+      "routePath": "/api/invitations",
+      "mountPath": "/api",
+      "method": "POST",
+      "module": [
+        "api/invitations.js:onRequestPost"
+      ]
+    },
+    {
+      "routePath": "/api/meeting-action-items",
+      "mountPath": "/api",
+      "method": "POST",
+      "module": [
+        "api/meeting-action-items.js:onRequestPost"
+      ]
+    },
+    {
+      "routePath": "/api/meeting-notes",
+      "mountPath": "/api",
+      "method": "POST",
+      "module": [
+        "api/meeting-notes.js:onRequestPost"
+      ]
+    },
+    {
+      "routePath": "/api/meeting-topics",
+      "mountPath": "/api",
+      "method": "POST",
+      "module": [
+        "api/meeting-topics.js:onRequestPost"
+      ]
+    },
+    {
+      "routePath": "/api/meetings",
+      "mountPath": "/api",
+      "method": "GET",
+      "module": [
+        "api/meetings.js:onRequestGet"
+      ]
+    },
+    {
+      "routePath": "/api/meetings",
+      "mountPath": "/api/meetings",
+      "method": "POST",
+      "module": [
+        "api/meetings/index.js:onRequestPost"
+      ]
+    },
+    {
+      "routePath": "/api/people",
+      "mountPath": "/api",
+      "method": "GET",
+      "module": [
+        "api/people.js:onRequestGet"
+      ]
+    },
+    {
+      "routePath": "/api/people",
+      "mountPath": "/api",
+      "method": "POST",
+      "module": [
+        "api/people.js:onRequestPost"
+      ]
+    },
+    {
+      "routePath": "/api/people-candidates",
+      "mountPath": "/api",
+      "method": "GET",
+      "module": [
+        "api/people-candidates.js:onRequestGet"
+      ]
+    },
+    {
+      "routePath": "/api/projects",
+      "mountPath": "/api",
+      "method": "POST",
+      "module": [
+        "api/projects.js:onRequestPost"
+      ]
+    },
+    {
+      "routePath": "/api/tasks",
+      "mountPath": "/api",
+      "method": "GET",
+      "module": [
+        "api/tasks.js:onRequestGet"
+      ]
+    },
+    {
+      "routePath": "/api/tasks",
+      "mountPath": "/api",
+      "method": "POST",
+      "module": [
+        "api/tasks.js:onRequestPost"
+      ]
+    },
+    {
+      "routePath": "/api/tickets",
+      "mountPath": "/api",
+      "method": "GET",
+      "module": [
+        "api/tickets.js:onRequestGet"
+      ]
+    },
+    {
+      "routePath": "/api/tickets",
+      "mountPath": "/api",
+      "method": "POST",
+      "module": [
+        "api/tickets.js:onRequestPost"
+      ]
+    },
+    {
+      "routePath": "/api/users",
+      "mountPath": "/api",
+      "method": "GET",
+      "module": [
+        "api/users.js:onRequestGet"
+      ]
+    },
+    {
+      "routePath": "/api/workflows",
+      "mountPath": "/api",
+      "method": "GET",
+      "module": [
+        "api/workflows.js:onRequestGet"
+      ]
+    },
+    {
+      "routePath": "/api/healthz",
+      "mountPath": "/api",
+      "method": "",
+      "module": [
+        "api/healthz.js:onRequest"
+      ]
+    },
+    {
+      "routePath": "/",
+      "mountPath": "/",
+      "method": "",
+      "middleware": [
+        "_middleware.js:onRequest"
+      ]
+    }
+  ],
+  "baseURL": "/"
+}

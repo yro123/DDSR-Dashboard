@@ -1,5 +1,5 @@
 import { requireAdminUser } from '../../lib/authz.js'
-import { today, callClaude, loadContext, buildContextBlock, writeTask, CONFIDENCE_THRESHOLD } from '../../lib/analysis.js'
+import { today, callClaude, loadContext, buildContextBlock, writeTask, writeAssessment, CONFIDENCE_THRESHOLD } from '../../lib/analysis.js'
 
 // POST /api/admin/analyze-snapshots
 // Analyzes selected email snapshots with Claude and extracts tasks.
@@ -60,9 +60,9 @@ Today's date: ${todayStr}
 
 ${contextBlock}
 
-Return JSON: { "new_tasks": [{ "title": "string", "description": "string or null", "assignee_email": "string or null", "project_id": "integer or null", "due_date": "YYYY-MM-DD or null", "priority": "high|medium|low", "source_email_id": "string", "source_excerpt": "string or null", "confidence": "0.0 to 1.0", "claude_reasoning": "string" }], "completions": [{ "task_id": "integer", "completed_by_email": "string or null", "confidence": "0.0 to 1.0", "source_email_id": "string", "notes": "string or null" }], "needs_review": [] }
+Return JSON: { "new_tasks": [{ "title": "string", "description": "string or null", "assignee_email": "string or null", "project_id": "integer or null", "due_date": "YYYY-MM-DD or null", "priority": "high|medium|low", "source_email_id": "string", "source_excerpt": "string or null", "confidence": "0.0 to 1.0", "claude_reasoning": "string" }], "completions": [{ "task_id": "integer", "completed_by_email": "string or null", "confidence": "0.0 to 1.0", "source_email_id": "string", "notes": "string or null" }], "needs_review": [], "assessments": [{ "source_email_id": "string — one per email", "is_task": "boolean (true if it produced a new_tasks entry)", "urgency": "High|Medium|Low", "criticality": "High|Medium|Low", "resolution_bucket": "<1h|1-4h|1d|multi-day", "solution_outline": "1-2 sentence outline or null", "status": "needs_response|waiting_on_others|informational" }] }
 
-Rules: extract every action item and follow-up. Match assignees to roster. Infer due dates from relative language. Return empty arrays if nothing found.`
+Rules: extract every action item and follow-up. Match assignees to roster. Infer due dates from relative language. Produce exactly one assessment per email (status: needs_response = action awaited from us; waiting_on_others = blocked on someone else; informational = no action). Return empty arrays if nothing found.`
 
     const result = await callClaude(
       env.ANTHROPIC_API_KEY,
@@ -72,6 +72,7 @@ Rules: extract every action item and follow-up. Match assignees to roster. Infer
 
     const newTasks = Array.isArray(result.new_tasks) ? result.new_tasks : []
     const completions = Array.isArray(result.completions) ? result.completions : []
+    const assessments = Array.isArray(result.assessments) ? result.assessments : []
 
     // 5. Write tasks
     let tasks_added = 0
@@ -84,6 +85,12 @@ Rules: extract every action item and follow-up. Match assignees to roster. Infer
       } else {
         tasks_for_review++
       }
+    }
+
+    // 5b. Store per-email assessments (force is_task from the extracted tasks).
+    const taskEmailIds = new Set(newTasks.map(t => t.source_email_id))
+    for (const a of assessments) {
+      await writeAssessment(db, { ...a, is_task: taskEmailIds.has(a.source_email_id) || a.is_task })
     }
 
     // Count completions (we log them but don't write them here — handled separately if needed)

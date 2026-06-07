@@ -44,7 +44,10 @@ export default function ClientsTab() {
   useEffect(() => { reload() }, [])
 
   async function createClient() {
-    if (!newClient.name || !newClient.slug) return
+    if (!newClient.name || !newClient.slug) {
+      showToast('Name and slug are required', 'error')
+      return
+    }
     setSaving(true)
     try {
       await api.post('/api/clients', newClient)

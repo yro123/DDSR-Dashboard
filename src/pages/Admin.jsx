@@ -13,25 +13,25 @@ import UsersTab from './admin/UsersTab'
 const TABS = ['Meetings', 'People', 'Documents', 'Project Settings', 'Config', 'Clients', 'Users']
 
 export default function Admin() {
-  const { isAdmin, allProjects, currentClient } = useProject()
+  const { isAdmin, allProjects, current } = useProject()
   const { dark, toggle } = useTheme()
   const [tab, setTab] = useState('Meetings')
 
-  // Local selection for tabs that scope to a specific client (People, Documents, Project Settings, Config, Meetings).
-  // This is independent of the main sidebar "current client" because Admin is a global view.
-  const [adminClientSlug, setAdminClientSlug] = useState('')
+  // Local selection for tabs that scope to a specific PROJECT (People, Documents, Project Settings, Config, Meetings).
+  // This is independent of the main sidebar selection because Admin is a global view.
+  const [adminProjectSlug, setAdminProjectSlug] = useState('')
 
-  // Default the admin-scoped client selector to the global currentClient (from sidebar) or first available
+  // Default the admin-scoped project selector to the current project or first available.
   useEffect(() => {
-    if (!adminClientSlug && allProjects.length > 0) {
-      const preferred = currentClient?.slug || allProjects[0]?.slug
-      if (preferred) setAdminClientSlug(preferred)
+    if (!adminProjectSlug && allProjects.length > 0) {
+      const preferred = current?.slug || allProjects[0]?.slug
+      if (preferred) setAdminProjectSlug(preferred)
     }
-  }, [allProjects, currentClient, adminClientSlug])
+  }, [allProjects, current, adminProjectSlug])
 
   if (!isAdmin) {
     // Non-admins should not reach the full admin panel.
-    const fallback = currentClient?.slug || allProjects[0]?.slug
+    const fallback = current?.slug || allProjects[0]?.slug
     return <Navigate to={fallback ? `/${fallback}/tasks` : '/'} replace />
   }
 
@@ -68,8 +68,8 @@ export default function Admin() {
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
           {showClientSelector && allProjects.length > 0 && (
             <select
-              value={adminClientSlug}
-              onChange={e => setAdminClientSlug(e.target.value)}
+              value={adminProjectSlug}
+              onChange={e => setAdminProjectSlug(e.target.value)}
               style={{
                 border: '1px solid var(--border)', borderRadius: 7, padding: '5px 10px',
                 fontSize: 12, color: 'var(--text)', background: 'var(--surface)', cursor: 'pointer',
@@ -83,25 +83,25 @@ export default function Admin() {
           <button className="theme-toggle" onClick={toggle} title={dark ? 'Light mode' : 'Dark mode'}>
             {dark ? '☀' : '☾'}
           </button>
-          {adminClientSlug && (
-            <a href={`/${adminClientSlug}/tasks`} style={{
+          {adminProjectSlug && (
+            <a href={`/${adminProjectSlug}/tasks`} style={{
               fontSize: 12, color: 'var(--text-muted)', textDecoration: 'none',
               padding: '5px 12px', border: '1px solid var(--border)', borderRadius: 7,
               background: 'var(--surface)',
             }}>
-              ← Back to {adminClientSlug}
+              ← Back to {adminProjectSlug}
             </a>
           )}
         </div>
       </div>
 
-      {/* Tab content — pass the admin-selected client slug only to tabs that need it */}
+      {/* Tab content — pass the admin-selected PROJECT slug to every project-scoped tab */}
       <div style={{ padding: '28px 32px', maxWidth: 980, margin: '0 auto' }}>
-        {tab === 'Meetings'          && <MeetingsTab  projectSlug={adminClientSlug} />}
-        {tab === 'People'            && <PeopleTab    projectSlug={adminClientSlug} />}
-        {tab === 'Documents'         && <DocumentsTab />}
-        {tab === 'Project Settings'  && <ProjectTab   />}
-        {tab === 'Config'            && <ConfigTab     />}
+        {tab === 'Meetings'          && <MeetingsTab  projectSlug={adminProjectSlug} />}
+        {tab === 'People'            && <PeopleTab    projectSlug={adminProjectSlug} />}
+        {tab === 'Documents'         && <DocumentsTab projectSlug={adminProjectSlug} />}
+        {tab === 'Project Settings'  && <ProjectTab   projectSlug={adminProjectSlug} />}
+        {tab === 'Config'            && <ConfigTab    projectSlug={adminProjectSlug} />}
         {tab === 'Clients'           && <ClientsTab   />}
         {tab === 'Users'             && <UsersTab     />}
       </div>

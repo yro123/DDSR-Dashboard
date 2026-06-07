@@ -201,8 +201,14 @@ export default function Layout({ children }) {
               </div>
               <select
                 className="sidebar-sel"
-                value={slug || currentClient?.slug || ''}
-                onChange={e => navigate(`/${e.target.value}/${screen}`)}
+                value={currentClient?.slug || ''}
+                onChange={e => {
+                  // Options are clients; routes are project-scoped. Navigate to the
+                  // selected client's first project (or home if it has none).
+                  const picked = clients.find(c => c.slug === e.target.value)
+                  const projectSlug = picked?.projects?.[0]?.slug
+                  navigate(projectSlug ? `/${projectSlug}/${screen}` : '/')
+                }}
               >
                 {clients.map(c => (
                   <option key={c.slug} value={c.slug}>{c.name}</option>

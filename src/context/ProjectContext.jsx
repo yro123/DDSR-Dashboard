@@ -56,10 +56,11 @@ export function ProjectProvider({ children }) {
   }, [session])
 
   return (
-    <ProjectContext.Provider 
-      value={{ 
-        clients, 
+    <ProjectContext.Provider
+      value={{
+        clients,
         api,
+        authFetch,
         session
       }}
     >
@@ -70,23 +71,31 @@ export function ProjectProvider({ children }) {
 
 export function useProject() {
   const params = useParams()
-  const { 
-    clients, 
-    authFetch, 
+  const {
+    clients,
+    authFetch,
     api,
     session
   } = useContext(ProjectContext)
   const user = session?.user
 
   const myClientSlugs = clients.map(c => c.slug)
-  // currentClient comes only from the clients the user actually has membership for (via user_clients on the backend).
-  const currentClient = clients.find(c => c.slug === params.slug) || clients[0] || null
 
   const canAccessClient = (slug) => myClientSlugs.includes(slug)
   const hasMultipleClients = myClientSlugs.length > 1
 
   // Clean permission/scope object
   const isAdmin = !!(user?.isAdmin) || (typeof user?.email === 'string' && user.email.endsWith('@datadrivensr.com')) || false
+
+  // The `:slug` route param is always a PROJECT slug. `current` is that project;
+  // `currentClient` is the project's owning client. When there's no project slug
+  // in the URL (e.g. the /admin route), fall back to the first available project.
+  const allProjects = clients.flatMap(c => (c.projects || []).map(p => ({ ...p, client: c })))
+  const slug = params.slug || null
+  const current = slug
+    ? (allProjects.find(p => p.slug === slug) || null)
+    : (allProjects[0] || null)
+  const currentClient = current?.client || clients[0] || null
 
   const currentUserScope = {
     isAdmin,
@@ -96,19 +105,16 @@ export function useProject() {
     currentClientSlug: currentClient?.slug || null,
   }
 
-  const allProjects = clients.flatMap(c => (c.projects || []).map(p => ({ ...p, client: c })))
-  const slug = params.slug || null
-  const current = slug ? (allProjects.find(p => p.slug === slug) || null) : currentClient
-
-  return { 
-    clients, 
-    allProjects, 
-    current, 
-    slug, 
-    isAdmin, 
+  return {
+    clients,
+    allProjects,
+    current,
+    slug,
+    isAdmin,
     api,
-    session, 
-    myClientSlugs, 
+    authFetch,
+    session,
+    myClientSlugs,
     currentClient,
     canAccessClient,
     hasMultipleClients,

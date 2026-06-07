@@ -20,9 +20,9 @@ const btnCancel = {
   padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
 }
 
-export default function DocumentsTab() {
-  const { api, currentClient } = useProject()
-  const projectSlug = currentClient?.slug
+export default function DocumentsTab({ projectSlug: propProjectSlug }) {
+  const { api, current } = useProject()
+  const projectSlug = propProjectSlug || current?.slug
   const { getOptions } = useConfig()
   const docTypes = getOptions('doc_type')
   const [docs, setDocs] = useState([])

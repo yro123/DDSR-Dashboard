@@ -72,9 +72,10 @@ export default function Invite() {
             try {
               const res = await fetch('/api/clients', { credentials: 'include' })
               const accessible = await res.json()
-              const targetSlug = Array.isArray(accessible) && accessible.length > 0 
-                ? accessible[0].slug 
-                : null
+              // `:slug` routes are project-scoped — land on the first project of the
+              // first accessible client. If there's none, let DefaultRedirect decide.
+              const firstClient = Array.isArray(accessible) && accessible.length > 0 ? accessible[0] : null
+              const targetSlug = firstClient?.projects?.[0]?.slug || null
 
               if (targetSlug) {
                 navigate(`/${targetSlug}/tasks`, { replace: true })
@@ -102,7 +103,9 @@ export default function Invite() {
     try {
       const res = await fetch('/api/clients', { credentials: 'include' })
       const accessible = await res.json()
-      const target = Array.isArray(accessible) && accessible.length > 0 ? accessible[0].slug : null
+      // Land on the first project of the first accessible client (project-scoped routes).
+      const firstClient = Array.isArray(accessible) && accessible.length > 0 ? accessible[0] : null
+      const target = firstClient?.projects?.[0]?.slug || null
       navigate(target ? `/${target}/tasks` : '/', { replace: true })
     } catch {
       navigate('/', { replace: true })

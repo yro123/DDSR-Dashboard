@@ -1,18 +1,20 @@
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, lazy, Suspense } from 'react'
 import { authClient } from './lib/auth-client'
 import { ProjectProvider, useProject } from './context/ProjectContext'
 import { ConfigProvider } from './context/ConfigContext'
 import { ThemeProvider } from './context/ThemeContext'
-import Tasks    from './pages/Tasks'
-import Hub      from './pages/Hub'
-import Meetings from './pages/Meetings'
-import Review   from './pages/Review'
-import Requests from './pages/Requests'
-import Search   from './pages/Search'
-import SignIn   from './pages/SignIn'
-import Invite   from './pages/Invite'
-import Admin    from './pages/Admin'
+
+// Route-based code splitting: each page ships as its own chunk, loaded on demand.
+const Tasks    = lazy(() => import('./pages/Tasks'))
+const Hub      = lazy(() => import('./pages/Hub'))
+const Meetings = lazy(() => import('./pages/Meetings'))
+const Review   = lazy(() => import('./pages/Review'))
+const Requests = lazy(() => import('./pages/Requests'))
+const Search   = lazy(() => import('./pages/Search'))
+const SignIn   = lazy(() => import('./pages/SignIn'))
+const Invite   = lazy(() => import('./pages/Invite'))
+const Admin    = lazy(() => import('./pages/Admin'))
 
 function AuthGuard({ children }) {
   const { data: session, isPending } = authClient.useSession()
@@ -42,7 +44,7 @@ function AuthenticatedApp() {
 }
 
 function DefaultRedirect() {
-  const { clients, isAdmin, currentClient, allProjects } = useProject()
+  const { clients, isAdmin, allProjects } = useProject()
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -50,28 +52,47 @@ function DefaultRedirect() {
 
     if (isAdmin) {
       navigate('/admin', { replace: true })
-    } else {
-      // Land regular users on their current (or first) accessible client
-      const target = currentClient?.slug || allProjects[0]?.slug || clients[0]?.slug
-      if (target) {
-        navigate(`/${target}/tasks`, { replace: true })
-      } else {
-        navigate('/admin', { replace: true })
-      }
+      return
     }
-  }, [clients, isAdmin, currentClient, allProjects, navigate])
+    // `:slug` routes are project-scoped, so always land on a PROJECT slug.
+    // A client with no projects yet has no valid dashboard URL — fall through
+    // to the empty state below instead of building a dead `/:clientSlug/tasks`.
+    const target = allProjects[0]?.slug
+    if (target) navigate(`/${target}/tasks`, { replace: true })
+  }, [clients, isAdmin, allProjects, navigate])
 
+  if (clients.length === 0) return null // still loading
+  if (!isAdmin && allProjects.length === 0) return <NoProjects />
   return null
+}
+
+function NoProjects() {
+  return (
+    <div style={{
+      minHeight: '100vh', display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', gap: 8,
+      color: 'var(--text-dim)', padding: 40, textAlign: 'center',
+    }}>
+      <div style={{ fontSize: 28 }}>📂</div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>No projects yet</div>
+      <div style={{ fontSize: 13, maxWidth: 420 }}>
+        Your workspace doesn’t have any projects set up yet. An administrator needs to
+        create a project before there’s anything to show here.
+      </div>
+    </div>
+  )
 }
 
 export default function App() {
   return (
     <ThemeProvider>
-      <Routes>
-        <Route path="/sign-in" element={<SignIn />} />
-        <Route path="/invite"  element={<Invite />} />
-        <Route path="*" element={<AuthGuard><AuthenticatedApp /></AuthGuard>} />
-      </Routes>
+      <Suspense fallback={<div style={{ padding: 40, color: 'var(--text-dim)' }}>Loading…</div>}>
+        <Routes>
+          <Route path="/sign-in" element={<SignIn />} />
+          <Route path="/invite"  element={<Invite />} />
+          <Route path="*" element={<AuthGuard><AuthenticatedApp /></AuthGuard>} />
+        </Routes>
+      </Suspense>
     </ThemeProvider>
   )
 }
