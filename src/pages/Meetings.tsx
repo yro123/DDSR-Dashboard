@@ -1,0 +1,575 @@
+import { useState, useEffect } from 'react'
+import Layout from '../components/Layout'
+import { useProject, type ProjectWithClient } from '../context/ProjectContext'
+import { useConfig } from '../context/ConfigContext'
+import { useQuery } from '../hooks/useApi'
+import type { MeetingRow, MeetingTopicRow, MeetingNoteRow, MeetingActionItemRow, PersonRow } from '../../shared/types'
+
+const btnSave: React.CSSProperties = {
+  fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 6,
+  border: 'none', background: 'var(--accent)', color: 'var(--accent-text)',
+  cursor: 'pointer', fontFamily: 'inherit',
+}
+const btnCancel: React.CSSProperties = {
+  fontSize: 11, fontWeight: 600, padding: '4px 12px', borderRadius: 6,
+  border: '1px solid var(--border)', background: 'var(--surface)',
+  color: 'var(--text-muted)', cursor: 'pointer', fontFamily: 'inherit',
+}
+const btnDanger: React.CSSProperties = {
+  fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 5,
+  border: 'none', background: 'transparent', color: 'var(--text-dim)',
+  cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
+}
+const btnAdd: React.CSSProperties = {
+  fontSize: 11, fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-dim)',
+  border: 'none', borderRadius: 6, padding: '3px 10px', cursor: 'pointer',
+  fontFamily: 'inherit', flexShrink: 0,
+}
+const inputStyle: React.CSSProperties = {
+  border: '1px solid var(--border)', borderRadius: 7, padding: '6px 10px',
+  fontSize: 12, fontFamily: 'inherit', color: 'var(--text)',
+  background: 'var(--surface)', width: '100%',
+}
+const labelStyle: React.CSSProperties = {
+  fontSize: 10, fontWeight: 700, color: 'var(--text-dim)',
+  textTransform: 'uppercase', letterSpacing: '.04em', display: 'block', marginBottom: 4,
+}
+
+// ── View-model shapes returned by the API (nested beyond the flat DB rows) ──
+interface MeetingNoteView extends MeetingNoteRow {}
+interface ActionItemView extends MeetingActionItemRow {}
+interface TopicView extends MeetingTopicRow {
+  notes?: MeetingNoteView[]
+  actionItems?: ActionItemView[]
+}
+interface MeetingView extends MeetingRow {
+  attendees?: string[]
+  topics?: TopicView[]
+}
+
+interface MeetingFormData {
+  title: string
+  meeting_date: string
+  display_date: string
+  location: string
+  meeting_type: string
+  next_meeting: string
+  project_id: string | number | ''
+}
+
+interface ActionFormData {
+  action_text: string
+  assignee_name: string
+}
+
+interface TopicFormData {
+  area: string
+  color: string
+}
+
+
+interface MeetingFormProps {
+  initial?: Partial<MeetingView>
+  onSave: (form: MeetingFormData) => void
+  onCancel: () => void
+  projects?: ProjectWithClient[]
+  isAdmin?: boolean
+}
+
+function MeetingForm({ initial, onSave, onCancel, projects, isAdmin }: MeetingFormProps) {
+  const [form, setForm] = useState<MeetingFormData>({
+    title: initial?.title || '',
+    meeting_date: initial?.meeting_date || '',
+    display_date: initial?.display_date || '',
+    location: initial?.location || '',
+    meeting_type: initial?.meeting_type || 'Weekly Sync',
+    next_meeting: initial?.next_meeting || '',
+    project_id: initial?.project_id ?? '',
+  })
+  const set = (k: keyof MeetingFormData, v: string) => setForm(f => ({ ...f, [k]: v }))
+
+  // Reassigning to another project is an admin-only action on an existing meeting.
+  const canReassign = !!(initial?.id && isAdmin && projects && projects.length > 0)
+
+  const handleDateChange = (v: string) => {
+    const display = v
+      ? new Date(v + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+      : ''
+    setForm(f => ({ ...f, meeting_date: v, display_date: display }))
+  }
+
+  return (
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 16, marginBottom: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+        <div style={{ gridColumn: '1 / -1' }}>
+          <label style={labelStyle}>Title *</label>
+          <input value={form.title} onChange={e => set('title', e.target.value)} placeholder="Meeting title" style={inputStyle} autoFocus />
+        </div>
+        <div>
+          <label style={labelStyle}>Date *</label>
+          <input type="date" value={form.meeting_date} onChange={e => handleDateChange(e.target.value)} style={inputStyle} />
+        </div>
+        <div>
+          <label style={labelStyle}>Display Date</label>
+          <input value={form.display_date} onChange={e => set('display_date', e.target.value)} placeholder="e.g. May 26, 2026" style={inputStyle} />
+        </div>
+        <div>
+          <label style={labelStyle}>Meeting Type</label>
+          <input value={form.meeting_type} onChange={e => set('meeting_type', e.target.value)} placeholder="Weekly Sync" style={inputStyle} />
+        </div>
+        <div>
+          <label style={labelStyle}>Location</label>
+          <input value={form.location} onChange={e => set('location', e.target.value)} placeholder="Zoom / in-person" style={inputStyle} />
+        </div>
+        <div style={{ gridColumn: '1 / -1' }}>
+          <label style={labelStyle}>Next Meeting</label>
+          <input value={form.next_meeting} onChange={e => set('next_meeting', e.target.value)} placeholder="e.g. June 2, 2026" style={inputStyle} />
+        </div>
+        {canReassign && (
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={labelStyle}>Project</label>
+            <select value={form.project_id} onChange={e => set('project_id', e.target.value)} style={inputStyle}>
+              {projects!.map(p => (
+                <option key={p.id} value={p.id}>
+                  {p.client?.name ? `${p.client.name} — ${p.name}` : p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button
+          onClick={() => {
+            if (!form.title || !form.meeting_date) return
+            onSave(canReassign ? form : { ...form, project_id: '' })
+          }}
+          style={btnSave}
+        >Save</button>
+        <button onClick={onCancel} style={btnCancel}>Cancel</button>
+      </div>
+    </div>
+  )
+}
+
+interface TopicFormProps {
+  initial?: Partial<TopicView>
+  onSave: (data: TopicFormData) => void
+  onCancel: () => void
+}
+
+function TopicForm({ initial, onSave, onCancel }: TopicFormProps) {
+  const { getOptions } = useConfig()
+  const topicColors = getOptions('topic_color')
+  const [area, setArea]   = useState(initial?.area || '')
+  const [color, setColor] = useState(initial?.color || topicColors[0] || '#3B82F6')
+  return (
+    <div style={{ border: '1px dashed var(--border-mid)', borderRadius: 10, padding: 12, marginTop: 8 }}>
+      <div style={{ marginBottom: 8 }}>
+        <label style={labelStyle}>Topic Area *</label>
+        <input value={area} onChange={e => setArea(e.target.value)} placeholder="e.g. NetSuite Integration" style={inputStyle} autoFocus />
+      </div>
+      <div style={{ marginBottom: 10 }}>
+        <label style={labelStyle}>Color</label>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {topicColors.map(c => (
+            <button key={c} onClick={() => setColor(c)} style={{
+              width: 22, height: 22, borderRadius: '50%', background: c, border: 'none',
+              cursor: 'pointer', boxShadow: color === c ? `0 0 0 2px var(--surface), 0 0 0 4px ${c}` : 'none',
+              transition: 'box-shadow .12s',
+            }} />
+          ))}
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button onClick={() => { if (area.trim()) onSave({ area: area.trim(), color }) }} style={btnSave}>Save</button>
+        <button onClick={onCancel} style={btnCancel}>Cancel</button>
+      </div>
+    </div>
+  )
+}
+
+export default function Meetings() {
+  const { slug, api, isAdmin, allProjects } = useProject()
+
+  const endpoint = isAdmin ? `&all=1` : ''
+  const { data: meetingsData = [], loading: meetingsLoading, refetch: reloadMeetings } = useQuery<MeetingView[]>(
+    () => api.get<MeetingView[]>(`/api/meetings?slug=${slug}${endpoint}`),
+    [slug, isAdmin]
+  )
+  const { data: peopleData = [] } = useQuery<PersonRow[]>(
+    () => api.get<PersonRow[]>(`/api/people?slug=${slug}`),
+    [slug]
+  )
+
+  const [meetings, setMeetings] = useState<MeetingView[]>([])
+  const [people, setPeople]     = useState<PersonRow[]>([])
+  const [openId, setOpenId]     = useState<number | null>(null)
+
+  // Meeting-level state
+  const [addingNew, setAddingNew]         = useState(false)
+  const [editingMeetingId, setEditMeeting] = useState<number | null>(null)
+
+  // Topic state
+  const [addingTopicFor, setAddingTopicFor] = useState<number | null>(null)
+  const [editingTopicId, setEditTopicId]    = useState<number | null>(null)
+
+  // Note state
+  const [editingNoteId, setEditNoteId] = useState<number | null>(null)
+  const [noteText, setNoteText]        = useState('')
+  const [addingNoteFor, setAddingNoteFor] = useState<number | null>(null)
+  const [newNoteText, setNewNoteText]     = useState('')
+
+  // Action item state
+  const [editingActionId, setEditActionId] = useState<number | null>(null)
+  const [actionForm, setActionForm]        = useState<ActionFormData>({ action_text: '', assignee_name: '' })
+  const [addingActionFor, setAddingActionFor] = useState<number | null>(null)
+  const [newActionForm, setNewActionForm]     = useState<ActionFormData>({ action_text: '', assignee_name: '' })
+
+  // Sync hook data
+  useEffect(() => { setMeetings(meetingsData) }, [meetingsData])
+  useEffect(() => { setPeople(peopleData) }, [peopleData])
+
+  const loading = meetingsLoading
+
+  const reload = () => reloadMeetings()
+
+  // Meeting CRUD
+  async function createMeeting(data: MeetingFormData) {
+    if (!data.title || !data.meeting_date) return
+    await api.post('/api/meetings', { slug, ...data })
+    setAddingNew(false); reload()
+  }
+  async function updateMeeting(id: number, data: MeetingFormData) {
+    await api.put(`/api/meetings/${id}`, data)
+    setEditMeeting(null); reload()
+  }
+  async function deleteMeeting(id: number) {
+    if (!window.confirm('Delete this meeting and all its topics?')) return
+    await api.del(`/api/meetings/${id}`)
+    reload()
+  }
+
+  // Topic CRUD
+  async function createTopic(meetingId: number, data: TopicFormData) {
+    await api.post('/api/meeting-topics', { meeting_id: meetingId, ...data })
+    setAddingTopicFor(null); reload()
+  }
+  async function updateTopic(id: number, data: TopicFormData) {
+    await api.put(`/api/meeting-topics/${id}`, data)
+    setEditTopicId(null); reload()
+  }
+  async function deleteTopic(id: number) {
+    if (!window.confirm('Delete this topic and all its notes?')) return
+    await api.del(`/api/meeting-topics/${id}`)
+    reload()
+  }
+
+  // Note CRUD
+  async function createNote(topicId: number) {
+    if (!newNoteText.trim()) return
+    await api.post('/api/meeting-notes', { topic_id: topicId, note_text: newNoteText })
+    setAddingNoteFor(null); setNewNoteText(''); reload()
+  }
+  async function updateNote(id: number) {
+    await api.put(`/api/meeting-notes/${id}`, { note_text: noteText })
+    setEditNoteId(null); reload()
+  }
+  async function deleteNote(id: number) {
+    await api.del(`/api/meeting-notes/${id}`); reload()
+  }
+
+  // Action CRUD
+  async function createAction(topicId: number) {
+    if (!newActionForm.action_text.trim()) return
+    await api.post('/api/meeting-action-items', { topic_id: topicId, ...newActionForm })
+    setAddingActionFor(null); setNewActionForm({ action_text: '', assignee_name: '' }); reload()
+  }
+  async function updateAction(id: number) {
+    await api.put(`/api/meeting-action-items/${id}`, actionForm)
+    setEditActionId(null); reload()
+  }
+  async function deleteAction(id: number) {
+    await api.del(`/api/meeting-action-items/${id}`); reload()
+  }
+
+  if (loading) return <Layout><div style={{ padding: 40, color: 'var(--text-dim)' }}>Loading…</div></Layout>
+
+  return (
+    <Layout>
+      <div style={{ maxWidth: 900 }}>
+
+        {/* Admin: New Meeting */}
+        {isAdmin && (
+          <div style={{ marginBottom: 16 }}>
+            {addingNew ? (
+              <MeetingForm onSave={createMeeting} onCancel={() => setAddingNew(false)} />
+            ) : (
+              <button onClick={() => setAddingNew(true)} style={{
+                padding: '7px 18px', borderRadius: 8, border: 'none',
+                background: '#00D4C8', color: '#0A0A0A', fontWeight: 700, fontSize: 13,
+                fontFamily: 'inherit', cursor: 'pointer',
+              }}>
+                + Meeting
+              </button>
+            )}
+          </div>
+        )}
+
+        {meetings.map(m => {
+          const isOpen = openId === m.id
+          const dateParts = (m.display_date || '').split(' ')
+          const isEditing = editingMeetingId === m.id
+
+          return (
+            <div key={m.id} className="meeting-card">
+              {/* Header */}
+              {isEditing ? (
+                <div style={{ padding: '12px 20px' }}>
+                  <MeetingForm initial={m} onSave={data => updateMeeting(m.id, data)} onCancel={() => setEditMeeting(null)} projects={allProjects} isAdmin={isAdmin} />
+                </div>
+              ) : (
+                <button onClick={() => setOpenId(isOpen ? null : m.id)} style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 14,
+                  padding: '16px 20px',
+                  background: isOpen ? 'var(--surface-2)' : 'var(--surface)',
+                  border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
+                }}>
+                  <div style={{
+                    width: 44, height: 44, borderRadius: 10,
+                    background: 'var(--accent-dim)',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                  }}>
+                    <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '.05em' }}>
+                      {dateParts[0] || ''}
+                    </span>
+                    <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--accent)', lineHeight: 1 }}>
+                      {(dateParts[1] || '').replace(',', '')}
+                    </span>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 3 }}>{m.title}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{(m.attendees || []).join(' · ')}</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                    <span style={{ fontSize: 10, fontWeight: 600, background: 'var(--accent-dim)', color: 'var(--accent)', padding: '2px 10px', borderRadius: 99 }}>
+                      {(m.topics || []).length} topics
+                    </span>
+                    {isAdmin && (
+                      <>
+                        <span onClick={e => { e.stopPropagation(); setEditMeeting(m.id) }}
+                          style={{ fontSize: 10, color: 'var(--text-dim)', cursor: 'pointer', padding: '2px 6px', borderRadius: 4, background: 'var(--surface-2)' }}>
+                          Edit
+                        </span>
+                        <span onClick={e => { e.stopPropagation(); deleteMeeting(m.id) }}
+                          style={{ fontSize: 10, color: 'var(--red)', cursor: 'pointer', padding: '2px 6px', borderRadius: 4, background: 'var(--surface-2)' }}>
+                          Delete
+                        </span>
+                      </>
+                    )}
+                    <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{isOpen ? '▲' : '▼'}</span>
+                  </div>
+                </button>
+              )}
+
+              {/* Body */}
+              {isOpen && (
+                <div style={{ borderTop: '1px solid var(--border)', padding: 20 }}>
+                  {(m.topics || []).map(t => (
+                    <div key={t.id} style={{ border: `1.5px solid ${t.color}30`, borderRadius: 12, overflow: 'hidden', marginBottom: 14 }}>
+                      {/* Topic header */}
+                      {editingTopicId === t.id ? (
+                        <div style={{ padding: '10px 16px', background: t.color + '14' }}>
+                          <TopicForm initial={t} onSave={data => updateTopic(t.id, data)} onCancel={() => setEditTopicId(null)} />
+                        </div>
+                      ) : (
+                        <div style={{
+                          background: t.color + '14', padding: '10px 16px',
+                          borderBottom: `1px solid ${t.color}20`,
+                          display: 'flex', alignItems: 'center', gap: 10,
+                        }}>
+                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: t.color || undefined, flexShrink: 0, display: 'inline-block' }} />
+                          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', flex: 1 }}>{t.area}</span>
+                          {isAdmin && (
+                            <div style={{ display: 'flex', gap: 4 }}>
+                              <button onClick={() => setEditTopicId(t.id)} style={{ ...btnDanger, fontSize: 10, padding: '2px 7px', background: 'var(--surface-2)' }}>Edit</button>
+                              <button onClick={() => deleteTopic(t.id)} style={{ ...btnDanger, color: 'var(--red)' }}>✕</button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Notes + Actions */}
+                      <div style={{ background: 'var(--surface)', padding: '14px 16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                        {/* Discussion Notes */}
+                        <div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>
+                            Discussion Notes
+                          </div>
+                          {(t.notes || []).map(n => (
+                            <div key={n.id}>
+                              {editingNoteId === n.id ? (
+                                <div style={{ padding: '4px 0 8px', borderBottom: '1px solid var(--border)' }}>
+                                  <textarea
+                                    value={noteText}
+                                    onChange={e => setNoteText(e.target.value)}
+                                    rows={2}
+                                    style={{ ...inputStyle, resize: 'vertical', marginBottom: 6 }}
+                                    autoFocus
+                                  />
+                                  <div style={{ display: 'flex', gap: 6 }}>
+                                    <button onClick={() => updateNote(n.id)} style={btnSave}>Save</button>
+                                    <button onClick={() => setEditNoteId(null)} style={btnCancel}>Cancel</button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div style={{ display: 'flex', gap: 8, padding: '5px 0', borderBottom: '1px solid var(--border)', fontSize: 12, color: 'var(--text)', lineHeight: 1.5 }}>
+                                  <span style={{ color: t.color || undefined, flexShrink: 0, marginTop: 2 }}>•</span>
+                                  <span
+                                    onClick={isAdmin ? () => { setEditNoteId(n.id); setNoteText(n.note_text || (n as unknown as string)) } : undefined}
+                                    title={isAdmin ? 'Click to edit' : undefined}
+                                    style={{ cursor: isAdmin ? 'pointer' : 'default', flex: 1 }}
+                                  >{n.note_text || (n as unknown as string)}</span>
+                                  {isAdmin && (
+                                    <button onClick={() => deleteNote(n.id)} style={btnDanger} title="Delete note">✕</button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+
+                          {/* Add note */}
+                          {isAdmin && (
+                            addingNoteFor === t.id ? (
+                              <div style={{ padding: '8px 0' }}>
+                                <textarea
+                                  value={newNoteText}
+                                  onChange={e => setNewNoteText(e.target.value)}
+                                  rows={2}
+                                  placeholder="Note text…"
+                                  style={{ ...inputStyle, resize: 'vertical', marginBottom: 6 }}
+                                  autoFocus
+                                />
+                                <div style={{ display: 'flex', gap: 6 }}>
+                                  <button onClick={() => createNote(t.id)} style={btnSave}>Add</button>
+                                  <button onClick={() => { setAddingNoteFor(null); setNewNoteText('') }} style={btnCancel}>Cancel</button>
+                                </div>
+                              </div>
+                            ) : (
+                              <button onClick={() => { setAddingNoteFor(t.id); setNewNoteText('') }} style={{ ...btnAdd, marginTop: 6, fontSize: 10 }}>+ Add Note</button>
+                            )
+                          )}
+                        </div>
+
+                        {/* Action Items */}
+                        <div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>
+                            Action Items
+                          </div>
+                          {(t.actionItems || []).map((a, i) => (
+                            <div key={a.id}>
+                              {editingActionId === a.id ? (
+                                <div style={{ padding: '4px 0 8px', borderBottom: '1px solid var(--border)' }}>
+                                  <input
+                                    value={actionForm.action_text}
+                                    onChange={e => setActionForm(f => ({ ...f, action_text: e.target.value }))}
+                                    placeholder="Action text…"
+                                    style={{ ...inputStyle, marginBottom: 6 }}
+                                    autoFocus
+                                  />
+                                  <select
+                                    value={actionForm.assignee_name}
+                                    onChange={e => setActionForm(f => ({ ...f, assignee_name: e.target.value }))}
+                                    style={{ ...inputStyle, marginBottom: 6 }}
+                                  >
+                                    <option value="">— assignee —</option>
+                                    {people.map(p => <option key={p.id}>{p.name}</option>)}
+                                  </select>
+                                  <div style={{ display: 'flex', gap: 6 }}>
+                                    <button onClick={() => updateAction(a.id)} style={btnSave}>Save</button>
+                                    <button onClick={() => setEditActionId(null)} style={btnCancel}>Cancel</button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div style={{ display: 'flex', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--border)', fontSize: 12, color: 'var(--text)', lineHeight: 1.5 }}>
+                                  <span style={{ background: 'var(--accent)', color: 'var(--accent-text)', borderRadius: 99, fontSize: 9, fontWeight: 700, padding: '1px 6px', flexShrink: 0, marginTop: 2 }}>
+                                    {i + 1}
+                                  </span>
+                                  <span
+                                    style={{ flex: 1, cursor: isAdmin ? 'pointer' : 'default' }}
+                                    onClick={isAdmin ? () => { setEditActionId(a.id); setActionForm({ action_text: a.action_text, assignee_name: a.assignee_name || '' }) } : undefined}
+                                    title={isAdmin ? 'Click to edit' : undefined}
+                                  >{a.action_text}</span>
+                                  {a.assignee_name && (
+                                    <span style={{ fontSize: 10, color: 'var(--text-dim)', flexShrink: 0 }}>({a.assignee_name})</span>
+                                  )}
+                                  {isAdmin && (
+                                    <button onClick={() => deleteAction(a.id)} style={btnDanger} title="Delete action">✕</button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+
+                          {/* Add action */}
+                          {isAdmin && (
+                            addingActionFor === t.id ? (
+                              <div style={{ padding: '8px 0' }}>
+                                <input
+                                  value={newActionForm.action_text}
+                                  onChange={e => setNewActionForm(f => ({ ...f, action_text: e.target.value }))}
+                                  placeholder="Action item text…"
+                                  style={{ ...inputStyle, marginBottom: 6 }}
+                                  autoFocus
+                                />
+                                <select
+                                  value={newActionForm.assignee_name}
+                                  onChange={e => setNewActionForm(f => ({ ...f, assignee_name: e.target.value }))}
+                                  style={{ ...inputStyle, marginBottom: 6 }}
+                                >
+                                  <option value="">— assignee —</option>
+                                  {people.map(p => <option key={p.id}>{p.name}</option>)}
+                                </select>
+                                <div style={{ display: 'flex', gap: 6 }}>
+                                  <button onClick={() => createAction(t.id)} style={btnSave}>Add</button>
+                                  <button onClick={() => { setAddingActionFor(null); setNewActionForm({ action_text: '', assignee_name: '' }) }} style={btnCancel}>Cancel</button>
+                                </div>
+                              </div>
+                            ) : (
+                              <button onClick={() => { setAddingActionFor(t.id); setNewActionForm({ action_text: '', assignee_name: '' }) }} style={{ ...btnAdd, marginTop: 6, fontSize: 10 }}>+ Add Action</button>
+                            )
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Add topic */}
+                  {isAdmin && (
+                    addingTopicFor === m.id ? (
+                      <TopicForm onSave={data => createTopic(m.id, data)} onCancel={() => setAddingTopicFor(null)} />
+                    ) : (
+                      <button onClick={() => setAddingTopicFor(m.id)} style={{ ...btnAdd, marginTop: 4 }}>+ Add Topic</button>
+                    )
+                  )}
+
+                  {m.next_meeting && m.next_meeting !== 'TBD' && (
+                    <div style={{ fontSize: 11, color: 'var(--text-dim)', padding: '8px 2px 0' }}>
+                      Next meeting: {m.next_meeting}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })}
+
+        {meetings.length === 0 && !addingNew && (
+          <div style={{ textAlign: 'center', color: 'var(--text-dim)', padding: 40, fontSize: 13 }}>
+            No meetings yet.{isAdmin && ' Click "+ New Meeting" to add one.'}
+          </div>
+        )}
+      </div>
+    </Layout>
+  )
+}

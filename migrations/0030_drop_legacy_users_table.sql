@@ -1,0 +1,13 @@
+-- Migration 0030: drop the legacy `users` table.
+--
+-- The original `users` table (migration 0001, Clerk-era: integer id, clerk_user_id,
+-- client_id) was fully superseded by better-auth's `user` table (0010) plus the
+-- `user_clients` membership join (0019). No runtime handler references `users`
+-- anymore (verified: all access goes through `user` / `user_clients`). Drop it to
+-- remove the two-user-tables footgun.
+--
+-- NOTE: the legacy `clientSlug` column on `user` and the denormalized
+-- `invitations.clientSlug` are intentionally left in place — they're still
+-- written to satisfy a NOT NULL constraint and removing them needs a separate,
+-- carefully-tested table rebuild.
+DROP TABLE IF EXISTS users;
