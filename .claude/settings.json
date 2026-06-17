@@ -1,7 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\allen\\\\Projects\\\\DDSR\\\\DDSR-Dashboard\" -Recurse -Depth 2)"
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\allen\\\\Projects\\\\DDSR\\\\DDSR-Dashboard\" -Recurse -Depth 2)",
+      "PowerShell(npx tsc --noEmit 2>&1)",
+      "PowerShell(if \\(Test-Path package.json\\) { \\(Get-Content package.json -Raw | ConvertFrom-Json\\).scripts | ConvertTo-Json })",
+      "PowerShell(npm run typecheck 2>&1)",
+      "PowerShell(node node_modules/.bin/tsc -p tsconfig.functions.json --noEmit 2>&1)",
+      "PowerShell(node node_modules/.bin/tsc -p tsconfig.json --noEmit 2>&1)",
+      "PowerShell(Get-ChildItem node_modules/typescript -ErrorAction SilentlyContinue | Select-Object Name; \\(Get-Content node_modules/.bin/tsc -Raw -ErrorAction SilentlyContinue\\).Substring\\(0,200\\))",
+      "PowerShell(npx wrangler d1 migrations list ddsr-dashboard --local 2>&1)"
     ]
   }
 }

@@ -45,11 +45,13 @@ export async function onRequestPost({ env, request }: Ctx): Promise<Response> {
   let text: string | null
   let project_id: number | null
   let type: string | null
+  let assignee_id: number | null
   try {
     const body = await readJson(request)
     text = optString(body, 'text')
     project_id = optNumber(body, 'project_id')
     type = optString(body, 'type')
+    assignee_id = optNumber(body, 'assignee_id')
   } catch (err) {
     return badRequestResponse(err)
   }
@@ -96,8 +98,10 @@ Rules: extract every explicit action item, request, and follow-up. Match assigne
       let tasks_for_review = 0
 
       for (const task of newTasks) {
-        await writeTask(db, task, ctx.people, project_id, 'manual', todayStr)
-        if ((task.confidence ?? 0) >= CONFIDENCE_THRESHOLD && task.assignee_email) {
+        await writeTask(db, task, ctx.people, project_id, 'manual_text', todayStr, assignee_id)
+        // An explicit assignee sends the task straight to the board; otherwise
+        // it follows the confidence/match heuristic (low → review queue).
+        if (assignee_id || ((task.confidence ?? 0) >= CONFIDENCE_THRESHOLD && task.assignee_email)) {
           tasks_added++
         } else {
           tasks_for_review++
@@ -237,7 +241,7 @@ Use today's date if meeting date is unclear. Match assignees and projects from c
       let tasks_for_review = 0
 
       for (const task of newTasks) {
-        await writeTask(db, task, ctx.people, project_id, 'manual', todayStr)
+        await writeTask(db, task, ctx.people, project_id, 'manual_text', todayStr)
         if ((task.confidence ?? 0) >= CONFIDENCE_THRESHOLD && task.assignee_email) {
           tasks_added++
         } else {

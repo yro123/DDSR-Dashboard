@@ -168,10 +168,15 @@ export async function writeTask(
   defaultProjectId: number,
   sourceType: string,
   _todayStr?: string,
+  assigneeIdOverride?: number | null,
 ): Promise<number | undefined> {
-  const person = task.assignee_email
+  // An explicit override (e.g. picked in the Manual tab) wins over Claude's
+  // email-based match. Falls back to matching the assignee_email to the roster.
+  const matched = task.assignee_email
     ? people.find((p) => p.email?.toLowerCase() === task.assignee_email!.toLowerCase())
     : null
+  const assigneeId = assigneeIdOverride ?? matched?.id ?? null
+  const hasAssignee = assigneeId != null
 
   const projectId = task.project_id ?? defaultProjectId
   const now = new Date().toISOString()
@@ -188,14 +193,14 @@ export async function writeTask(
     projectId,
     task.title,
     task.description ?? null,
-    person?.id ?? null,
+    assigneeId,
     sourceType,
     task.source_email_id ?? null,
     task.source_excerpt ?? null,
     task.confidence ?? null,
     task.claude_reasoning ?? null,
-    person ? null : (task.assignee_email ? task.assignee_email.split('@')[0] : null),
-    person ? null : (task.assignee_email ?? null),
+    hasAssignee ? null : (task.assignee_email ? task.assignee_email.split('@')[0] : null),
+    hasAssignee ? null : (task.assignee_email ?? null),
     normalizePriority(task.priority),
     task.due_date ?? null,
     now, now,

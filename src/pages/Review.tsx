@@ -747,6 +747,7 @@ export default function Review() {
   // Manual tab
   const [manualTaskText, setManualTaskText]           = useState('')
   const [manualTaskProjectId, setManualTaskProjectId] = useState('')
+  const [manualTaskAssigneeId, setManualTaskAssigneeId] = useState('')
   const [manualTaskSubmitting, setManualTaskSubmitting] = useState(false)
   const [manualTaskResult, setManualTaskResult]       = useState<AnalysisResult | null>(null)
   const [manualMeetingText, setManualMeetingText]         = useState('')
@@ -923,14 +924,27 @@ export default function Review() {
     setAnalyzingGroup(null)
   }
 
+  // Reload the cross-project review queue so newly extracted tasks appear in the
+  // Tasks tab (and its count) without a full page reload.
+  const refreshReviewTasks = async () => {
+    const t = await api.get<ReviewTask[]>('/api/tasks?review=1&all=1').catch(() => null)
+    if (Array.isArray(t)) setTasks(t)
+  }
+
   const submitManualTasks = async () => {
     if (!manualTaskText.trim() || !manualTaskProjectId) return
     setManualTaskSubmitting(true)
     setManualTaskResult(null)
     try {
-      const result = await api.post<AnalysisResult>('/api/admin/analyze-text', { text: manualTaskText, project_id: parseInt(manualTaskProjectId, 10), type: 'tasks' })
+      const result = await api.post<AnalysisResult>('/api/admin/analyze-text', {
+        text: manualTaskText,
+        project_id: parseInt(manualTaskProjectId, 10),
+        type: 'tasks',
+        ...(manualTaskAssigneeId ? { assignee_id: parseInt(manualTaskAssigneeId, 10) } : {}),
+      })
       setManualTaskResult(result)
       setManualTaskText('')
+      await refreshReviewTasks()
     } catch (err) {
       setManualTaskResult({ error: (err as Error).message })
     }
@@ -945,6 +959,7 @@ export default function Review() {
       const result = await api.post<AnalysisResult>('/api/admin/analyze-text', { text: manualMeetingText, project_id: parseInt(manualMeetingProjectId, 10), type: 'meeting' })
       setManualMeetingResult(result)
       setManualMeetingText('')
+      await refreshReviewTasks()
     } catch (err) {
       setManualMeetingResult({ error: (err as Error).message })
     }
@@ -965,6 +980,10 @@ export default function Review() {
       return acc
     }, {})
   )
+
+  // Manual tab: people for the selected client (map project id → slug → roster).
+  const manualTaskProject = allProjects.find(p => String(p.id) === manualTaskProjectId)
+  const manualTaskPeople = manualTaskProject ? (peopleBySlug[manualTaskProject.slug] || []) : []
 
   const tabs: TabDef[] = [
     { key: 'meetings', label: '🎙️ Meetings', count: pendingMeetings.length },
@@ -1411,11 +1430,21 @@ export default function Review() {
                   <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                     <select
                       value={manualTaskProjectId}
-                      onChange={e => setManualTaskProjectId(e.target.value)}
-                      style={{ fontSize: 12, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', flex: '1 1 200px' }}
+                      onChange={e => { setManualTaskProjectId(e.target.value); setManualTaskAssigneeId('') }}
+                      style={{ fontSize: 12, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', flex: '1 1 160px' }}
                     >
                       <option value="">— select client —</option>
                       {allProjects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                    <select
+                      value={manualTaskAssigneeId}
+                      onChange={e => setManualTaskAssigneeId(e.target.value)}
+                      disabled={!manualTaskProjectId}
+                      title={!manualTaskProjectId ? 'Select a client first' : 'Assign all extracted tasks to this person'}
+                      style={{ fontSize: 12, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', flex: '1 1 160px', cursor: manualTaskProjectId ? 'pointer' : 'not-allowed' }}
+                    >
+                      <option value="">— assignee (optional) —</option>
+                      {manualTaskPeople.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
                     <button
                       onClick={submitManualTasks}
@@ -1424,6 +1453,9 @@ export default function Review() {
                     >
                       {manualTaskSubmitting ? 'Analyzing…' : 'Extract Tasks'}
                     </button>
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 8 }}>
+                    Pick an assignee to send tasks straight to the board, or leave it blank to send them to the review queue.
                   </div>
                   {manualTaskResult && (
                     <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: 7, background: manualTaskResult.error ? '#fef2f2' : '#f0fdf4', fontSize: 12 }}>
